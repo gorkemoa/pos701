@@ -12,6 +12,7 @@ class UserViewModel extends ChangeNotifier {
   UserModel? _userInfo;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _disposed = false;
   
   UserViewModel(this._authService) {
     _logger.i('UserViewModel başlatıldı');
@@ -21,11 +22,26 @@ class UserViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+  
+  // Güvenli bildirim gönderme metodu
+  void _safeNotifyListeners() {
+    if (!_disposed) {
+      notifyListeners();
+    } else {
+      _logger.w('UserViewModel dispose edilmiş durumda, bildirim gönderilemiyor');
+    }
+  }
+  
   Future<bool> loadUserInfo() async {
     _logger.i('Kullanıcı bilgileri yükleniyor');
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotifyListeners();
     
     try {
       final isLoggedIn = await _authService.isLoggedIn();
@@ -33,7 +49,7 @@ class UserViewModel extends ChangeNotifier {
         _isLoading = false;
         _errorMessage = 'Oturum açılmamış';
         _logger.w('Kullanıcı bilgileri yüklenemedi: Oturum açılmamış');
-        notifyListeners();
+        _safeNotifyListeners();
         return false;
       }
       
@@ -42,7 +58,7 @@ class UserViewModel extends ChangeNotifier {
         _isLoading = false;
         _errorMessage = 'Kullanıcı ID bulunamadı';
         _logger.w('Kullanıcı bilgileri yüklenemedi: Kullanıcı ID bulunamadı');
-        notifyListeners();
+        _safeNotifyListeners();
         return false;
       }
       
@@ -53,19 +69,19 @@ class UserViewModel extends ChangeNotifier {
       if (response.success && response.data != null) {
         _userInfo = response.data;
         _logger.i('Kullanıcı bilgileri başarıyla yüklendi. Kullanıcı: ${_userInfo?.userFullname}');
-        notifyListeners();
+        _safeNotifyListeners();
         return true;
       } else {
         _errorMessage = 'Kullanıcı bilgileri yüklenemedi';
         _logger.w('Kullanıcı bilgileri başarısız: ${response.errorCode}');
-        notifyListeners();
+        _safeNotifyListeners();
         return false;
       }
     } catch (e) {
       _isLoading = false;
       _errorMessage = 'Bir hata oluştu: ${e.toString()}';
       _logger.e('Kullanıcı bilgileri yüklenirken hata oluştu', e);
-      notifyListeners();
+      _safeNotifyListeners();
       return false;
     }
   }
@@ -102,6 +118,6 @@ class UserViewModel extends ChangeNotifier {
   Future<void> clearUserInfo() async {
     _logger.i('Kullanıcı bilgileri temizleniyor');
     _userInfo = null;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 } 

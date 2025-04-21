@@ -5,6 +5,7 @@ import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/widgets/table_selection_dialog.dart';
 import 'package:pos701/widgets/table_merge_dialog.dart';
 import 'package:provider/provider.dart';
+import 'package:pos701/screens/category_screen.dart';
 
 class TableCard extends StatelessWidget {
   final TableItem table;
@@ -663,7 +664,25 @@ class TableCard extends StatelessWidget {
     final primaryColor = Color(AppConstants.primaryColorValue);
     
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        // Masa aktif değilse, normal onTap fonksiyonunu çalıştır
+        // Masa aktifse, kategori ekranına yönlendir
+        if (table.isActive) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CategoryScreen(
+                compID: compID,
+                userToken: userToken,
+                tableID: table.tableID,
+                orderID: table.orderID,
+              ),
+            ),
+          );
+        } else {
+          onTap();
+        }
+      },
       onLongPress: table.isActive ? () => _showTableOptions(context) : null,
       child: Container(
         margin: const EdgeInsets.all(4),

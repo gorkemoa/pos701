@@ -10,6 +10,7 @@ class StatisticsViewModel extends ChangeNotifier {
   StatisticsModel? _statistics;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _disposed = false;
   
   StatisticsViewModel(this._statisticsService) {
     _logger.i('StatisticsViewModel başlatıldı');
@@ -20,6 +21,21 @@ class StatisticsViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+  
+  // Güvenli bildirim gönderme metodu
+  void _safeNotifyListeners() {
+    if (!_disposed) {
+      notifyListeners();
+    } else {
+      _logger.w('StatisticsViewModel dispose edilmiş durumda, bildirim gönderilemiyor');
+    }
+  }
+  
   Future<bool> loadStatistics(int compID) async {
     final startTime = DateTime.now();
     _logger.i('İstatistik verileri yükleniyor. CompID: $compID');
@@ -27,7 +43,7 @@ class StatisticsViewModel extends ChangeNotifier {
     
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    _safeNotifyListeners();
     _logger.d('Yükleme durumu güncellendi ve bildirim gönderildi');
     
     try {
@@ -52,7 +68,7 @@ class StatisticsViewModel extends ChangeNotifier {
         _statistics = response.data;
         _logger.i('İstatistik verileri başarıyla yüklendi. Yükleme süresi: ${duration.inMilliseconds}ms');
         _logger.d('Yüklenen veri: totalGuest=${_statistics!.totalGuest}, totalTables=${_statistics!.totalTables}');
-        notifyListeners();
+        _safeNotifyListeners();
         _logger.d('Başarılı yükleme sonrası bildirim gönderildi');
         return true;
       } else {
@@ -65,7 +81,7 @@ class StatisticsViewModel extends ChangeNotifier {
         _logger.w('İstatistik verileri yükleme başarısız: $hataSebebi');
         _logger.d('Hata detayları: success=${response.success}, error=${response.error}, errorCode=${response.errorCode}');
         _logger.d('Yükleme süresi: ${duration.inMilliseconds}ms');
-        notifyListeners();
+        _safeNotifyListeners();
         _logger.d('Hata durumu sonrası bildirim gönderildi');
         return false;
       }
@@ -80,7 +96,7 @@ class StatisticsViewModel extends ChangeNotifier {
       _logger.d('Hata oluşma süresi: ${duration.inMilliseconds}ms');
       _logger.d('Hata sonrası ViewModel durumu: isLoading=$_isLoading, errorMessage=$_errorMessage');
       
-      notifyListeners();
+      _safeNotifyListeners();
       _logger.d('Hata durumu sonrası bildirim gönderildi');
       return false;
     }
