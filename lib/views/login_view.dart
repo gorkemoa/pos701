@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/login_viewmodel.dart';
+import 'package:pos701/constants/app_constants.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -38,7 +39,7 @@ class _LoginViewState extends State<LoginView> {
           'Kullanıcı Giriş Ekranı',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: const Color(0xFFD74B4B),
+        backgroundColor: Color(AppConstants.primaryColorValue),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {},
@@ -142,7 +143,7 @@ class _LoginViewState extends State<LoginView> {
                             onChanged: (value) {
                               viewModel.setRememberMe(value ?? false);
                             },
-                            activeColor: const Color(0xFFD74B4B),
+                            activeColor: Color(AppConstants.primaryColorValue),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -190,7 +191,7 @@ class _LoginViewState extends State<LoginView> {
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD74B4B),
+                          backgroundColor: Color(AppConstants.primaryColorValue),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4),
@@ -209,12 +210,12 @@ class _LoginViewState extends State<LoginView> {
                               ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 40),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 40),
                       child: Center(
                         child: Text(
-                          'Versiyon 2.1',
-                          style: TextStyle(
+                          'Versiyon ${AppConstants.appVersion}',
+                          style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 14,
                           ),

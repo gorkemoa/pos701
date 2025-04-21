@@ -4,6 +4,7 @@ import 'package:pos701/views/login_view.dart';
 import 'package:pos701/services/api_service.dart';
 import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/viewmodels/login_viewmodel.dart';
+import 'package:pos701/constants/app_constants.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,19 +29,13 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'POS701',
+        title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primaryColor: const Color(0xFF77c178),
-          scaffoldBackgroundColor: const Color(0xFFf5f5f5),
-          textTheme: const TextTheme(
-            bodyLarge: TextStyle(color: Color(0xFF333333)),
-          ),
+          primaryColor: Color(AppConstants.primaryColorValue),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF77c178),
-            primary: const Color(0xFF77c178),
-            secondary: const Color.fromARGB(255, 255, 255, 255),
-            tertiary: const Color.fromARGB(255, 0, 0, 0),
+            seedColor: Color(AppConstants.primaryColorValue),
+            primary: Color(AppConstants.primaryColorValue),
           ),
         ),
         home: const LoginView(),

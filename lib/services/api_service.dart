@@ -14,6 +14,7 @@ class ApiService {
     _dio.options.headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Authorization': _getBasicAuthHeader(),
     };
 
     _dio.interceptors.add(
@@ -22,11 +23,19 @@ class ApiService {
           final token = await _storage.read(key: AppConstants.tokenKey);
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
+          } else {
+            options.headers['Authorization'] = _getBasicAuthHeader();
           }
           return handler.next(options);
         },
       ),
     );
+  }
+
+  String _getBasicAuthHeader() {
+    final credentials = '${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}';
+    final encodedCredentials = base64Encode(utf8.encode(credentials));
+    return 'Basic $encodedCredentials';
   }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParams}) async {
