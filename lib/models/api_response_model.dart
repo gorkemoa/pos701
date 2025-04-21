@@ -34,7 +34,13 @@ class ApiResponseModel<T> {
     }
     
     // Eğer API yanıtında success: true ise, 410 kodu olsa bile işlem başarılı
-    final isSuccess = json['success'] as bool;
+    // Null kontrolü ekleyerek, null değerleri varsayılan değerlerle değiştirelim
+    final isSuccess = json.containsKey('success') ? 
+        (json['success'] is bool ? json['success'] as bool : true) : true;
+    
+    // Error alanı için de null kontrolü yapalım
+    final isError = json.containsKey('error') ? 
+        (json['error'] is bool ? json['error'] as bool : false) : false;
     
     // Data kontrolü - API yanıtında data olabilir veya olmayabilir
     T? parsedData;
@@ -63,7 +69,7 @@ class ApiResponseModel<T> {
     }
     
     return ApiResponseModel<T>(
-      error: json['error'] as bool,
+      error: isError,
       success: isSuccess,
       data: parsedData,
       errorCode: finalErrorCode,

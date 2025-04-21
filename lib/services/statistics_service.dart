@@ -47,7 +47,7 @@ class StatisticsService {
       
       // API'nin 401 ve 410 durum kodlarını başarılı kabul et
       dio.options.validateStatus = (status) {
-        return (status != null && (status >= 200 && status < 300)) || status == 410 || status == 401;
+        return (status != null && (status >= 200 && status < 300)) || status == 410;
       };
       
       final data = {
@@ -61,6 +61,8 @@ class StatisticsService {
       final response = await dio.post(endpoint, data: jsonEncode(data));
       
       _logger.d('İstatistik yanıtı alındı. Status: ${response.statusCode}');
+      _logger.d('HTTP Durum Kodu: ${response.statusCode} - ${response.statusMessage}');
+      _logger.d('Yanıt Başlıkları: ${response.headers}');
       
       // 401 durum kodu özel işleme - bu durumda yetkilendirme hatası var
       if (response.statusCode == 401) {
@@ -95,6 +97,31 @@ class StatisticsService {
         } else {
           throw FormatException('Beklenmeyen yanıt formatı: ${response.data.runtimeType}');
         }
+        
+        // Yanıtın yapısını detaylı log'la
+        _logger.d('API yanıt yapısı: ${responseData.keys.toList()}');
+        _logger.d('API yanıtının tam içeriği: $responseData');
+        
+        // Yanıt içinde istatistik verilerinin doğrudan olup olmadığını kontrol et
+        if (!responseData.containsKey('data') && responseData.containsKey('statistics')) {
+          // Eğer data yoksa ama statistics varsa, responseData'yı yeniden yapılandır
+          responseData = {
+            'error': false,
+            'success': true,
+            'data': responseData,
+            '410': responseData.containsKey('410') ? responseData['410'] : null
+          };
+          _logger.d('Yeniden yapılandırılmış yanıt: $responseData');
+        }
+        
+        // Yanıt "data" içeriyorsa ama "data" null ise, hata mesajı ekle
+        if (responseData.containsKey('data') && responseData['data'] == null) {
+          responseData['error'] = true;
+          responseData['success'] = false;
+          responseData['errorCode'] = 'API yanıtı boş data döndürdü';
+          _logger.w('API yanıtında data null: $responseData');
+        }
+        
       } catch (e) {
         _logger.e('API yanıtı işlenirken format hatası: $e. Yanıt: ${response.data}');
         return ApiResponseModel<StatisticsModel>(
@@ -115,16 +142,29 @@ class StatisticsService {
         if (apiResponse.success && apiResponse.data != null) {
           _logger.i('İstatistik verileri başarıyla alındı');
         } else {
-          _logger.w('İstatistik verileri alınamadı. Yanıt: ${apiResponse.errorCode ?? "Bilinmeyen hata"}');
+          // Daha detaylı hata mesajı oluştur
+          String hataMesaji = apiResponse.errorCode ?? "Bilinmeyen hata: API başarısız yanıt döndü fakat hata kodu yok";
+          if (apiResponse.data == null && apiResponse.success) {
+            hataMesaji = "Başarılı yanıt alındı fakat veri yok";
+          }
+          _logger.w('İstatistik verileri alınamadı. Yanıt: $hataMesaji');
+          _logger.d('Ham yanıt içeriği: $responseData');
         }
         
         return apiResponse;
       } catch (parseError) {
         _logger.e('API yanıtı işlenirken hata: $parseError', parseError);
+        
+        // Hata mesajını daha ayrıntılı hale getir
+        var errorDetails = parseError.toString();
+        if (parseError is TypeError) {
+          errorDetails = 'Tip uyumsuzluğu hatası: $parseError. Yanıt: $responseData';
+        }
+        
         return ApiResponseModel<StatisticsModel>(
           error: true,
           success: false,
-          errorCode: 'API yanıtı işleme hatası: $parseError',
+          errorCode: 'API yanıtı işleme hatası: $errorDetails',
         );
       }
     } catch (e) {

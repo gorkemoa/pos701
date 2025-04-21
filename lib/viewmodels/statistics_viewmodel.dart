@@ -35,8 +35,13 @@ class StatisticsViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = 'İstatistik verileri yüklenemedi';
-        _logger.w('İstatistik verileri yükleme başarısız: ${response.errorCode}');
+        String hataSebebi = response.errorCode ?? "API'den hata detayı alınamadı";
+        if (response.success && response.data == null) {
+          hataSebebi = "API yanıtı başarılı fakat veri içermiyor";
+        }
+        
+        _errorMessage = 'İstatistik verileri yüklenemedi: $hataSebebi';
+        _logger.w('İstatistik verileri yükleme başarısız: $hataSebebi');
         notifyListeners();
         return false;
       }
