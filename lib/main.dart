@@ -10,6 +10,7 @@ import 'package:pos701/viewmodels/statistics_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
+import 'package:pos701/views/tables_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,3 +98,4 @@ class MyApp extends StatelessWidget {
     return await authService.isLoggedIn();
   }
 }
+

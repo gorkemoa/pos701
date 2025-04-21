@@ -28,7 +28,8 @@ class _HomeViewState extends State<HomeView> {
       
       // İstatistik verilerini yükle
       final statisticsViewModel = Provider.of<StatisticsViewModel>(context, listen: false);
-      statisticsViewModel.loadStatistics(1); // Burada compID'yi 1 olarak sabit verdim, gerçek uygulamada dinamik olmalı
+      final int compID = userViewModel.userInfo?.compID ?? 0;
+      statisticsViewModel.loadStatistics(compID);
     });
   }
 
@@ -53,7 +54,8 @@ class _HomeViewState extends State<HomeView> {
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
               userViewModel.loadUserInfo();
-              statisticsViewModel.refreshStatistics(1); // compID'yi 1 olarak sabit verdim
+              final int compID = userViewModel.userInfo?.compID ?? 0;
+              statisticsViewModel.refreshStatistics(compID);
             },
           ),
         ],
@@ -72,26 +74,26 @@ class _HomeViewState extends State<HomeView> {
                         DashboardCard(
                           backgroundColor: Color(AppConstants.incomeCardColor),
                           icon: Icons.payments,
-                          value: statisticsViewModel.statistics?.totalAmount ?? '₺0.00',
-                          title: statisticsViewModel.statistics?.totalAmountText ?? 'Bugün alınan ödemeler',
+                          value: statisticsViewModel.statistics?.totalAmount ?? '',
+                          title: statisticsViewModel.statistics?.totalAmountText ?? '',
                         ),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.expenseCardColor),
                           icon: Icons.currency_exchange,
-                          value: statisticsViewModel.statistics?.totalExpenseAmount ?? '₺0.00',
-                          title: statisticsViewModel.statistics?.totalExpenseAmountText ?? 'Bugünkü toplam gider tutarı',
+                          value: statisticsViewModel.statistics?.totalExpenseAmount ?? '',
+                          title: statisticsViewModel.statistics?.totalExpenseAmountText ?? '',
                         ),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.orderCardColor),
                           icon: Icons.coffee,
-                          value: statisticsViewModel.statistics?.totalOpenAmount ?? '₺0.00',
-                          title: statisticsViewModel.statistics?.totalOpenAmountText ?? 'Açık sipariş toplamı',
+                          value: statisticsViewModel.statistics?.totalOpenAmount ?? '',
+                          title: statisticsViewModel.statistics?.totalOpenAmountText ?? '',
                         ),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.customerCardColor),
                           icon: Icons.people,
-                          value: '${statisticsViewModel.statistics?.totalGuest ?? 0}',
-                          title: statisticsViewModel.statistics?.totalGuestText ?? 'Bugün ağırlanan misafir sayısı',
+                          value: '${statisticsViewModel.statistics?.totalGuest}',
+                          title: statisticsViewModel.statistics?.totalGuestText ?? '',
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -185,7 +187,7 @@ class _HomeViewState extends State<HomeView> {
       );
     }
     
-    // Örnek veri noktaları oluştur
+    // Veri noktaları oluştur
     final spots = List.generate(25, (index) {
       // Saat bazında veriyi bul
       final hourData = sales.firstWhere(
@@ -196,12 +198,31 @@ class _HomeViewState extends State<HomeView> {
       return FlSpot(index.toDouble(), hourData.amount ?? 0.0);
     });
     
+    // Min ve max değerleri hesapla
+    double minY = 0.0;
+    double maxY = 0.0;
+    
+    if (spots.isNotEmpty) {
+      minY = spots.map((spot) => spot.y).reduce((min, y) => y < min ? y : min);
+      maxY = spots.map((spot) => spot.y).reduce((max, y) => y > max ? y : max);
+      
+      // Grafik daha iyi görünsün diye biraz boşluk ekle
+      minY = minY > 0 ? 0 : minY * 1.1;
+      maxY = maxY * 1.1;
+      
+      // Eğer min ve max eşitse, görsel aralık oluştur
+      if (minY == maxY) {
+        minY = minY > 0 ? 0 : minY - 1;
+        maxY = maxY + 1;
+      }
+    }
+    
     return LineChart(
       LineChartData(
         gridData: FlGridData(
           show: true,
           drawVerticalLine: true,
-          horizontalInterval: 0.2,
+          horizontalInterval: maxY > 5 ? maxY / 5 : 1,
           verticalInterval: 2,
         ),
         titlesData: FlTitlesData(
@@ -233,7 +254,7 @@ class _HomeViewState extends State<HomeView> {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: 0.2,
+              interval: maxY > 5 ? maxY / 5 : 1,
               reservedSize: 40,
               getTitlesWidget: (value, meta) {
                 const style = TextStyle(
@@ -258,8 +279,8 @@ class _HomeViewState extends State<HomeView> {
         ),
         minX: 0,
         maxX: 24,
-        minY: -1.0,
-        maxY: 1.0,
+        minY: minY,
+        maxY: maxY,
         lineBarsData: [
           LineChartBarData(
             spots: spots,
@@ -268,7 +289,10 @@ class _HomeViewState extends State<HomeView> {
             barWidth: 3,
             isStrokeCapRound: true,
             dotData: FlDotData(show: false),
-            belowBarData: BarAreaData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Color(AppConstants.chartLineColor).withOpacity(0.2),
+            ),
           ),
         ],
       ),
@@ -292,19 +316,85 @@ class _HomeViewState extends State<HomeView> {
       );
     }
     
-    // Burada ödeme tiplerini gösteren chart widget'ı eklenebilir
-    // Şimdilik basit bir liste gösterimi yapalım
+    // Toplam tutar hesapla
+    final double totalAmount = payments.fold(0.0, (sum, payment) => sum + (payment.amount ?? 0.0));
+    
     return Expanded(
-      child: ListView.builder(
-        itemCount: payments.length,
-        itemBuilder: (context, index) {
-          final payment = payments[index];
-          return ListTile(
-            title: Text(payment.type ?? 'Bilinmeyen'),
-            trailing: Text('${payment.amount?.toStringAsFixed(2)} TL'),
-          );
-        },
+      child: Row(
+        children: [
+          // Pasta grafiği
+          Expanded(
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 2,
+                centerSpaceRadius: 40,
+                sections: payments.map((payment) {
+                  final double percentage = totalAmount > 0 
+                    ? ((payment.amount ?? 0.0) / totalAmount) * 100 
+                    : 0.0;
+                  
+                  // Her ödeme tipi için farklı renk oluştur
+                  final Color color = _getColorForPaymentType(payment.type ?? '');
+                  
+                  return PieChartSectionData(
+                    color: color,
+                    value: payment.amount ?? 0.0,
+                    title: '${percentage.toStringAsFixed(1)}%',
+                    radius: 60,
+                    titleStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          
+          // Ödeme tipleri listesi ve açıklamalar
+          Expanded(
+            child: ListView.builder(
+              itemCount: payments.length,
+              itemBuilder: (context, index) {
+                final payment = payments[index];
+                final Color color = _getColorForPaymentType(payment.type ?? '');
+                
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: 16,
+                        color: color,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          payment.type ?? 'Bilinmeyen',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      Text(
+                        '${payment.amount?.toStringAsFixed(2)} TL',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+  }
+  
+  // Ödeme tipine göre renk döndür
+  Color _getColorForPaymentType(String type) {
+    // Basit bir hash fonksiyonu ile renk oluştur
+    final int hash = type.hashCode;
+    return Color(0xFF000000 + (hash % 0xFFFFFF));
   }
 } 

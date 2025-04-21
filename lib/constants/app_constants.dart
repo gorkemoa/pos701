@@ -6,6 +6,7 @@ class AppConstants {
   // API Endpoints
   static const String loginEndpoint = 'service/auth/login';
   static const String userInfoEndpoint = 'service/user/id/';
+  static const String getTablesEndpoint = 'service/user/order/tableList';
   
   // Storage Keys
   static const String tokenKey = 'token';
@@ -24,4 +25,11 @@ class AppConstants {
   // Basic Auth
   static const String basicAuthUsername = 'Tr1VAhW2ICWHPN2nlvp7K5ytGoyOJM';
   static const String basicAuthPassword = 'vRP4rT7APmjSmkI17I1EVpPH57Edl0';
+}
+
+class AppStrings {
+  static const String errorTitle = 'Hata';
+  static const String noRegionsFound = 'Bölge bulunamadı';
+  static const String retryButtonText = 'Yeniden Dene';
+  static const String supportButtonText = 'Destek İste';
 } 

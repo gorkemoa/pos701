@@ -1,99 +1,212 @@
 import 'package:flutter/material.dart';
+import 'package:pos701/views/tables_view.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/constants/app_constants.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
+
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer> {
+  bool _tanimlamalarExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     final userViewModel = Provider.of<UserViewModel>(context);
     final authService = Provider.of<AuthService>(context, listen: false);
+    final Color primaryColor = Color(AppConstants.primaryColorValue);
     
     return Drawer(
       child: Column(
         children: [
-          UserAccountsDrawerHeader(
-            decoration: BoxDecoration(
-              color: Color(AppConstants.primaryColorValue),
-            ),
-            accountName: Text(
-              userViewModel.userInfo?.userFullname ?? 'Kullanıcı',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            accountEmail: Text(
-              userViewModel.userInfo?.userEmail ?? 'E-posta yok',
-            ),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Text(
-                userViewModel.userInfo?.userFirstname?.substring(0, 1) ?? 'K',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(AppConstants.primaryColorValue),
+          Container(
+            color: primaryColor,
+            height: 110,
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  'Menü',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.home, size: 26),
+                    title: const Text('Anasayfa', style: TextStyle(fontSize: 16)),
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.shopping_basket, size: 26),
+                    title: const Text('Siparişler', style: TextStyle(fontSize: 16)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TablesView(
+                            userToken: userViewModel.userInfo?.userToken ?? '',
+                            compID: userViewModel.userInfo?.compID ?? 0,
+                            title: 'Siparişler',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.tv, size: 26),
+                    title: const Text('Mutfak', style: TextStyle(fontSize: 16)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Mutfak sayfasına yönlendirme
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.layers, size: 26),
+                    title: const Text('Tanımlamalar', style: TextStyle(fontSize: 16)),
+                    trailing: Icon(
+                      _tanimlamalarExpanded ? Icons.expand_less : Icons.expand_more,
+                      size: 26,
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _tanimlamalarExpanded = !_tanimlamalarExpanded;
+                      });
+                    },
+                  ),
+                  const Divider(height: 1),
+                  if (_tanimlamalarExpanded)
+                    Column(
+                      children: [
+                        ListTile(
+                          leading: const SizedBox(width: 26),
+                          title: const Text('Menü Tanımlama', style: TextStyle(fontSize: 16)),
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Menü Tanımlama sayfasına yönlendirme
+                          },
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: const SizedBox(width: 26),
+                          title: const Text('Masa Tanımlama', style: TextStyle(fontSize: 16)),
+                          onTap: () {
+                            Navigator.pop(context);
+                            // Masa Tanımlama sayfasına yönlendirme
+                          },
+                        ),
+                        const Divider(height: 1),
+                      ],
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.print, size: 26),
+                    title: const Text('Yazıcı Tanımlama', style: TextStyle(fontSize: 16)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Yazıcı Tanımlama sayfasına yönlendirme
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.ondemand_video, size: 26),
+                    title: const Text('Kullanım Kılavuzu', style: TextStyle(fontSize: 16)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Kullanım Kılavuzu sayfasına yönlendirme
+                    },
+                  ),
+                  const Divider(height: 1),
+                ],
               ),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.dashboard),
-            title: const Text('Ana Sayfa'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.receipt),
-            title: const Text('Siparişler'),
-            onTap: () {
-              Navigator.pop(context);
-              // Siparişler sayfasına yönlendirme
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.people),
-            title: const Text('Müşteriler'),
-            onTap: () {
-              Navigator.pop(context);
-              // Müşteriler sayfasına yönlendirme
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.attach_money),
-            title: const Text('Ödemeler'),
-            onTap: () {
-              Navigator.pop(context);
-              // Ödemeler sayfasına yönlendirme
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Ayarlar'),
-            onTap: () {
-              Navigator.pop(context);
-              // Ayarlar sayfasına yönlendirme
-            },
-          ),
-          const Spacer(),
-          Divider(height: 1, color: Colors.grey.shade300),
-          ListTile(
-            leading: const Icon(Icons.exit_to_app, color: Colors.red),
-            title: const Text('Çıkış Yap', style: TextStyle(color: Colors.red)),
-            onTap: () async {
-              await authService.logout();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginView()),
-                  (route) => false,
-                );
-              }
-            },
+          Container(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Restaurant Ayarları sayfasına yönlendirme
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Restaurant Ayarları'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Uygulama Ayarları sayfasına yönlendirme
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Uygulama Ayarları'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await authService.logout();
+                      if (context.mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (context) => const LoginView()),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Çıkış Yap'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ],
       ),

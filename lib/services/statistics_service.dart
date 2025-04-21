@@ -34,7 +34,7 @@ class StatisticsService {
       dio.options.connectTimeout = const Duration(seconds: 10);
       dio.options.receiveTimeout = const Duration(seconds: 10);
       
-      // Basic Auth header oluştur
+      // AppConstants'taki Basic Auth bilgilerini kullan
       final credentials = '${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
       final basicAuthHeader = 'Basic $encodedCredentials';
@@ -45,9 +45,9 @@ class StatisticsService {
         'Authorization': basicAuthHeader,
       };
       
-      // API'nin 401 ve 410 durum kodlarını başarılı kabul et
+      // API'nin özel durum kodlarını başarılı kabul et
       dio.options.validateStatus = (status) {
-        return (status != null && (status >= 200 && status < 300)) || status == 410;
+        return (status != null && (status >= 200 && status < 300)) || status == 410 || status == 417;
       };
       
       final data = {
@@ -58,11 +58,18 @@ class StatisticsService {
       _logger.d('İstatistik verisi isteği gönderiliyor: $data');
       
       final endpoint = 'service/user/account/statistics';
-      final response = await dio.post(endpoint, data: jsonEncode(data));
+      final response = await dio.put(endpoint, data: jsonEncode(data));
       
-      _logger.d('İstatistik yanıtı alındı. Status: ${response.statusCode}');
-      _logger.d('HTTP Durum Kodu: ${response.statusCode} - ${response.statusMessage}');
+      int statusCode = response.statusCode ?? 0;
+      String statusMessage = response.statusMessage ?? 'Durum mesajı yok';
+      
+      _logger.d('İstatistik yanıtı alındı. Status: $statusCode');
+      _logger.d('HTTP Durum Kodu: $statusCode - $statusMessage');
       _logger.d('Yanıt Başlıkları: ${response.headers}');
+      
+      // Ham yanıt içeriğini loglayalım
+      _logger.d('Ham yanıt tipi: ${response.data.runtimeType}');
+      _logger.d('Ham yanıt içeriği: ${response.data}');
       
       // 401 durum kodu özel işleme - bu durumda yetkilendirme hatası var
       if (response.statusCode == 401) {
@@ -78,9 +85,18 @@ class StatisticsService {
         );
       }
       
-      // 410 durum kodu için özel işlem
-      if (response.statusCode == 410) {
-        _logger.i('HTTP 410 durum kodu alındı. Bu API için normal bir yanıt.');
+      // 417 durum kodu için özel işleme - yetkilendirme hatası
+      if (response.statusCode == 417) {
+        final message = response.data is String 
+            ? response.data 
+            : 'Yetkisiz erişim hatası (417)';
+        _logger.w('HTTP 417 hatası: $message');
+        
+        return ApiResponseModel<StatisticsModel>(
+          error: true,
+          success: false,
+          errorCode: 'Yetkisiz erişim: $message',
+        );
       }
       
       // Yanıt formatını kontrol et ve işle
@@ -98,9 +114,35 @@ class StatisticsService {
           throw FormatException('Beklenmeyen yanıt formatı: ${response.data.runtimeType}');
         }
         
+        // API yanıtında özel durum kodu var mı kontrol et (410 Gone, vb.)
+        bool hasSpecialStatusCode = false;
+        String specialStatusInfo = "";
+        
+        // HTTP durum kodu doğrudan anahtarda bulunuyor mu?
+        if (responseData.containsKey('200') || responseData.containsKey('410')) {
+          String statusKey = responseData.containsKey('410') ? '410' : '200';
+          specialStatusInfo = "HTTP $statusKey: ${responseData[statusKey]}";
+          _logger.d('Özel durum kodu bulundu: $specialStatusInfo');
+          hasSpecialStatusCode = true;
+        }
+        
         // Yanıtın yapısını detaylı log'la
         _logger.d('API yanıt yapısı: ${responseData.keys.toList()}');
         _logger.d('API yanıtının tam içeriği: $responseData');
+        
+        // Yanıtta veri olması gerektiği halde yoksa
+        if (responseData.containsKey('data') && responseData['data'] == null) {
+          // 410 koduna sahipse veya yanıtın kendisi 410 ise özel olarak işle
+          if (responseData.containsKey('410') || statusCode == 410) {
+            responseData['errorCode'] = 'API 410 Gone durumu döndürdü: Veriler kullanılamıyor';
+            _logger.w('API 410 Gone durumu: $responseData');
+          } else {
+            responseData['error'] = true;
+            responseData['success'] = false;
+            responseData['errorCode'] = 'API yanıtı boş data döndürdü';
+            _logger.w('API yanıtında data null: $responseData');
+          }
+        }
         
         // Yanıt içinde istatistik verilerinin doğrudan olup olmadığını kontrol et
         if (!responseData.containsKey('data') && responseData.containsKey('statistics')) {
@@ -114,12 +156,50 @@ class StatisticsService {
           _logger.d('Yeniden yapılandırılmış yanıt: $responseData');
         }
         
-        // Yanıt "data" içeriyorsa ama "data" null ise, hata mesajı ekle
-        if (responseData.containsKey('data') && responseData['data'] == null) {
-          responseData['error'] = true;
-          responseData['success'] = false;
-          responseData['errorCode'] = 'API yanıtı boş data döndürdü';
-          _logger.w('API yanıtında data null: $responseData');
+        // Eğer yalnızca özel durum kodu içeriyorsa ve başka veri yoksa
+        if (responseData.keys.length <= 2 && 
+            (responseData.containsKey('200') || responseData.containsKey('410') || 
+             responseData.containsKey('error') || responseData.containsKey('success'))) {
+          
+          _logger.w('API sadece durum kodu içeriyor, veri yok. İçerik: $responseData');
+          String durum = responseData.containsKey('410') ? '410 Gone' : 
+                        (responseData.containsKey('200') ? '200 OK' : 'Bilinmeyen durum');
+          
+          // 200 OK durumuna özel işleme (API veri dönmüyor ama 200 OK durumu)
+          if (durum == '200 OK') {
+            responseData = {
+              'error': true,
+              'success': false,
+              'errorCode': 'API veri döndürmüyor fakat başarılı HTTP kodu döndürüyor (200 OK). Bu bir backend sorunu olabilir.',
+              'data': null,
+              'statusCode': durum
+            };
+            _logger.w('Backend sorunu olabilir - API veri döndürmüyor, sadece başarı durumu döndürüyor: 200 OK');
+            
+            // Bu durumu backend ekibine bildirmek için alternatif bir istek yapabiliriz (opsiyonel)
+            try {
+              _logger.i('İstatistik servisi durum kontrolü yapılıyor...');
+              // Burada alternatif bir endpoint veya debug endpoint'i çağrılabilir
+              
+              // Token ve kullanıcı bilgilerini logla
+              _logger.i('Kullanıcı token: $token, CompID: $compID');
+              
+              // API durumunu belirlemek için diğer bilgileri de logla
+              final currentTime = DateTime.now().toIso8601String();
+              _logger.i('API isteği zamanı: $currentTime');
+              _logger.i('Endpoint: service/user/account/statistics');
+            } catch (e) {
+              _logger.e('Durum kontrolü hatası: $e');
+            }
+          } else {
+            responseData = {
+              'error': false,
+              'success': false,
+              'errorCode': 'API sadece durum kodu döndürdü: $durum - Veri yok',
+              'data': null,
+              'statusCode': durum
+            };
+          }
         }
         
       } catch (e) {
@@ -139,19 +219,29 @@ class StatisticsService {
           (data) => StatisticsModel.fromJson(data),
         );
         
-        if (apiResponse.success && apiResponse.data != null) {
+        // HTTP durum kodunu ve mesajını ekleyelim
+        final responseWithStatusInfo = ApiResponseModel<StatisticsModel>(
+          error: apiResponse.error,
+          success: apiResponse.success,
+          data: apiResponse.data,
+          errorCode: apiResponse.errorCode != null 
+              ? "${apiResponse.errorCode} (HTTP: $statusCode - $statusMessage)" 
+              : "HTTP: $statusCode - $statusMessage"
+        );
+        
+        if (responseWithStatusInfo.success && responseWithStatusInfo.data != null) {
           _logger.i('İstatistik verileri başarıyla alındı');
         } else {
           // Daha detaylı hata mesajı oluştur
-          String hataMesaji = apiResponse.errorCode ?? "Bilinmeyen hata: API başarısız yanıt döndü fakat hata kodu yok";
-          if (apiResponse.data == null && apiResponse.success) {
-            hataMesaji = "Başarılı yanıt alındı fakat veri yok";
+          String hataMesaji = responseWithStatusInfo.errorCode ?? "Bilinmeyen hata: API başarısız yanıt döndü fakat hata kodu yok";
+          if (responseWithStatusInfo.data == null && responseWithStatusInfo.success) {
+            hataMesaji = "Başarılı yanıt alındı fakat veri yok (HTTP: $statusCode - $statusMessage)";
           }
           _logger.w('İstatistik verileri alınamadı. Yanıt: $hataMesaji');
           _logger.d('Ham yanıt içeriği: $responseData');
         }
         
-        return apiResponse;
+        return responseWithStatusInfo;
       } catch (parseError) {
         _logger.e('API yanıtı işlenirken hata: $parseError', parseError);
         

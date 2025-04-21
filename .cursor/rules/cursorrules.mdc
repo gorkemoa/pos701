@@ -17,7 +17,12 @@ Generate code, corrections, and refactorings that comply with the basic principl
   - Create necessary types.
 - Don't leave blank lines within a function.
 - One export per file.
+- API Endpoints
+  Never use dummy or static data if you are consuming an actual API endpoint.
+  Always handle real network responses.
+  Use mocks or fakes only in tests or development preview mode, and clearly isolate them.
 
+Avoid hardcoded response samples inside repositories or services.
 ### Nomenclature
 
 - Use PascalCase for classes.
