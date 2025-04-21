@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/login_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
+import 'package:pos701/viewmodels/user_viewmodel.dart';
+import 'package:pos701/views/home_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -61,18 +63,9 @@ class _LoginViewState extends State<LoginView> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Image.asset(
-                            'assets/images/adisyo_logo.png',
-                            width: 60,
-                            height: 60,
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'adisyo',
-                            style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF333333),
-                            ),
+                            'assets/images/image.png',
+                            width: 160,
+                            height: 160,
                           ),
                         ],
                       ),
@@ -180,13 +173,21 @@ class _LoginViewState extends State<LoginView> {
                                     _passwordController.text,
                                   );
                                   if (success) {
-                                    // Navigate to home screen
-                                    // Örneğin: Navigator.of(context).pushReplacementNamed('/home');
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Giriş başarılı!'),
-                                      ),
+                                    // Kullanıcı bilgilerini yükle
+                                    final userViewModel = Provider.of<UserViewModel>(
+                                      context,
+                                      listen: false,
                                     );
+                                    await userViewModel.loadUserInfo();
+                                    
+                                    // Ana sayfaya yönlendir
+                                    if (mounted) {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                          builder: (context) => const HomeView(),
+                                        ),
+                                      );
+                                    }
                                   }
                                 }
                               },

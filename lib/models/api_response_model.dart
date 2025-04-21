@@ -1,3 +1,5 @@
+import 'package:pos701/utils/app_logger.dart';
+
 class ApiResponseModel<T> {
   final bool error;
   final bool success;
@@ -12,11 +14,59 @@ class ApiResponseModel<T> {
   });
 
   factory ApiResponseModel.fromJson(Map<String, dynamic> json, T Function(Map<String, dynamic>) fromJsonT) {
+    final logger = AppLogger();
+    logger.d('API yanıtı işleniyor: $json');
+    
+    // API'nin özel durum: 410 (Gone) kodu başarılı bir yanıt göstergesi olabilir
+    // '410' değeri bir String veya başka bir tip olabilir
+    bool hasGoneCode = false;
+    
+    if (json.containsKey('410')) {
+      final gone410Value = json['410'];
+      if (gone410Value is String && gone410Value == 'Gone') {
+        hasGoneCode = true;
+        logger.i('Yanıtta "410": "Gone" (String) bulundu');
+      } else if (gone410Value != null) {
+        // Diğer tip kontrolü
+        hasGoneCode = true;
+        logger.i('Yanıtta "410" kodu farklı tipte (${gone410Value.runtimeType}) bulundu: $gone410Value');
+      }
+    }
+    
+    // Eğer API yanıtında success: true ise, 410 kodu olsa bile işlem başarılı
+    final isSuccess = json['success'] as bool;
+    
+    // Data kontrolü - API yanıtında data olabilir veya olmayabilir
+    T? parsedData;
+    if (json.containsKey('data') && json['data'] != null) {
+      try {
+        if (json['data'] is Map<String, dynamic>) {
+          parsedData = fromJsonT(json['data'] as Map<String, dynamic>);
+          logger.d('Data başarıyla ayrıştırıldı');
+        } else {
+          logger.w('Data ayrıştırılamadı: data bir Map değil, tipi: ${json['data'].runtimeType}');
+        }
+      } catch (e) {
+        logger.e('Data ayrıştırma hatası', e);
+      }
+    } else {
+      logger.d('Yanıtta data bilgisi yok veya null');
+    }
+    
+    // Tüm olası hatalar için errorCode oluşturma
+    String? finalErrorCode;
+    if (hasGoneCode) {
+      finalErrorCode = "410: Gone";
+    } else if (json.containsKey('message') && json['message'] != null) {
+      // Eğer API yanıtında message varsa hata mesajı olarak kullan
+      finalErrorCode = json['message'].toString();
+    }
+    
     return ApiResponseModel<T>(
       error: json['error'] as bool,
-      success: json['success'] as bool,
-      data: json['data'] != null ? fromJsonT(json['data'] as Map<String, dynamic>) : null,
-      errorCode: json['410'] as String?,
+      success: isSuccess,
+      data: parsedData,
+      errorCode: finalErrorCode,
     );
   }
 } 

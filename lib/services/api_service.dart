@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/constants/app_constants.dart';
+import 'package:pos701/utils/app_logger.dart';
 
 class ApiService {
   final Dio _dio = Dio();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  SharedPreferences? _prefs;
+  final AppLogger _logger = AppLogger();
 
   ApiService() {
     _dio.options.baseUrl = AppConstants.baseUrl;
@@ -16,20 +18,84 @@ class ApiService {
       'Accept': 'application/json',
       'Authorization': _getBasicAuthHeader(),
     };
+    
+    // API'nin 410 durum kodunu başarılı bir yanıt olarak değerlendirmek için
+    _dio.options.validateStatus = (status) {
+      return (status != null && (status >= 200 && status < 300)) || status == 410;
+    };
 
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await _storage.read(key: AppConstants.tokenKey);
+          await _initPrefs();
+          final token = _prefs?.getString(AppConstants.tokenKey);
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           } else {
             options.headers['Authorization'] = _getBasicAuthHeader();
           }
+          
+          // Request Log
+          _logger.apiRequest(
+            options.method, 
+            options.uri.toString(), 
+            body: options.data, 
+            headers: options.headers.map((key, value) => MapEntry(key, value.toString())),
+          );
+          
+          // Zaman ölçümü
+          options.extra['startTime'] = DateTime.now().millisecondsSinceEpoch;
+          
           return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          final startTime = response.requestOptions.extra['startTime'] as int?;
+          final endTime = DateTime.now().millisecondsSinceEpoch;
+          final executionTime = startTime != null ? endTime - startTime : null;
+          
+          // 410 durum kodu için özel mesaj
+          if (response.statusCode == 410) {
+            _logger.i('HTTP 410 alındı: Bu API için normal bir yanıt, başarılı kabul ediliyor');
+          }
+          
+          // Response Log
+          _logger.apiResponse(
+            response.requestOptions.method,
+            response.requestOptions.uri.toString(),
+            response.statusCode ?? 0,
+            response.data,
+            executionTime: executionTime,
+          );
+          
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) {
+          final startTime = e.requestOptions.extra['startTime'] as int?;
+          final endTime = DateTime.now().millisecondsSinceEpoch;
+          final executionTime = startTime != null ? endTime - startTime : null;
+          
+          // Error Log
+          _logger.apiError(
+            e.requestOptions.method,
+            e.requestOptions.uri.toString(),
+            e.message,
+            response: e.response?.data,
+            executionTime: executionTime,
+          );
+          
+          return handler.next(e);
         },
       ),
     );
+    
+    _logger.i('ApiService başlatıldı. Base URL: ${AppConstants.baseUrl}');
+    // Başlatma işlemi asenkron, ilk çağrıda _initPrefs() kullanılacak
+  }
+  
+  Future<void> _initPrefs() async {
+    if (_prefs == null) {
+      _prefs = await SharedPreferences.getInstance();
+    }
   }
 
   String _getBasicAuthHeader() {
@@ -75,24 +141,31 @@ class ApiService {
   }
 
   Future<void> saveToken(String token) async {
-    await _storage.write(key: AppConstants.tokenKey, value: token);
+    await _initPrefs();
+    await _prefs?.setString(AppConstants.tokenKey, token);
+    _logger.i('Token kaydedildi: $token');
   }
 
   Future<void> saveUserId(int userId) async {
-    await _storage.write(key: AppConstants.userIdKey, value: userId.toString());
+    await _initPrefs();
+    await _prefs?.setInt(AppConstants.userIdKey, userId);
+    _logger.i('KullanıcıID kaydedildi: $userId');
   }
 
   Future<String?> getToken() async {
-    return await _storage.read(key: AppConstants.tokenKey);
+    await _initPrefs();
+    return _prefs?.getString(AppConstants.tokenKey);
   }
 
   Future<int?> getUserId() async {
-    final userIdStr = await _storage.read(key: AppConstants.userIdKey);
-    return userIdStr != null ? int.parse(userIdStr) : null;
+    await _initPrefs();
+    return _prefs?.getInt(AppConstants.userIdKey);
   }
 
   Future<void> clearToken() async {
-    await _storage.delete(key: AppConstants.tokenKey);
-    await _storage.delete(key: AppConstants.userIdKey);
+    await _initPrefs();
+    await _prefs?.remove(AppConstants.tokenKey);
+    await _prefs?.remove(AppConstants.userIdKey);
+    _logger.i('Token ve kullanıcı bilgileri temizlendi');
   }
 } 
