@@ -8,7 +8,6 @@ class AppConstants {
   static const String userInfoEndpoint = 'service/user/id/';
   static const String getTablesEndpoint = 'service/user/order/tableList';
   static const String tableChangeEndpoint = 'service/user/order/tableChange';
-  static const String tableMergeEndpoint = 'service/user/order/tableOrderMerge';
   
   // Storage Keys
   static const String tokenKey = 'token';

@@ -161,6 +161,44 @@ class TablesViewModel extends ChangeNotifier {
     }
   }
   
+  Future<bool> transferOrder({
+    required String userToken,
+    required int compID,
+    required int oldOrderID,
+    required int newOrderID,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    
+    try {
+      final response = await _tableService.transferOrder(
+        userToken: userToken,
+        compID: compID,
+        oldOrderID: oldOrderID,
+        newOrderID: newOrderID,
+      );
+      
+      _isLoading = false;
+      
+      if (response['success'] == true) {
+        _successMessage = response['success_message'] ?? 'Adisyon başarıyla aktarıldı';
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'Adisyon aktarma işlemi başarısız oldu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  
   // Belirli bir bölgenin masalarını döndürür
   List<TableItem> getTablesByRegion(int regionId) {
     final region = regions.firstWhere(

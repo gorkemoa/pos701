@@ -123,6 +123,9 @@ class TableCard extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(bottomSheetContext);
                     // Adisyon aktarma işlemi
+                    Future.microtask(() {
+                      _handleOrderTransfer(context, viewModel);
+                    });
                   },
                 ),
                 const Divider(),
@@ -193,10 +196,12 @@ class TableCard extends StatelessWidget {
     // Yükleniyor diyaloğu göster
     if (!context.mounted) return;
     
+    late BuildContext loadingContext;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) {
+      builder: (context) {
+        loadingContext = context;
         return const AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -219,8 +224,13 @@ class TableCard extends StatelessWidget {
     );
     
     // Yükleniyor diyaloğunu kapat
-    if (!context.mounted) return;
-    Navigator.pop(context);
+    if (context.mounted) {
+      try {
+        Navigator.of(loadingContext).pop();
+      } catch (e) {
+        debugPrint('Diyalog kapatma hatası: $e');
+      }
+    }
     
     if (success) {
       // Başarılı mesajını göster
@@ -271,10 +281,12 @@ class TableCard extends StatelessWidget {
           // Yükleniyor diyaloğu göster
           if (!dialogContext.mounted) return;
           
+          late BuildContext loadingContext;
           showDialog(
             context: dialogContext,
             barrierDismissible: false,
-            builder: (loadingContext) {
+            builder: (context) {
+              loadingContext = context;
               return const AlertDialog(
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -297,8 +309,13 @@ class TableCard extends StatelessWidget {
           );
           
           // Yükleniyor diyaloğunu kapat
-          if (!dialogContext.mounted) return;
-          Navigator.of(dialogContext).pop();
+          if (dialogContext.mounted) {
+            try {
+              Navigator.of(loadingContext).pop();
+            } catch (e) {
+              debugPrint('Diyalog kapatma hatası: $e');
+            }
+          }
           
           if (success) {
             // Başarılı mesajını göster
@@ -320,6 +337,161 @@ class TableCard extends StatelessWidget {
             );
           }
         },
+      ),
+    );
+  }
+
+  void _handleOrderTransfer(BuildContext context, TablesViewModel viewModel) async {
+    // Hedef masa olarak aktif masaları listele
+    final activeTables = viewModel.activeTables.where((t) => t.tableID != table.tableID).toList();
+    
+    if (activeTables.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aktarılabilecek başka aktif masa bulunamadı')),
+      );
+      return;
+    }
+
+    // Hedef masa seçimi diyaloğunu göster
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.receipt, color: Colors.blue),
+            SizedBox(width: 10),
+            Text('Adisyon Aktarım'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Adisyonu aktarmak istediğiniz hedef masayı seçin:',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: activeTables.length,
+                  itemBuilder: (context, index) {
+                    final targetTable = activeTables[index];
+                    return ListTile(
+                      title: Text(targetTable.tableName),
+                      subtitle: Text('Sipariş: ${targetTable.orderAmount} ₺'),
+                      onTap: () async {
+                        // Onay dialogu göster
+                        final confirmTransfer = await showDialog<bool>(
+                          context: dialogContext,
+                          builder: (confirmContext) => AlertDialog(
+                            title: const Text('Onay'),
+                            content: Text(
+                              '${table.tableName} masasının adisyonu ${targetTable.tableName} masasına aktarılacak. Onaylıyor musunuz?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(confirmContext).pop(false),
+                                child: const Text('İptal'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.of(confirmContext).pop(true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                ),
+                                child: const Text('Onayla'),
+                              ),
+                            ],
+                          ),
+                        );
+                        
+                        if (confirmTransfer != true) return;
+                        
+                        // İlk diyaloğu kapat
+                        if (!dialogContext.mounted) return;
+                        Navigator.of(dialogContext).pop();
+                        
+                        // Yükleme dialogu göster
+                        if (!context.mounted) return;
+                        
+                        late BuildContext loadingContext;
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) {
+                            loadingContext = context;
+                            return const AlertDialog(
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text('Adisyon aktarılıyor...'),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                        
+                        // Adisyon aktarma işlemini gerçekleştir
+                        final success = await viewModel.transferOrder(
+                          userToken: userToken,
+                          compID: compID,
+                          oldOrderID: table.orderID,
+                          newOrderID: targetTable.orderID,
+                        );
+                        
+                        // Yükleme dialogunu kapat
+                        if (context.mounted) {
+                          try {
+                            Navigator.of(loadingContext).pop();
+                          } catch (e) {
+                            debugPrint('Diyalog kapatma hatası: $e');
+                          }
+                        }
+                        
+                        // Sonucu göster
+                        if (!context.mounted) return;
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              success
+                                ? (viewModel.successMessage ?? 'Adisyon başarıyla aktarıldı')
+                                : (viewModel.errorMessage ?? 'Adisyon aktarma işlemi başarısız oldu')
+                            ),
+                            backgroundColor: success ? Colors.green : Colors.red,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                        
+                        if (success) {
+                          // Tabloları yenile
+                          await viewModel.getTablesData(
+                            userToken: userToken,
+                            compID: compID,
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('İptal'),
+          ),
+        ],
       ),
     );
   }
@@ -350,7 +522,8 @@ class TableCard extends StatelessWidget {
           // Yükleniyor diyaloğu göster
           if (!dialogContext.mounted) return;
           
-          BuildContext loadingContext;
+          // Yükleniyor diyaloğunu göster
+          late BuildContext loadingContext;
           showDialog(
             context: dialogContext,
             barrierDismissible: false,
@@ -367,7 +540,7 @@ class TableCard extends StatelessWidget {
                 ),
               );
             },
-          ).then((_) => null); // then ile olası hataları yakala
+          );
 
           // Masa birleştirme API çağrısı
           final success = await viewModel.mergeTables(
@@ -381,7 +554,7 @@ class TableCard extends StatelessWidget {
           try {
             // Yükleniyor diyaloğunu kapat
             if (dialogContext.mounted) {
-              Navigator.of(dialogContext).pop();
+              Navigator.of(loadingContext).pop();
             }
           } catch (e) {
             debugPrint('Diyalog kapatma hatası: $e');
@@ -509,6 +682,7 @@ class TableCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
+            // Ana içerik
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Center(
@@ -543,6 +717,8 @@ class TableCard extends StatelessWidget {
                 ),
               ),
             ),
+            
+            // Aktif masa için sağ üst köşede menü ikonu
             if (table.isActive)
               Positioned(
                 top: 0,
@@ -554,23 +730,49 @@ class TableCard extends StatelessWidget {
                   onPressed: () => _showTableOptions(context),
                 ),
               ),
-            // Birleştirilmiş masa ikonu
+              
+            // Birleştirilmiş masa için arka plan overlay
             if (table.isMerged)
-              Positioned(
-                top: 0,
-                left: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.9),
-                    borderRadius: const BorderRadius.only(
-                      bottomRight: Radius.circular(8),
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.15),
+                      borderRadius: borderRadius,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.people_alt,
-                    color: Colors.white,
-                    size: 18,
+                ),
+              ),
+            
+            // Birleştirilmiş masa ikonu - daha belirgin ve ortada
+            if (table.isMerged)
+              Positioned(
+                top: 3,
+                left: 3,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.people_alt,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Birleşik',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

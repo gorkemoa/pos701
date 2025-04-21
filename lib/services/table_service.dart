@@ -87,14 +87,14 @@ class TableService {
   Future<Map<String, dynamic>> mergeTables({
     required String userToken,
     required int compID,
-    required int tableID, // Ana masa
-    required int orderID, // Ana masaya ait orderID
-    required List<int> mergeTables, // Birleştirilecek masaların ID'leri
-    required String step, // 'merged' veya 'unmerged'
+    required int tableID,
+    required int orderID,
+    required List<int> mergeTables,
+    required String step, // "merged" veya "unmerged" değeri alabilir
   }) async {
     try {
-      final url = '${AppConstants.baseUrl}${AppConstants.tableMergeEndpoint}';
-      debugPrint('Masa birleştirme API isteği: $url');
+      final url = '${AppConstants.baseUrl}${AppConstants.tableChangeEndpoint}';
+      debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} API isteği: $url');
       
       final requestBody = {
         'userToken': userToken,
@@ -104,7 +104,7 @@ class TableService {
         'step': step,
         'mergeTables': mergeTables,
       };
-      debugPrint('Masa birleştirme istek verileri: $requestBody');
+      debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} istek verileri: $requestBody');
       
       final response = await http.put(
         Uri.parse(url),
@@ -115,17 +115,80 @@ class TableService {
         body: jsonEncode(requestBody),
       );
       
-      debugPrint('Masa birleştirme yanıt kodu: ${response.statusCode}');
-      debugPrint('Masa birleştirme yanıt içeriği: ${response.body}');
+      debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} yanıt kodu: ${response.statusCode}');
+      debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} yanıt içeriği: ${response.body}');
       
-      if (response.statusCode == 410) {
+      if (response.statusCode == 410 || response.statusCode == 200) {
         return jsonDecode(response.body);
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error_message': 'Yetkilendirme hatası: Lütfen tekrar giriş yapın.',
+        };
       } else {
-        throw Exception('Masa birleştirme hatası: ${response.statusCode}, ${response.body}');
+        return {
+          'success': false,
+          'error_message': 'Sunucu hatası: ${response.statusCode}',
+        };
       }
     } catch (e) {
-      debugPrint('Masa birleştirme işlemi sırasında hata: $e');
-      throw Exception('Masa birleştirme işlemi sırasında hata oluştu: $e');
+      debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} işlemi sırasında hata: $e');
+      return {
+        'success': false,
+        'error_message': 'İşlem sırasında bir hata oluştu: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> transferOrder({
+    required String userToken,
+    required int compID,
+    required int oldOrderID,
+    required int newOrderID,
+  }) async {
+    try {
+      final url = '${AppConstants.baseUrl}service/user/order/tableOrderTransfer';
+      debugPrint('Adisyon aktarım API isteği: $url');
+      
+      final requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        'oldOrderID': oldOrderID,
+        'newOrderID': newOrderID,
+      };
+      debugPrint('Adisyon aktarım istek verileri: $requestBody');
+      
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('Adisyon aktarım yanıt kodu: ${response.statusCode}');
+      debugPrint('Adisyon aktarım yanıt içeriği: ${response.body}');
+      
+      if (response.statusCode == 410 || response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error_message': 'Yetkilendirme hatası: Lütfen tekrar giriş yapın.',
+        };
+      } else {
+        return {
+          'success': false,
+          'error_message': 'Sunucu hatası: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      debugPrint('Adisyon aktarım işlemi sırasında hata: $e');
+      return {
+        'success': false,
+        'error_message': 'İstek gönderilirken bir hata oluştu: $e',
+      };
     }
   }
 }

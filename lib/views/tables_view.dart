@@ -21,9 +21,10 @@ class TablesView extends StatefulWidget {
   State<TablesView> createState() => _TablesViewState();
 }
 
-class _TablesViewState extends State<TablesView> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
+  TabController? _tabController;
   final TablesViewModel _viewModel = TablesViewModel();
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -32,24 +33,35 @@ class _TablesViewState extends State<TablesView> with SingleTickerProviderStateM
   }
 
   Future<void> _loadData() async {
+    // Eğer halen tabController varsa, önce onu dispose et
+    _disposeTabController();
+    
     await _viewModel.getTablesData(
       userToken: widget.userToken,
       compID: widget.compID,
     );
     
-    if (_viewModel.regions.isNotEmpty) {
-      _tabController = TabController(
-        length: _viewModel.regions.length,
-        vsync: this,
-      );
+    if (_viewModel.regions.isNotEmpty && mounted) {
+      setState(() {
+        _tabController = TabController(
+          length: _viewModel.regions.length,
+          vsync: this,
+        );
+        _isInitialized = true;
+      });
+    }
+  }
+  
+  void _disposeTabController() {
+    if (_tabController != null) {
+      _tabController!.dispose();
+      _tabController = null;
     }
   }
 
   @override
   void dispose() {
-    if (_viewModel.regions.isNotEmpty) {
-      _tabController.dispose();
-    }
+    _disposeTabController();
     super.dispose();
   }
 
@@ -90,6 +102,15 @@ class _TablesViewState extends State<TablesView> with SingleTickerProviderStateM
             return Scaffold(
               appBar: AppBar(title: Text(widget.title)),
               body: Center(child: Text(AppStrings.noRegionsFound)),
+            );
+          }
+
+          // TabController yoksa veya region sayısı değiştiyse yeni tabController oluştur
+          if (_tabController == null || _tabController!.length != regions.length) {
+            _disposeTabController();
+            _tabController = TabController(
+              length: regions.length,
+              vsync: this,
             );
           }
 
