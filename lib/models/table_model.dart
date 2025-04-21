@@ -88,6 +88,8 @@ class TableItem {
   final String tableName;
   final String orderAmount;
   final bool isActive;
+  final bool isMerged;
+  final List<int> mergedTableIDs;
 
   TableItem({
     required this.tableID,
@@ -95,6 +97,8 @@ class TableItem {
     required this.tableName,
     required this.orderAmount,
     required this.isActive,
+    this.isMerged = false,
+    this.mergedTableIDs = const [],
   });
 
   factory TableItem.fromJson(Map<String, dynamic> json) {
@@ -104,6 +108,10 @@ class TableItem {
       tableName: json['tableName'] ?? '',
       orderAmount: json['orderAmount'] ?? '',
       isActive: json['isActive'] ?? false,
+      isMerged: json['isMerged'] ?? false,
+      mergedTableIDs: json['mergedTableIDs'] != null 
+          ? List<int>.from(json['mergedTableIDs'])
+          : [],
     );
   }
 
@@ -114,6 +122,8 @@ class TableItem {
       'tableName': tableName,
       'orderAmount': orderAmount,
       'isActive': isActive,
+      'isMerged': isMerged,
+      'mergedTableIDs': mergedTableIDs,
     };
   }
 } 

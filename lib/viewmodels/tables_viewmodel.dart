@@ -79,6 +79,47 @@ class TablesViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> mergeTables({
+    required String userToken,
+    required int compID,
+    required int mainTableID,
+    required int orderID,
+    required List<int> tablesToMerge,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    
+    try {
+      final response = await _tableService.mergeTables(
+        userToken: userToken,
+        compID: compID,
+        tableID: mainTableID,
+        orderID: orderID,
+        mergeTables: tablesToMerge,
+        step: 'merged',
+      );
+      
+      _isLoading = false;
+      
+      if (response['success'] == true) {
+        _successMessage = response['success_message'] ?? 'Masalar başarıyla birleştirildi';
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'Masa birleştirme işlemi başarısız oldu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
   
   // Belirli bir bölgenin masalarını döndürür
   List<TableItem> getTablesByRegion(int regionId) {
@@ -100,6 +141,12 @@ class TablesViewModel extends ChangeNotifier {
   List<TableItem> get inactiveTables {
     final allTables = regions.expand((region) => region.tables).toList();
     return allTables.where((table) => !table.isActive).toList();
+  }
+
+  // Seçilen masa dışındaki tüm aktif ve pasif masaları döndürür
+  List<TableItem> getAvailableTablesForMerge(int excludeTableID) {
+    final allTables = regions.expand((region) => region.tables).toList();
+    return allTables.where((table) => table.tableID != excludeTableID).toList();
   }
   
   void clearMessages() {

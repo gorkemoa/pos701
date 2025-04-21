@@ -83,4 +83,49 @@ class TableService {
       throw Exception('Masa değiştirme işlemi sırasında hata oluştu: $e');
     }
   }
+
+  Future<Map<String, dynamic>> mergeTables({
+    required String userToken,
+    required int compID,
+    required int tableID, // Ana masa
+    required int orderID, // Ana masaya ait orderID
+    required List<int> mergeTables, // Birleştirilecek masaların ID'leri
+    required String step, // 'merged' veya 'unmerged'
+  }) async {
+    try {
+      final url = '${AppConstants.baseUrl}${AppConstants.tableMergeEndpoint}';
+      debugPrint('Masa birleştirme API isteği: $url');
+      
+      final requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        'tableID': tableID,
+        'orderID': orderID,
+        'step': step,
+        'mergeTables': mergeTables,
+      };
+      debugPrint('Masa birleştirme istek verileri: $requestBody');
+      
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('Masa birleştirme yanıt kodu: ${response.statusCode}');
+      debugPrint('Masa birleştirme yanıt içeriği: ${response.body}');
+      
+      if (response.statusCode == 410) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Masa birleştirme hatası: ${response.statusCode}, ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Masa birleştirme işlemi sırasında hata: $e');
+      throw Exception('Masa birleştirme işlemi sırasında hata oluştu: $e');
+    }
+  }
 }

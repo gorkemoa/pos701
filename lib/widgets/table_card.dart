@@ -3,6 +3,7 @@ import 'package:pos701/models/table_model.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/widgets/table_selection_dialog.dart';
+import 'package:pos701/widgets/table_merge_dialog.dart';
 import 'package:provider/provider.dart';
 
 class TableCard extends StatelessWidget {
@@ -20,8 +21,7 @@ class TableCard extends StatelessWidget {
   }) : super(key: key);
 
   void _showTableOptions(BuildContext context) {
-    // BottomSheet açılmadan önce viewModel'i alıyoruz
-    final viewModel = Provider.of<TablesViewModel>(context, listen: false);
+    final TablesViewModel viewModel = Provider.of<TablesViewModel>(context, listen: false);
     
     showModalBottomSheet(
       context: context,
@@ -75,9 +75,12 @@ class TableCard extends StatelessWidget {
                   iconColor: Colors.blue,
                   text: 'Masayı Değiştir',
                   onTap: () {
+                    // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
                     Navigator.pop(bottomSheetContext);
-                    // Context'i değiştirmeden önce viewModel'i aktarıyoruz
-                    _handleTableChange(context, viewModel);
+                    // Context kapandıktan sonraki işlem için Future.microtask kullan
+                    Future.microtask(() {
+                      _handleTableChange(context, viewModel);
+                    });
                   },
                 ),
                 const Divider(),
@@ -87,8 +90,12 @@ class TableCard extends StatelessWidget {
                   iconColor: Colors.blue,
                   text: 'Masaları Birleştir',
                   onTap: () {
+                    // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
                     Navigator.pop(bottomSheetContext);
-                    // Masaları birleştirme işlemi
+                    // Context kapandıktan sonraki işlem için Future.microtask kullan
+                    Future.microtask(() {
+                      _handleTableMerge(context, viewModel);
+                    });
                   },
                 ),
                 const Divider(),
@@ -130,7 +137,6 @@ class TableCard extends StatelessWidget {
   }
 
   void _handleTableChange(BuildContext context, TablesViewModel viewModel) async {
-    // artık viewModel parametre olarak geçirildiği için Provider.of kullanmıyoruz
     final inactiveTables = viewModel.inactiveTables;
     
     if (inactiveTables.isEmpty) {
@@ -141,16 +147,20 @@ class TableCard extends StatelessWidget {
     }
 
     // Boş (aktif olmayan) masa seçimi diyaloğunu göster
+    if (!context.mounted) return;
+    
     showDialog(
       context: context,
-      builder: (context) => TableSelectionDialog(
+      builder: (dialogContext) => TableSelectionDialog(
         inactiveTables: inactiveTables,
         onTableSelected: (selectedTable) async {
           // Yükleniyor diyaloğu göster
+          if (!dialogContext.mounted) return;
+          
           showDialog(
-            context: context,
+            context: dialogContext,
             barrierDismissible: false,
-            builder: (BuildContext context) {
+            builder: (loadingContext) {
               return const AlertDialog(
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -173,10 +183,12 @@ class TableCard extends StatelessWidget {
           );
           
           // Yükleniyor diyaloğunu kapat
-          Navigator.of(context).pop();
+          if (!dialogContext.mounted) return;
+          Navigator.of(dialogContext).pop();
           
           if (success) {
             // Başarılı mesajını göster
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(viewModel.successMessage ?? 'Masa başarıyla değiştirildi')),
             );
@@ -188,9 +200,146 @@ class TableCard extends StatelessWidget {
             );
           } else {
             // Hata mesajını göster
+            if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(viewModel.errorMessage ?? 'Masa değiştirme işlemi başarısız oldu')),
             );
+          }
+        },
+      ),
+    );
+  }
+
+  void _handleTableMerge(BuildContext context, TablesViewModel viewModel) async {
+    // Ana masa ile birleştirilecek masaların seçimi için kullanılabilir masaları al
+    final availableTables = viewModel.getAvailableTablesForMerge(table.tableID);
+    
+    if (availableTables.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Birleştirilebilecek masa bulunamadı')),
+      );
+      return;
+    }
+
+    // Birleştirilecek masaların seçimi diyaloğunu göster
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => TableMergeDialog(
+        mainTable: table,
+        availableTables: availableTables,
+        onTablesMerged: (selectedTables) async {
+          // Seçilen masa ID'lerini al
+          final selectedTableIds = selectedTables.map((t) => t.tableID).toList();
+          
+          // Yükleniyor diyaloğu göster
+          if (!dialogContext.mounted) return;
+          
+          BuildContext loadingContext;
+          showDialog(
+            context: dialogContext,
+            barrierDismissible: false,
+            builder: (context) {
+              loadingContext = context;
+              return const AlertDialog(
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Masalar birleştiriliyor...'),
+                  ],
+                ),
+              );
+            },
+          ).then((_) => null); // then ile olası hataları yakala
+
+          // Masa birleştirme API çağrısı
+          final success = await viewModel.mergeTables(
+            userToken: userToken,
+            compID: compID,
+            mainTableID: table.tableID,
+            orderID: table.orderID,
+            tablesToMerge: selectedTableIds,
+          );
+          
+          try {
+            // Yükleniyor diyaloğunu kapat
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+          } catch (e) {
+            debugPrint('Diyalog kapatma hatası: $e');
+          }
+          
+          if (success) {
+            // Başarılı mesajını göster
+            if (context.mounted) {
+              // Başarılı bir birleştirme için özel bir diyalog göster
+              showDialog(
+                context: context,
+                builder: (successContext) => AlertDialog(
+                  title: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Color(AppConstants.primaryColorValue),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('İşlem Başarılı'),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('${table.tableName} masası başarıyla birleştirildi.'),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Birleştirilen masalar sol üst köşedeki insan simgesiyle işaretlenmiştir.',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(successContext).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(AppConstants.primaryColorValue),
+                      ),
+                      child: const Text('Tamam'),
+                    ),
+                  ],
+                ),
+              );
+              
+              // SnackBar ile de bildirim göster
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(viewModel.successMessage ?? 'Masalar başarıyla birleştirildi'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+            
+            // Tabloları yenile
+            await viewModel.getTablesData(
+              userToken: userToken,
+              compID: compID,
+            );
+          } else {
+            // Hata mesajını göster
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(viewModel.errorMessage ?? 'Masa birleştirme işlemi başarısız oldu'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
         },
       ),
@@ -224,6 +373,7 @@ class TableCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(8);
+    final primaryColor = Color(AppConstants.primaryColorValue);
     
     return GestureDetector(
       onTap: onTap,
@@ -235,8 +385,8 @@ class TableCard extends StatelessWidget {
           borderRadius: borderRadius,
           border: Border.all(
             color: table.isActive 
-                ? Color(AppConstants.primaryColorValue) 
-                : Color(AppConstants.primaryColorValue),
+                ? primaryColor 
+                : primaryColor,
             width: table.isActive ? 2 : 1,
           ),
         ),
@@ -268,7 +418,7 @@ class TableCard extends StatelessWidget {
                         child: Text(
                           '₺${table.orderAmount}',
                           style: TextStyle(
-                            color: Color(AppConstants.primaryColorValue),
+                            color: primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -288,6 +438,26 @@ class TableCard extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   constraints: BoxConstraints.tight(const Size(32, 32)),
                   onPressed: () => _showTableOptions(context),
+                ),
+              ),
+            // Birleştirilmiş masa ikonu
+            if (table.isMerged)
+              Positioned(
+                top: 0,
+                left: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withOpacity(0.9),
+                    borderRadius: const BorderRadius.only(
+                      bottomRight: Radius.circular(8),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.people_alt,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ),
           ],
