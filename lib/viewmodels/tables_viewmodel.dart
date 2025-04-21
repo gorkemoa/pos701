@@ -121,6 +121,46 @@ class TablesViewModel extends ChangeNotifier {
     }
   }
   
+  Future<bool> unmergeTables({
+    required String userToken,
+    required int compID,
+    required int tableID,
+    required int orderID,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    
+    try {
+      final response = await _tableService.mergeTables(
+        userToken: userToken,
+        compID: compID,
+        tableID: tableID,
+        orderID: orderID,
+        mergeTables: [], // Boş liste gönder
+        step: 'unmerged', // Ayırma işlemi için 'unmerged' değeri
+      );
+      
+      _isLoading = false;
+      
+      if (response['success'] == true) {
+        _successMessage = response['success_message'] ?? 'Masalar başarıyla ayrıldı';
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'Masa ayırma işlemi başarısız oldu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  
   // Belirli bir bölgenin masalarını döndürür
   List<TableItem> getTablesByRegion(int regionId) {
     final region = regions.firstWhere(

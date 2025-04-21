@@ -84,7 +84,23 @@ class TableCard extends StatelessWidget {
                   },
                 ),
                 const Divider(),
-                _optionButton(
+                // Masa birleştirilmiş ise "Masaları Ayır" düğmesi, değilse "Masaları Birleştir" düğmesi göster
+                table.isMerged 
+                ? _optionButton(
+                  bottomSheetContext,
+                  icon: Icons.call_split,
+                  iconColor: Colors.orange,
+                  text: 'Masaları Ayır',
+                  onTap: () {
+                    // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
+                    Navigator.pop(bottomSheetContext);
+                    // Context kapandıktan sonraki işlem için Future.microtask kullan
+                    Future.microtask(() {
+                      _handleTableUnmerge(context, viewModel);
+                    });
+                  },
+                )
+                : _optionButton(
                   bottomSheetContext,
                   icon: Icons.merge_type,
                   iconColor: Colors.blue,
@@ -134,6 +150,104 @@ class TableCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _handleTableUnmerge(BuildContext context, TablesViewModel viewModel) async {
+    // Ayırma işleminden önce onay al
+    final confirmUnmerge = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.help_outline, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Masaları Ayır'),
+          ],
+        ),
+        content: Text(
+          'Bu işlem ${table.tableName} masasını ve bağlı masaları ayıracaktır. Devam etmek istiyor musunuz?',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('İptal'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Evet, Ayır'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmUnmerge != true) return;
+
+    // Yükleniyor diyaloğu göster
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Masalar ayrılıyor...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    // Masa ayırma API çağrısı
+    final success = await viewModel.unmergeTables(
+      userToken: userToken,
+      compID: compID,
+      tableID: table.tableID,
+      orderID: table.orderID,
+    );
+    
+    // Yükleniyor diyaloğunu kapat
+    if (!context.mounted) return;
+    Navigator.pop(context);
+    
+    if (success) {
+      // Başarılı mesajını göster
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.successMessage ?? 'Masalar başarıyla ayrıldı'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      
+      // Tabloları yenile
+      await viewModel.getTablesData(
+        userToken: userToken,
+        compID: compID,
+      );
+    } else {
+      // Hata mesajını göster
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage ?? 'Masa ayırma işlemi başarısız oldu'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleTableChange(BuildContext context, TablesViewModel viewModel) async {
