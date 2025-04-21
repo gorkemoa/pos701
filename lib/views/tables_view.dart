@@ -172,6 +172,8 @@ class _TablesViewState extends State<TablesView> with SingleTickerProviderStateM
           final table = region.tables[index];
           return TableCard(
             table: table,
+            userToken: widget.userToken,
+            compID: widget.compID,
             onTap: () {
               // Masa seçildiğinde
               debugPrint('${table.tableName} seçildi');

@@ -42,4 +42,45 @@ class TableService {
       throw Exception('Tablolar alınırken hata oluştu: $e');
     }
   }
+
+  Future<Map<String, dynamic>> changeTable({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    required int tableID,
+  }) async {
+    try {
+      final url = '${AppConstants.baseUrl}${AppConstants.tableChangeEndpoint}';
+      debugPrint('Masa değiştirme API isteği: $url');
+      
+      final requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        'orderID': orderID,
+        'tableID': tableID, // Yeni masanın ID değeri
+      };
+      debugPrint('Masa değiştirme istek verileri: $requestBody');
+      
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('Masa değiştirme yanıt kodu: ${response.statusCode}');
+      debugPrint('Masa değiştirme yanıt içeriği: ${response.body}');
+      
+      if (response.statusCode == 410) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Masa değiştirme hatası: ${response.statusCode}, ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Masa değiştirme işlemi sırasında hata: $e');
+      throw Exception('Masa değiştirme işlemi sırasında hata oluştu: $e');
+    }
+  }
 }

@@ -7,6 +7,7 @@ class AppConstants {
   static const String loginEndpoint = 'service/auth/login';
   static const String userInfoEndpoint = 'service/user/id/';
   static const String getTablesEndpoint = 'service/user/order/tableList';
+  static const String tableChangeEndpoint = 'service/user/order/tableChange';
   
   // Storage Keys
   static const String tokenKey = 'token';
