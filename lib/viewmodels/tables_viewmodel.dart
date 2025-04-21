@@ -146,7 +146,10 @@ class TablesViewModel extends ChangeNotifier {
   // Seçilen masa dışındaki tüm aktif ve pasif masaları döndürür
   List<TableItem> getAvailableTablesForMerge(int excludeTableID) {
     final allTables = regions.expand((region) => region.tables).toList();
-    return allTables.where((table) => table.tableID != excludeTableID).toList();
+    // Sadece pasif masaları listele (aktif masalar birleştirilemez)
+    return allTables.where((table) => 
+      table.tableID != excludeTableID && !table.isActive
+    ).toList();
   }
   
   void clearMessages() {

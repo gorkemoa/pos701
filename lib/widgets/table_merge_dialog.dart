@@ -191,10 +191,19 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${widget.mainTable.tableName} ile birleştirilecek masaları seçin',
+                        '${widget.mainTable.tableName} ile birleştirilecek boş masaları seçin',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Not: Sadece boş masalar birleştirilebilir',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                     ],
@@ -264,10 +273,19 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Birleştirilebilecek masa bulunamadı',
+                              'Birleştirilebilecek boş masa bulunamadı',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Sadece boş (sipariş olmayan) masalar birleştirilebilir',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                                fontStyle: FontStyle.italic,
                               ),
                             ),
                           ],
@@ -305,19 +323,12 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                                     fontSize: 16,
                                   ),
                                 ),
-                                subtitle: table.isActive 
-                                    ? Text(
-                                        'Aktif • ${table.orderAmount} ₺', 
-                                        style: TextStyle(
-                                          color: isSelected ? primaryColor : Colors.grey[600],
-                                        ),
-                                      )
-                                    : Text(
-                                        'Boş Masa',
-                                        style: TextStyle(
-                                          color: isSelected ? primaryColor : Colors.grey[600],
-                                        ),
-                                      ),
+                                subtitle: Text(
+                                  'Boş Masa',
+                                  style: TextStyle(
+                                    color: isSelected ? primaryColor : Colors.grey[600],
+                                  ),
+                                ),
                                 leading: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
@@ -327,7 +338,7 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(
-                                    table.isActive ? Icons.table_bar : Icons.table_bar_outlined,
+                                    Icons.table_bar_outlined,
                                     color: isSelected ? Colors.white : primaryColor,
                                     size: 28,
                                   ),
