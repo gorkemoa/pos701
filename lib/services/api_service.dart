@@ -19,9 +19,9 @@ class ApiService {
       'Authorization': _getBasicAuthHeader(),
     };
     
-    // API'nin 410 durum kodunu başarılı bir yanıt olarak değerlendirmek için
+    // API'nin 410 durum kodunu ve 401 durum kodunu başarılı bir yanıt olarak değerlendirmek için
     _dio.options.validateStatus = (status) {
-      return (status != null && (status >= 200 && status < 300)) || status == 410;
+      return (status != null && (status >= 200 && status < 300)) || status == 410 || status == 401;
     };
 
     _dio.interceptors.add(
@@ -56,6 +56,11 @@ class ApiService {
           // 410 durum kodu için özel mesaj
           if (response.statusCode == 410) {
             _logger.i('HTTP 410 alındı: Bu API için normal bir yanıt, başarılı kabul ediliyor');
+          }
+          
+          // 401 durum kodu için özel mesaj
+          if (response.statusCode == 401) {
+            _logger.w('HTTP 401 alındı: Yetkisiz erişim hatası. Yeniden kimlik doğrulama gerekebilir.');
           }
           
           // Response Log

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:pos701/models/statistics_model.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
+import 'package:pos701/viewmodels/statistics_viewmodel.dart';
 import 'package:pos701/widgets/app_drawer.dart';
 import 'package:pos701/widgets/dashboard_card.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -18,16 +20,22 @@ class _HomeViewState extends State<HomeView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Kullanıcı bilgilerini yükle
       final userViewModel = Provider.of<UserViewModel>(context, listen: false);
       if (userViewModel.userInfo == null) {
         userViewModel.loadUserInfo();
       }
+      
+      // İstatistik verilerini yükle
+      final statisticsViewModel = Provider.of<StatisticsViewModel>(context, listen: false);
+      statisticsViewModel.loadStatistics(1); // Burada compID'yi 1 olarak sabit verdim, gerçek uygulamada dinamik olmalı
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final userViewModel = Provider.of<UserViewModel>(context);
+    final statisticsViewModel = Provider.of<StatisticsViewModel>(context);
     
     return Scaffold(
       appBar: AppBar(
@@ -45,15 +53,16 @@ class _HomeViewState extends State<HomeView> {
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
               userViewModel.loadUserInfo();
+              statisticsViewModel.refreshStatistics(1); // compID'yi 1 olarak sabit verdim
             },
           ),
         ],
       ),
       drawer: const AppDrawer(),
-      body: userViewModel.isLoading
+      body: statisticsViewModel.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : userViewModel.errorMessage != null
-              ? Center(child: Text('Hata: ${userViewModel.errorMessage}'))
+          : statisticsViewModel.errorMessage != null
+              ? Center(child: Text('Hata: ${statisticsViewModel.errorMessage}'))
               : SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -63,26 +72,26 @@ class _HomeViewState extends State<HomeView> {
                         DashboardCard(
                           backgroundColor: Color(AppConstants.incomeCardColor),
                           icon: Icons.payments,
-                          value: '₺0.00',
-                          title: 'Bugün alınan ödemeler',
+                          value: statisticsViewModel.statistics?.totalAmount ?? '₺0.00',
+                          title: statisticsViewModel.statistics?.totalAmountText ?? 'Bugün alınan ödemeler',
                         ),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.expenseCardColor),
                           icon: Icons.currency_exchange,
-                          value: '₺0.00',
-                          title: 'Bugünkü toplam gider tutarı',
+                          value: statisticsViewModel.statistics?.totalExpenseAmount ?? '₺0.00',
+                          title: statisticsViewModel.statistics?.totalExpenseAmountText ?? 'Bugünkü toplam gider tutarı',
                         ),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.orderCardColor),
                           icon: Icons.coffee,
-                          value: '₺0.00',
-                          title: 'Açık sipariş toplamı',
+                          value: statisticsViewModel.statistics?.totalOpenAmount ?? '₺0.00',
+                          title: statisticsViewModel.statistics?.totalOpenAmountText ?? 'Açık sipariş toplamı',
                         ),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.customerCardColor),
                           icon: Icons.people,
-                          value: '0',
-                          title: 'Bugün ağırlanan misafir sayısı',
+                          value: '${statisticsViewModel.statistics?.totalGuest ?? 0}',
+                          title: statisticsViewModel.statistics?.totalGuestText ?? 'Bugün ağırlanan misafir sayısı',
                         ),
                         const SizedBox(height: 16),
                         Container(
@@ -115,97 +124,7 @@ class _HomeViewState extends State<HomeView> {
                               ),
                               const SizedBox(height: 16),
                               Expanded(
-                                child: LineChart(
-                                  LineChartData(
-                                    gridData: FlGridData(
-                                      show: true,
-                                      drawVerticalLine: true,
-                                      horizontalInterval: 0.2,
-                                      verticalInterval: 2,
-                                    ),
-                                    titlesData: FlTitlesData(
-                                      show: true,
-                                      bottomTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          reservedSize: 30,
-                                          interval: 2,
-                                          getTitlesWidget: (value, meta) {
-                                            const style = TextStyle(
-                                              color: Color(0xff72719b),
-                                              fontWeight: FontWeight.normal,
-                                              fontSize: 10,
-                                            );
-                                            String text;
-                                            if (value % 2 == 0) {
-                                              text = '${value.toInt().toString()}:00';
-                                            } else {
-                                              return const SizedBox.shrink();
-                                            }
-                                            return Padding(
-                                              padding: const EdgeInsets.only(top: 10.0),
-                                              child: Text(text, style: style),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                      leftTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          interval: 0.2,
-                                          reservedSize: 40,
-                                          getTitlesWidget: (value, meta) {
-                                            const style = TextStyle(
-                                              color: Color(0xff72719b),
-                                              fontWeight: FontWeight.normal,
-                                              fontSize: 10,
-                                            );
-                                            return Text('${value.toStringAsFixed(1)}', style: style);
-                                          },
-                                        ),
-                                      ),
-                                      rightTitles: AxisTitles(
-                                        sideTitles: SideTitles(showTitles: false),
-                                      ),
-                                      topTitles: AxisTitles(
-                                        sideTitles: SideTitles(showTitles: false),
-                                      ),
-                                    ),
-                                    borderData: FlBorderData(
-                                      show: true,
-                                      border: Border.all(color: const Color(0xffeceff1)),
-                                    ),
-                                    minX: 0,
-                                    maxX: 24,
-                                    minY: -1.0,
-                                    maxY: 1.0,
-                                    lineBarsData: [
-                                      LineChartBarData(
-                                        spots: const [
-                                          FlSpot(0, 0),
-                                          FlSpot(2, 0),
-                                          FlSpot(4, 0),
-                                          FlSpot(6, 0),
-                                          FlSpot(8, 0),
-                                          FlSpot(10, 0),
-                                          FlSpot(12, 0),
-                                          FlSpot(14, 0),
-                                          FlSpot(16, 0),
-                                          FlSpot(18, 0),
-                                          FlSpot(20, 0),
-                                          FlSpot(22, 0),
-                                          FlSpot(24, 0),
-                                        ],
-                                        isCurved: true,
-                                        color: Color(AppConstants.chartLineColor),
-                                        barWidth: 3,
-                                        isStrokeCapRound: true,
-                                        dotData: FlDotData(show: false),
-                                        belowBarData: BarAreaData(show: false),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                child: _buildSalesChart(statisticsViewModel),
                               ),
                             ],
                           ),
@@ -240,17 +159,7 @@ class _HomeViewState extends State<HomeView> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              const Expanded(
-                                child: Center(
-                                  child: Text(
-                                    'Veri yok',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              _buildPaymentTypesChart(statisticsViewModel),
                             ],
                           ),
                         ),
@@ -258,6 +167,144 @@ class _HomeViewState extends State<HomeView> {
                     ),
                   ),
                 ),
+    );
+  }
+  
+  Widget _buildSalesChart(StatisticsViewModel viewModel) {
+    final sales = viewModel.statistics?.nowDaySales ?? [];
+    
+    if (sales.isEmpty) {
+      return const Center(
+        child: Text(
+          'Veri yok',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 16,
+          ),
+        ),
+      );
+    }
+    
+    // Örnek veri noktaları oluştur
+    final spots = List.generate(25, (index) {
+      // Saat bazında veriyi bul
+      final hourData = sales.firstWhere(
+        (s) => s.hour == '$index:00',
+        orElse: () => SalesData(hour: '$index:00', amount: 0.0),
+      );
+      
+      return FlSpot(index.toDouble(), hourData.amount ?? 0.0);
+    });
+    
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: true,
+          horizontalInterval: 0.2,
+          verticalInterval: 2,
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 30,
+              interval: 2,
+              getTitlesWidget: (value, meta) {
+                const style = TextStyle(
+                  color: Color(0xff72719b),
+                  fontWeight: FontWeight.normal,
+                  fontSize: 10,
+                );
+                String text;
+                if (value % 2 == 0) {
+                  text = '${value.toInt().toString()}:00';
+                } else {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10.0),
+                  child: Text(text, style: style),
+                );
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 0.2,
+              reservedSize: 40,
+              getTitlesWidget: (value, meta) {
+                const style = TextStyle(
+                  color: Color(0xff72719b),
+                  fontWeight: FontWeight.normal,
+                  fontSize: 10,
+                );
+                return Text('${value.toStringAsFixed(1)}', style: style);
+              },
+            ),
+          ),
+          rightTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+        ),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: const Color(0xffeceff1)),
+        ),
+        minX: 0,
+        maxX: 24,
+        minY: -1.0,
+        maxY: 1.0,
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: Color(AppConstants.chartLineColor),
+            barWidth: 3,
+            isStrokeCapRound: true,
+            dotData: FlDotData(show: false),
+            belowBarData: BarAreaData(show: false),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildPaymentTypesChart(StatisticsViewModel viewModel) {
+    final payments = viewModel.statistics?.nowDayPayments ?? [];
+    
+    if (payments.isEmpty) {
+      return const Expanded(
+        child: Center(
+          child: Text(
+            'Veri yok',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Burada ödeme tiplerini gösteren chart widget'ı eklenebilir
+    // Şimdilik basit bir liste gösterimi yapalım
+    return Expanded(
+      child: ListView.builder(
+        itemCount: payments.length,
+        itemBuilder: (context, index) {
+          final payment = payments[index];
+          return ListTile(
+            title: Text(payment.type ?? 'Bilinmeyen'),
+            trailing: Text('${payment.amount?.toStringAsFixed(2)} TL'),
+          );
+        },
+      ),
     );
   }
 } 

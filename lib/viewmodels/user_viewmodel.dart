@@ -72,10 +72,31 @@ class UserViewModel extends ChangeNotifier {
   
   Future<int?> _getStoredUserId() async {
     final prefs = await SharedPreferences.getInstance();
+    // Öncelikle int değeri kontrol edelim (yeni depolama formatı)
+    final userId = prefs.getInt(AppConstants.userIdKey);
+    if (userId != null) {
+      _logger.d('Kayıtlı kullanıcı ID (int): $userId');
+      return userId;
+    }
+    
+    // Eğer int değer yoksa, eski depolama formatı olan String'i kontrol edelim
     final userIdStr = prefs.getString(AppConstants.userIdKey);
-    final userId = userIdStr != null ? int.parse(userIdStr) : null;
-    _logger.d('Kayıtlı kullanıcı ID: $userId');
-    return userId;
+    if (userIdStr != null) {
+      try {
+        final parsedUserId = int.parse(userIdStr);
+        _logger.d('Kayıtlı kullanıcı ID (string->int): $parsedUserId');
+        // Eski formatı yeni formata dönüştürelim
+        await prefs.setInt(AppConstants.userIdKey, parsedUserId);
+        await prefs.remove(AppConstants.userIdKey + '_str');
+        return parsedUserId;
+      } catch (e) {
+        _logger.e('Kullanıcı ID string değeri int\'e dönüştürülemedi', e);
+        return null;
+      }
+    }
+    
+    _logger.d('Kayıtlı kullanıcı ID bulunamadı');
+    return null;
   }
   
   Future<void> clearUserInfo() async {

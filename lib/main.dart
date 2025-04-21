@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/services/api_service.dart';
 import 'package:pos701/services/auth_service.dart';
+import 'package:pos701/services/statistics_service.dart';
 import 'package:pos701/viewmodels/login_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
+import 'package:pos701/viewmodels/statistics_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
@@ -35,6 +37,9 @@ class MyApp extends StatelessWidget {
         ProxyProvider<ApiService, AuthService>(
           update: (_, apiService, __) => AuthService(apiService),
         ),
+        ProxyProvider<ApiService, StatisticsService>(
+          update: (_, apiService, __) => StatisticsService(apiService),
+        ),
         ChangeNotifierProxyProvider<AuthService, LoginViewModel>(
           create: (_) => LoginViewModel(AuthService(ApiService())),
           update: (_, authService, __) => LoginViewModel(authService),
@@ -42,6 +47,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<AuthService, UserViewModel>(
           create: (_) => UserViewModel(AuthService(ApiService())),
           update: (_, authService, __) => UserViewModel(authService),
+        ),
+        ChangeNotifierProxyProvider<StatisticsService, StatisticsViewModel>(
+          create: (_) => StatisticsViewModel(StatisticsService(ApiService())),
+          update: (_, statisticsService, __) => StatisticsViewModel(statisticsService),
         ),
       ],
       child: MaterialApp(
