@@ -31,10 +31,16 @@ class MyApp extends StatelessWidget {
         title: 'POS701',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primaryColor: const Color(0xFFD74B4B),
+          primaryColor: const Color(0xFF77c178),
+          scaffoldBackgroundColor: const Color(0xFFf5f5f5),
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: Color(0xFF333333)),
+          ),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFD74B4B),
-            primary: const Color(0xFFD74B4B),
+            seedColor: const Color(0xFF77c178),
+            primary: const Color(0xFF77c178),
+            secondary: const Color.fromARGB(255, 255, 255, 255),
+            tertiary: const Color.fromARGB(255, 0, 0, 0),
           ),
         ),
         home: const LoginView(),
