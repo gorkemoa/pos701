@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/models/product_category_model.dart';
+import 'package:pos701/models/product_model.dart';
 import 'package:pos701/utils/app_logger.dart';
 
 class ProductService {
@@ -49,6 +50,53 @@ class ProductService {
     } catch (e) {
       _logger.e('Kategoriler alınırken hata oluştu', e);
       throw Exception('Kategoriler alınırken hata oluştu: $e');
+    }
+  }
+
+  Future<ProductResponse> getProductsOfCategory({
+    required String userToken,
+    required int compID,
+    required int catID,
+  }) async {
+    try {
+      final url = '${AppConstants.baseUrl}service/product/category/products';
+      _logger.d('Ürün API isteği: $url, KategoriID: $catID');
+      
+      final requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        'catID': catID,
+      };
+      _logger.d('İstek verileri: $requestBody');
+      
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      _logger.d('Ürün yanıtı alındı. Status: ${response.statusCode}');
+      _logger.d('HTTP Durum Kodu: ${response.statusCode}');
+      _logger.d('Yanıt Başlıkları: ${response.headers}');
+      _logger.d('Ham yanıt içeriği: ${response.body}');
+      
+      if (response.statusCode == 200 || response.statusCode == 410) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        _logger.d('Ham yanıt tipi: ${jsonResponse.runtimeType}');
+        _logger.d('Ham yanıt içeriği: $jsonResponse');
+        
+        final productResponse = ProductResponse.fromJson(jsonResponse);
+        return productResponse;
+      } else {
+        _logger.w('HTTP ${response.statusCode} hatası: Ürün verileri alınamadı');
+        throw Exception('HTTP ${response.statusCode}: Ürün verileri alınamadı');
+      }
+    } catch (e) {
+      _logger.e('Ürünler alınırken hata oluştu', e);
+      throw Exception('Ürünler alınırken hata oluştu: $e');
     }
   }
 } 

@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:pos701/models/user_model.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/viewmodels/category_viewmodel.dart';
+import 'package:pos701/viewmodels/product_viewmodel.dart';
 import 'package:pos701/models/product_category_model.dart';
+import 'package:pos701/models/product_model.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/services/product_service.dart';
 
@@ -12,6 +14,7 @@ class CategoryScreen extends StatefulWidget {
   final String userToken;
   final int? tableID;
   final int? orderID;
+  final String tableName;
 
   const CategoryScreen({
     Key? key,
@@ -19,6 +22,7 @@ class CategoryScreen extends StatefulWidget {
     required this.userToken,
     this.tableID,
     this.orderID,
+    this.tableName = "Yeni sipariş",
   }) : super(key: key);
 
   @override
@@ -27,13 +31,24 @@ class CategoryScreen extends StatefulWidget {
 
 class _CategoryScreenState extends State<CategoryScreen> {
   late CategoryViewModel _categoryViewModel;
+  late ProductViewModel _productViewModel;
   bool _isInitialized = false;
+  final TextEditingController _searchController = TextEditingController();
+  Category? _selectedCategory;
+  int _cartCount = 0;
 
   @override
   void initState() {
     super.initState();
     _categoryViewModel = CategoryViewModel(ProductService());
+    _productViewModel = ProductViewModel(ProductService());
     _loadCategories();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCategories() async {
@@ -46,121 +61,427 @@ class _CategoryScreenState extends State<CategoryScreen> {
       _isInitialized = true;
     });
   }
+  
+  Future<void> _loadProducts(int catID, String categoryName) async {
+    _productViewModel.setCategoryInfo(catID, categoryName);
+    final success = await _productViewModel.loadProductsOfCategory(
+      widget.userToken,
+      widget.compID,
+      catID,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _categoryViewModel,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _categoryViewModel),
+        ChangeNotifierProvider.value(value: _productViewModel),
+      ],
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Kategoriler'),
           backgroundColor: Color(AppConstants.primaryColorValue),
-        ),
-        body: Consumer<CategoryViewModel>(
-          builder: (context, viewModel, child) {
-            if (viewModel.isLoading) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-
-            if (viewModel.errorMessage != null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red.shade300,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      viewModel.errorMessage!,
-                      style: const TextStyle(fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _loadCategories,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(AppConstants.primaryColorValue),
-                      ),
-                      child: const Text('Yeniden Dene'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (!viewModel.hasCategories) {
-              return const Center(
-                child: Text('Kategori bulunamadı'),
-              );
-            }
-
-            return GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.2,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.tableName.toUpperCase(), 
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              itemCount: viewModel.categories.length,
-              itemBuilder: (context, index) {
-                final category = viewModel.categories[index];
-                Color categoryColor;
-                try {
-                  categoryColor = Color(
-                    int.parse(category.catColor.replaceFirst('#', '0xFF')),
+              Text("Yeni sipariş", 
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.chevron_left, size: 30),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.menu),
+              onPressed: () {},
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Arama Çubuğu
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Ürün arayın...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(vertical: 0),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+            ),
+            
+            // İçerik
+            Expanded(
+              child: Consumer<CategoryViewModel>(
+                builder: (context, categoryViewModel, child) {
+                  if (categoryViewModel.isLoading) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (categoryViewModel.errorMessage != null) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            categoryViewModel.errorMessage!,
+                            style: const TextStyle(fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadCategories,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(AppConstants.primaryColorValue),
+                            ),
+                            child: const Text('Yeniden Dene'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (!categoryViewModel.hasCategories) {
+                    return const Center(
+                      child: Text('Kategori bulunamadı'),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      // Kategoriler Bölümü
+                      Container(
+                        height: MediaQuery.of(context).size.height * 0.28,
+                        child: GridView.builder(
+                          padding: const EdgeInsets.all(2),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 2,
+                            mainAxisSpacing: 3,
+                            childAspectRatio: 2,
+                          ),
+                          itemCount: categoryViewModel.categories.length,
+                          itemBuilder: (context, index) {
+                            final category = categoryViewModel.categories[index];
+                            Color categoryColor;
+                            try {
+                              categoryColor = Color(
+                                int.parse(category.catColor.replaceFirst('#', '0xFF')),
+                              );
+                            } catch (e) {
+                              categoryColor = Colors.grey;
+                            }
+                            
+                            return _buildCategoryButton(category, categoryColor);
+                          },
+                        ),
+                      ),
+                      
+                      // Ürünler Bölümü
+                      Expanded(
+                        child: Consumer<ProductViewModel>(
+                          builder: (context, productViewModel, child) {
+                            if (_selectedCategory == null) {
+                              return Center(
+                                child: Text(
+                                  'Lütfen bir kategori seçin',
+                                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                                ),
+                              );
+                            }
+                            
+                            if (productViewModel.isLoading) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            if (productViewModel.errorMessage != null) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: 48,
+                                      color: Colors.red.shade300,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      productViewModel.errorMessage!,
+                                      style: const TextStyle(fontSize: 16),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: () => _loadProducts(_selectedCategory!.catID, _selectedCategory!.catName),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Color(
+                                          int.parse(_selectedCategory!.catColor.replaceFirst('#', '0xFF')),
+                                        ),
+                                      ),
+                                      child: const Text('Yeniden Dene'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            if (!productViewModel.hasProducts) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      size: 48,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'Bu kategoride henüz ürün bulunmuyor',
+                                      style: TextStyle(fontSize: 16),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return GridView.builder(
+                              padding: const EdgeInsets.all(8),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 0.8,
+                              ),
+                              itemCount: productViewModel.products.length,
+                              itemBuilder: (context, index) {
+                                final product = productViewModel.products[index];
+                                return _buildProductCard(product);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   );
-                } catch (e) {
-                  categoryColor = Colors.grey;
-                }
-                
-                return _buildCategoryCard(category, categoryColor);
-              },
-            );
-          },
+                },
+              ),
+            ),
+            
+            // Alt Navigasyon Çubuğu
+            Container(
+              height: 60,
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey.shade300)),
+              ),
+              child: Stack(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            color: Color(AppConstants.primaryColorValue),
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.chevron_left, color: Colors.white),
+                                  Text(
+                                    'Geri',
+                                    style: TextStyle(color: Colors.white, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {},
+                          child: Container(
+                            color: Color(AppConstants.primaryColorValue),
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.camera_alt, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Ödeme Al',
+                                    style: TextStyle(color: Colors.white, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {},
+                          child: Container(
+                            color: Color(AppConstants.primaryColorValue),
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.print, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Yazdır',
+                                    style: TextStyle(color: Colors.white, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: _cartCount > 0 
+                        ? Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              _cartCount.toString(),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : SizedBox(),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildCategoryCard(Category category, Color categoryColor) {
+  Widget _buildCategoryButton(Category category, Color categoryColor) {
+    final isSelected = _selectedCategory?.catID == category.catID;
+    
     return Card(
-      elevation: 4,
+      margin: const EdgeInsets.all(2),
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(0),
+      ),
+      color: categoryColor,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedCategory = category;
+          });
+          _loadProducts(category.catID, category.catName);
+        },
+        child: Center(
+          child: Text(
+            category.catName.toUpperCase(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductCard(Product product) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.all(4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+        side: BorderSide(
+          color: Colors.grey.shade300,
+          width: 1,
+        ),
       ),
       child: InkWell(
         onTap: () {
-          // Ürün listesi ekranına yönlendirme yapılacak
+          // Ürün sepete eklenecek
+          setState(() {
+            _cartCount++;
+          });
         },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                categoryColor.withOpacity(0.7),
-                categoryColor,
-              ],
-            ),
-          ),
-          child: Center(
-            child: Text(
-              category.catName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Center(
+                  child: Text(
+                    product.proName.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  '₺${product.proPrice.replaceAll(" TL", "")}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
           ),
         ),
       ),
