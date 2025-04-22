@@ -5,7 +5,7 @@ import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/widgets/table_selection_dialog.dart';
 import 'package:pos701/widgets/table_merge_dialog.dart';
 import 'package:provider/provider.dart';
-import 'package:pos701/screens/category_screen.dart';
+import 'package:pos701/views/category_view.dart';
 
 class TableCard extends StatelessWidget {
   final TableItem table;
@@ -671,7 +671,7 @@ class TableCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CategoryScreen(
+              builder: (context) => CategoryView(
                 compID: compID,
                 userToken: userToken,
                 tableID: table.tableID,

@@ -8,12 +8,14 @@ class AppConstants {
   static const String userInfoEndpoint = 'service/user/id/';
   static const String getTablesEndpoint = 'service/user/order/tableList';
   static const String tableChangeEndpoint = 'service/user/order/tableChange';
+  static const String productDetailEndpoint = 'service/product/id/detail';
   
   // Storage Keys
   static const String tokenKey = 'token';
   static const String userIdKey = 'userId';
   static const String userNameKey = 'userName';
   static const String rememberMeKey = 'rememberMe';
+  static const String companyIdKey = 'companyId';
   
   // Colors
   static const int primaryColorValue = 0xFF77c178; // Yeşil renk

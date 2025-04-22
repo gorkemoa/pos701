@@ -8,15 +8,17 @@ import 'package:pos701/models/product_category_model.dart';
 import 'package:pos701/models/product_model.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/services/product_service.dart';
+import 'package:pos701/views/basket_view.dart';
+import 'package:pos701/viewmodels/basket_viewmodel.dart';
 
-class CategoryScreen extends StatefulWidget {
+class CategoryView extends StatefulWidget {
   final int compID;
   final String userToken;
   final int? tableID;
   final int? orderID;
   final String tableName;
 
-  const CategoryScreen({
+  const CategoryView({
     Key? key,
     required this.compID,
     required this.userToken,
@@ -26,10 +28,10 @@ class CategoryScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<CategoryScreen> createState() => _CategoryScreenState();
+  State<CategoryView> createState() => _CategoryViewState();
 }
 
-class _CategoryScreenState extends State<CategoryScreen> {
+class _CategoryViewState extends State<CategoryView> {
   late CategoryViewModel _categoryViewModel;
   late ProductViewModel _productViewModel;
   bool _isInitialized = false;
@@ -73,6 +75,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final basketViewModel = Provider.of<BasketViewModel>(context);
+    
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _categoryViewModel),
@@ -296,112 +300,139 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 },
               ),
             ),
-            
-            // Alt Navigasyon Çubuğu
-            Container(
-              height: 60,
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Stack(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            color: Color(AppConstants.primaryColorValue),
-                            child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.chevron_left, color: Colors.white),
-                                  Text(
-                                    'Geri',
-                                    style: TextStyle(color: Colors.white, fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {},
-                          child: Container(
-                            color: Color(AppConstants.primaryColorValue),
-                            child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.camera_alt, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Ödeme Al',
-                                    style: TextStyle(color: Colors.white, fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {},
-                          child: Container(
-                            color: Color(AppConstants.primaryColorValue),
-                            child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.print, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Yazdır',
-                                    style: TextStyle(color: Colors.white, fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            if (!basketViewModel.isEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BasketView(
+                    tableName: widget.tableName,
                   ),
-                  Positioned(
-                    right: 10,
-                    bottom: 10,
-                    child: _cartCount > 0 
-                        ? Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              _cartCount.toString(),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                ),
+              );
+            }
+          },
+          backgroundColor: basketViewModel.isEmpty
+              ? Colors.grey
+              : Color(AppConstants.primaryColorValue),
+          child: Stack(
+            children: [
+              const Icon(Icons.shopping_cart),
+              if (basketViewModel.totalQuantity > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 12,
+                      minHeight: 12,
+                    ),
+                    child: Text(
+                      '${basketViewModel.totalQuantity}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // Alt Navigasyon Çubuğu
+        bottomNavigationBar: Container(
+          height: 60,
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.grey.shade300)),
+          ),
+          child: Stack(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        color: Color(AppConstants.primaryColorValue),
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.chevron_left, color: Colors.white),
+                              Text(
+                                'Geri',
+                                style: TextStyle(color: Colors.white, fontSize: 14),
                               ),
-                            ),
-                          )
-                        : SizedBox(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {},
+                      child: Container(
+                        color: Color(AppConstants.primaryColorValue),
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                              SizedBox(width: 4),
+                              Text(
+                                'Ödeme Al',
+                                style: TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {},
+                      child: Container(
+                        color: Color(AppConstants.primaryColorValue),
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.print, color: Colors.white, size: 18),
+                              SizedBox(width: 4),
+                              Text(
+                                'Yazdır',
+                                style: TextStyle(color: Colors.white, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildCategoryButton(Category category, Color categoryColor) {
-    final isSelected = _selectedCategory?.catID == category.catID;
     
     return Card(
       margin: const EdgeInsets.all(2),
@@ -446,9 +477,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
       child: InkWell(
         onTap: () {
           // Ürün sepete eklenecek
-          setState(() {
-            _cartCount++;
-          });
+          Provider.of<BasketViewModel>(context, listen: false).addProduct(product);
         },
         child: Padding(
           padding: const EdgeInsets.all(8.0),

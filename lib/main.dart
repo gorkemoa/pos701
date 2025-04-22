@@ -7,6 +7,7 @@ import 'package:pos701/services/statistics_service.dart';
 import 'package:pos701/viewmodels/login_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/viewmodels/statistics_viewmodel.dart';
+import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
@@ -41,9 +42,12 @@ class MyApp extends StatelessWidget {
         ProxyProvider<ApiService, StatisticsService>(
           update: (_, apiService, __) => StatisticsService(apiService),
         ),
-        ChangeNotifierProxyProvider<AuthService, LoginViewModel>(
-          create: (_) => LoginViewModel(AuthService(ApiService())),
-          update: (_, authService, __) => LoginViewModel(authService),
+        ChangeNotifierProxyProvider2<AuthService, ApiService, LoginViewModel>(
+          create: (context) => LoginViewModel(
+            Provider.of<AuthService>(context, listen: false),
+            Provider.of<ApiService>(context, listen: false),
+          ),
+          update: (_, authService, apiService, previous) => LoginViewModel(authService, apiService),
         ),
         ChangeNotifierProxyProvider<AuthService, UserViewModel>(
           create: (_) => UserViewModel(AuthService(ApiService())),
@@ -52,6 +56,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProxyProvider<StatisticsService, StatisticsViewModel>(
           create: (_) => StatisticsViewModel(StatisticsService(ApiService())),
           update: (_, statisticsService, __) => StatisticsViewModel(statisticsService),
+        ),
+        ChangeNotifierProvider<BasketViewModel>(
+          create: (_) => BasketViewModel(),
         ),
       ],
       child: MaterialApp(

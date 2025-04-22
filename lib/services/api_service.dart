@@ -156,6 +156,12 @@ class ApiService {
     await _prefs?.setInt(AppConstants.userIdKey, userId);
     _logger.i('KullanıcıID kaydedildi: $userId');
   }
+  
+  Future<void> saveCompanyId(int companyId) async {
+    await _initPrefs();
+    await _prefs?.setInt(AppConstants.companyIdKey, companyId);
+    _logger.i('ŞirketID kaydedildi: $companyId');
+  }
 
   Future<String?> getToken() async {
     await _initPrefs();
@@ -166,11 +172,17 @@ class ApiService {
     await _initPrefs();
     return _prefs?.getInt(AppConstants.userIdKey);
   }
+  
+  Future<int?> getCompanyId() async {
+    await _initPrefs();
+    return _prefs?.getInt(AppConstants.companyIdKey);
+  }
 
   Future<void> clearToken() async {
     await _initPrefs();
     await _prefs?.remove(AppConstants.tokenKey);
     await _prefs?.remove(AppConstants.userIdKey);
+    await _prefs?.remove(AppConstants.companyIdKey);
     _logger.i('Token ve kullanıcı bilgileri temizlendi');
   }
 } 

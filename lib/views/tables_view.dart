@@ -4,6 +4,7 @@ import 'package:pos701/models/table_model.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/widgets/table_card.dart';
 import 'package:pos701/constants/app_constants.dart';
+import 'package:pos701/views/category_view.dart';
 
 class TablesView extends StatefulWidget {
   final String userToken;
@@ -207,11 +208,18 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
   }
 
   void _handleTableTap(TableItem table) {
-    // Masa seçildiğinde yapılacak işlemler
-    if (table.isActive) {
-      // Aktif masa - sipariş detayına git
-    } else {
-      // Pasif masa - yeni sipariş başlat
-    }
+    // Masa aktif olsa da olmasa da kategorileri ve ürünleri göster
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CategoryView(
+          compID: widget.compID,
+          userToken: widget.userToken,
+          tableID: table.tableID,
+          orderID: table.isActive ? table.orderID : null,
+          tableName: table.tableName,
+        ),
+      ),
+    );
   }
 } 

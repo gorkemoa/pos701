@@ -3,10 +3,14 @@ import 'package:pos701/models/login_model.dart';
 import 'package:pos701/models/user_model.dart';
 import 'package:pos701/models/api_response_model.dart';
 import 'package:pos701/services/auth_service.dart';
+import 'package:pos701/services/api_service.dart';
 import 'package:pos701/utils/app_logger.dart';
+import 'package:pos701/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final AuthService _authService;
+  final ApiService _apiService;
   final AppLogger _logger = AppLogger();
   
   bool _isLoading = false;
@@ -15,7 +19,7 @@ class LoginViewModel extends ChangeNotifier {
   String? _savedUsername;
   bool _isPasswordVisible = false;
   
-  LoginViewModel(this._authService) {
+  LoginViewModel(this._authService, this._apiService) {
     _logger.i('LoginViewModel başlatıldı');
     _loadSavedUsername();
   }
@@ -72,8 +76,21 @@ class LoginViewModel extends ChangeNotifier {
       
       _isLoading = false;
       
-      if (response.success) {
+      if (response.success && response.data != null) {
         _logger.i('Giriş başarılı');
+        
+        // Şirket ID'sini kaydet (eğer varsa)
+        if (response.data!.compID != null) {
+          await _apiService.saveCompanyId(response.data!.compID!);
+          _logger.i('Şirket ID kaydedildi: ${response.data!.compID}');
+          
+          // SharedPreferences'a doğrudan da kaydedelim (alternatif yöntem)
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt(AppConstants.companyIdKey, response.data!.compID!);
+        } else {
+          _logger.w('Kullanıcı bilgilerinde Şirket ID (compID) bulunamadı');
+        }
+        
         return true;
       } else {
         _errorMessage = 'Kullanıcı adı veya şifre hatalı';
