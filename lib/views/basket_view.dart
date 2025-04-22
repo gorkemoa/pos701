@@ -8,6 +8,7 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/product_detail_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
+import 'package:pos701/viewmodels/order_viewmodel.dart';
 
 class BasketView extends StatefulWidget {
   final String tableName;
@@ -25,11 +26,27 @@ class _BasketViewState extends State<BasketView> {
   String? _userToken;
   int? _compID;
   bool _isUserDataLoaded = false;
+  int? _tableID;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // TableView'den gelen tableID'yi alıyorum
+    final Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null && args.containsKey('tableID')) {
+      setState(() {
+        _tableID = args['tableID'];
+      });
+      debugPrint('🔵 Alınan tableID: $_tableID');
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -81,6 +98,68 @@ class _BasketViewState extends State<BasketView> {
     }
   }
 
+  Future<void> _siparisGonder() async {
+    if (_userToken == null || _compID == null || _tableID == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kullanıcı veya masa bilgileri alınamadı.')),
+      );
+      return;
+    }
+    
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    
+    if (basketViewModel.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sepette ürün bulunmamaktadır.')),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+    
+    final success = await orderViewModel.siparisSunucuyaGonder(
+      userToken: _userToken!,
+      compID: _compID!,
+      tableID: _tableID!,
+      tableName: widget.tableName,
+      sepetUrunleri: basketViewModel.items,
+      orderGuest: 1, // Varsayılan değer
+      kuverQty: 1, // Varsayılan değer
+    );
+    
+    setState(() {
+      _isLoading = false;
+    });
+    
+    if (success) {
+      // Sepeti temizle
+      basketViewModel.clearBasket();
+      
+      // Başarılı mesajı göster
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sipariş başarıyla oluşturuldu.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      // Ana sayfaya dön
+      Navigator.of(context).pop();
+    } else {
+      // Hata mesajı göster
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sipariş oluşturulamadı: ${orderViewModel.errorMessage ?? "Bilinmeyen hata"}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,10 +175,7 @@ class _BasketViewState extends State<BasketView> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const Text(
-              "Yeni sipariş",
-              style: TextStyle(fontSize: 16),
-            ),
+          
           ],
         ),
         leading: IconButton(
@@ -113,201 +189,199 @@ class _BasketViewState extends State<BasketView> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Başlık
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Yeni Sipariş",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black54,
-                ),
-              ),
-            ),
-          ),
-          
-          // Sepet Öğeleri Listesi
-          Expanded(
-            child: Consumer<BasketViewModel>(
-              builder: (context, basketViewModel, child) {
-                if (basketViewModel.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "Sepetiniz boş",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  );
-                }
-                
-                return ListView.separated(
-                  itemCount: basketViewModel.items.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final item = basketViewModel.items[index];
-                    return _buildBasketItem(context, item);
-                  },
-                );
-              },
-            ),
-          ),
-          
-          // Toplam Bilgileri
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.grey.shade300)),
-            ),
-            child: Consumer<BasketViewModel>(
-              builder: (context, basketViewModel, child) {
-                return Column(
-                  children: [
-                    // Toplam Tutar Satırı
-                    _buildInfoRow(
-                      "Toplam Tutar",
-                      "₺${basketViewModel.totalAmount.toStringAsFixed(2)}",
-                    ),
-                    
-                    // İndirim Satırı
-                    _buildInfoRow(
-                      "İndirim",
-                      "₺${basketViewModel.discount.toStringAsFixed(2)}",
-                    ),
-                    
-                    // Tahsil Edilen Satırı
-                    _buildInfoRow(
-                      "Tahsil Edilen",
-                      "₺${basketViewModel.collectedAmount.toStringAsFixed(2)}",
-                    ),
-                    
-                    // Kalan Satırı
-                    _buildInfoRow(
-                      "Kalan",
-                      "₺${basketViewModel.remainingAmount.toStringAsFixed(2)}",
-                      isBold: true,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          
-          // Alt Butonlar
-          Container(
-            height: 90,
-            child: Row(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
               children: [
-                // Kaydet Butonu
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                    
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(AppConstants.primaryColorValue),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
+                // Başlık
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      widget.tableName + " Siparişi",
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black54,
                       ),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle_outline, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text(
-                          "Kaydet",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ),
                 
-                // Ödeme Al Butonu
+                // Sepet Öğeleri Listesi
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                     
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(AppConstants.primaryColorValue),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
-                      ),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.payment, color: Colors.white, size: 18),
-                        SizedBox(width: 4),
-                        Text(
-                          "Ödeme Al",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
+                  child: Consumer<BasketViewModel>(
+                    builder: (context, basketViewModel, child) {
+                      if (basketViewModel.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            "Sepetiniz boş",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        );
+                      }
+                      
+                      return ListView.separated(
+                        itemCount: basketViewModel.items.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final item = basketViewModel.items[index];
+                          return _buildBasketItem(context, item);
+                        },
+                      );
+                    },
                   ),
                 ),
                 
-                // Yazdır Butonu
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                   
+                // Toplam Bilgileri
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                  ),
+                  child: Consumer<BasketViewModel>(
+                    builder: (context, basketViewModel, child) {
+                      return Column(
+                        children: [
+                          // Toplam Tutar Satırı
+                          _buildInfoRow(
+                            "Toplam Tutar",
+                            "₺${basketViewModel.totalAmount.toStringAsFixed(2)}",
+                          ),
+                          
+                          // İndirim Satırı
+                          _buildInfoRow(
+                            "İndirim",
+                            "₺${basketViewModel.discount.toStringAsFixed(2)}",
+                          ),
+                          
+                          // Tahsil Edilen Satırı
+                          _buildInfoRow(
+                            "Tahsil Edilen",
+                            "₺${basketViewModel.collectedAmount.toStringAsFixed(2)}",
+                          ),
+                          
+                          // Kalan Satırı
+                          _buildInfoRow(
+                            "Kalan",
+                            "₺${basketViewModel.remainingAmount.toStringAsFixed(2)}",
+                            isBold: true,
+                          ),
+                        ],
+                      );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(AppConstants.primaryColorValue),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
-                      ),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.print, color: Colors.white, size: 18),
-                        SizedBox(width: 4),
-                        Text(
-                          "Yazdır",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
+                  ),
+                ),
+                
+                // Alt Butonlar
+                Container(
+                  height: 90,
+                  child: Row(
+                    children: [
+                      // Kaydet Butonu
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _siparisGonder,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(AppConstants.primaryColorValue),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_outline, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                "Kaydet",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      
+                      // Ödeme Al Butonu
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                           
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(AppConstants.primaryColorValue),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.payment, color: Colors.white, size: 18),
+                              SizedBox(width: 4),
+                              Text(
+                                "Ödeme Al",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      // Yazdır Butonu
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                         
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(AppConstants.primaryColorValue),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.print, color: Colors.white, size: 18),
+                              SizedBox(width: 4),
+                              Text(
+                                "Yazdır",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
-
-
 
   Widget _buildBasketItem(BuildContext context, BasketItem item) {
     return Padding(
@@ -323,6 +397,7 @@ class _BasketViewState extends State<BasketView> {
                   compID: _compID!,
                   postID: item.product.postID,
                   tableName: widget.tableName,
+                  selectedProID: item.product.proID,
                 ),
               ),
             );

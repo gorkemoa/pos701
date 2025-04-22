@@ -672,6 +672,7 @@ class TableCard extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) => CategoryView(
+                tableName: table.tableName,
                 compID: compID,
                 userToken: userToken,
                 tableID: table.tableID,

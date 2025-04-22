@@ -13,6 +13,7 @@ class ProductDetailView extends StatefulWidget {
   final int compID;
   final int postID;
   final String tableName;
+  final int? selectedProID;
 
   const ProductDetailView({
     Key? key,
@@ -20,6 +21,7 @@ class ProductDetailView extends StatefulWidget {
     required this.compID,
     required this.postID,
     required this.tableName,
+    this.selectedProID,
   }) : super(key: key);
 
   @override
@@ -33,7 +35,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   ProductDetail? _productDetail;
   bool _isLoading = true;
   String? _errorMessage;
-  int _selectedVariantIndex = 0;
+  int _selectedPorsiyonIndex = 0;
 
   @override
   void initState() {
@@ -59,13 +61,21 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           _productDetail = response.data;
           _isLoading = false;
           
-          // Varsayılan varyantı seçme
-          _selectedVariantIndex = _productDetail!.variants
-              .indexWhere((variant) => variant.isDefault);
+          if (widget.selectedProID != null) {
+            // Sepetten seçilen ürünün porsiyonunu bul
+            _selectedPorsiyonIndex = _productDetail!.variants
+                .indexWhere((porsiyon) => porsiyon.proID == widget.selectedProID);
+          }
           
-          // Varsayılan varyant bulunamadıysa ilk varyantı seç
-          if (_selectedVariantIndex < 0 && _productDetail!.variants.isNotEmpty) {
-            _selectedVariantIndex = 0;
+          // Seçili porsiyon bulunamadıysa varsayılan porsiyonu seç
+          if (_selectedPorsiyonIndex < 0) {
+            _selectedPorsiyonIndex = _productDetail!.variants
+                .indexWhere((porsiyon) => porsiyon.isDefault);
+          }
+          
+          // Varsayılan porsiyon bulunamadıysa ilk porsiyonu seç
+          if (_selectedPorsiyonIndex < 0 && _productDetail!.variants.isNotEmpty) {
+            _selectedPorsiyonIndex = 0;
           }
         });
       } else {
@@ -87,26 +97,71 @@ class _ProductDetailViewState extends State<ProductDetailView> {
 
   void _addProductToBasket() {
     if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
-      final selectedVariant = _productDetail!.variants[_selectedVariantIndex];
+      final selectedPorsiyon = _productDetail!.variants[_selectedPorsiyonIndex];
       
       final product = Product(
         postID: _productDetail!.postID,
-        proID: selectedVariant.proID,
-        proName: '${_productDetail!.postTitle} ${selectedVariant.proUnit}',
-        proUnit: selectedVariant.proUnit,
-        proStock: selectedVariant.proStock.toString(),
-        proPrice: selectedVariant.proPrice.toString(),
+        proID: selectedPorsiyon.proID,
+        proName: '${_productDetail!.postTitle} ${selectedPorsiyon.proUnit}',
+        proUnit: selectedPorsiyon.proUnit,
+        proStock: selectedPorsiyon.proStock.toString(),
+        proPrice: selectedPorsiyon.proPrice.toString(),
       );
       
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      basketViewModel.addProduct(product);
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ürün sepete eklendi'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      // Sepetten gelen bir ürün mü?
+      if (widget.selectedProID != null) {
+        // Sepetten gelen ürünün eski proID'si
+        int oldProID = widget.selectedProID!;
+        
+        // Eğer aynı porsiyon seçildiyse işlem yapmaya gerek yok
+        if (oldProID == selectedPorsiyon.proID) {
+          Navigator.of(context).pop();
+          return;
+        }
+        
+        // Eski ürünü sepetten bul
+        final existingItem = basketViewModel.items.firstWhere(
+          (item) => item.product.proID == oldProID,
+          orElse: () => BasketItem(product: product, quantity: 0),
+        );
+        
+        if (existingItem.quantity > 0) {
+          // Sadece seçili öğeyi güncelle, miktar korunacak
+          basketViewModel.updateSpecificItem(oldProID, product, existingItem.quantity);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ürün porsiyonu güncellendi'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else {
+          // Ürün bulunamadı, normal ekleme yap
+          basketViewModel.addProduct(product);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ürün sepete eklendi'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Normal ürün ekleme
+        basketViewModel.addProduct(product);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ürün sepete eklendi'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
+      // Geri dön
+      Navigator.of(context).pop();
     }
   }
 
@@ -167,9 +222,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           ),
           const SizedBox(height: 24),
           
-          // Varyantlar
+          // Porsiyonlar
           const Text(
-            'Varyantlar',
+            'Porsiyonlar',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -177,21 +232,21 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           ),
           const SizedBox(height: 12),
           
-          // Varyant Listesi
-          _buildVariantsList(),
+          // Porsiyon Listesi
+          _buildPorsiyonList(),
         ],
       ),
     );
   }
 
-  Widget _buildVariantsList() {
+  Widget _buildPorsiyonList() {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _productDetail!.variants.length,
       itemBuilder: (context, index) {
-        final variant = _productDetail!.variants[index];
-        final isSelected = index == _selectedVariantIndex;
+        final porsiyon = _productDetail!.variants[index];
+        final isSelected = index == _selectedPorsiyonIndex;
         
         return Card(
           elevation: isSelected ? 4 : 1,
@@ -206,7 +261,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           child: InkWell(
             onTap: () {
               setState(() {
-                _selectedVariantIndex = index;
+                _selectedPorsiyonIndex = index;
               });
             },
             child: Padding(
@@ -218,13 +273,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        variant.proUnit,
+                        porsiyon.proUnit,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (variant.isDefault)
+                      if (porsiyon.isDefault)
                         const Text(
                           'Varsayılan',
                           style: TextStyle(
@@ -235,7 +290,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                     ],
                   ),
                   Text(
-                    '₺${variant.proPrice.toStringAsFixed(2)}',
+                    '₺${porsiyon.proPrice.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -260,7 +315,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       return const SizedBox.shrink();
     }
     
-    final selectedVariant = _productDetail!.variants[_selectedVariantIndex];
+    final selectedPorsiyon = _productDetail!.variants[_selectedPorsiyonIndex];
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -289,7 +344,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                   ),
                 ),
                 Text(
-                  '₺${selectedVariant.proPrice.toStringAsFixed(2)}',
+                  '₺${selectedPorsiyon.proPrice.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -305,7 +360,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text(
-              'Sepete Ekle',
+              'Porsiyonu Güncelle',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

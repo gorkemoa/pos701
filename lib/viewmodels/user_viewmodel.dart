@@ -4,6 +4,7 @@ import 'package:pos701/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/utils/app_logger.dart';
+import 'package:flutter/scheduler.dart';
 
 class UserViewModel extends ChangeNotifier {
   final AuthService _authService;
@@ -31,7 +32,15 @@ class UserViewModel extends ChangeNotifier {
   // Güvenli bildirim gönderme metodu
   void _safeNotifyListeners() {
     if (!_disposed) {
-      notifyListeners();
+      if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+        notifyListeners();
+      } else {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (!_disposed) {
+            notifyListeners();
+          }
+        });
+      }
     } else {
       _logger.w('UserViewModel dispose edilmiş durumda, bildirim gönderilemiyor');
     }

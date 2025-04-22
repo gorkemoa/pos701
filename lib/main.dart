@@ -8,6 +8,7 @@ import 'package:pos701/viewmodels/login_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/viewmodels/statistics_viewmodel.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
+import 'package:pos701/viewmodels/order_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
@@ -20,18 +21,8 @@ void main() {
   logger.i('Uygulama başlatılıyor');
   logger.i('API Base URL: ${AppConstants.baseUrl}');
   
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final logger = AppLogger();
-    logger.d('MyApp build çağrıldı');
-    
-    return MultiProvider(
+  runApp(
+    MultiProvider(
       providers: [
         Provider<ApiService>(
           create: (_) => ApiService(),
@@ -59,6 +50,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<BasketViewModel>(
           create: (_) => BasketViewModel(),
+        ),
+        ChangeNotifierProvider<OrderViewModel>(
+          create: (_) => OrderViewModel(),
         ),
       ],
       child: MaterialApp(
@@ -96,13 +90,13 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Future<bool> _checkIfLoggedIn(AuthService authService) async {
-    final logger = AppLogger();
-    logger.d('Oturum durumu kontrol ediliyor');
-    return await authService.isLoggedIn();
-  }
+Future<bool> _checkIfLoggedIn(AuthService authService) async {
+  final logger = AppLogger();
+  logger.d('Oturum durumu kontrol ediliyor');
+  return await authService.isLoggedIn();
 }
 
