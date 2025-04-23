@@ -161,7 +161,9 @@ class _HomeViewState extends State<HomeView> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              _buildPaymentTypesChart(statisticsViewModel),
+                              Expanded(
+                                child: _buildPaymentTypesChart(statisticsViewModel),
+                              ),
                             ],
                           ),
                         ),
@@ -173,7 +175,7 @@ class _HomeViewState extends State<HomeView> {
   }
   
   Widget _buildSalesChart(StatisticsViewModel viewModel) {
-    final sales = viewModel.statistics?.nowDaySales ?? [];
+    final List<SalesData> sales = viewModel.statistics?.nowDaySales ?? [];
     
     if (sales.isEmpty) {
       return const Center(
@@ -187,12 +189,21 @@ class _HomeViewState extends State<HomeView> {
       );
     }
     
+    // Mevcut verileri debug amaçlı yazdır
+    debugPrint('Satış verileri: ${sales.length} adet');
+    for (var sale in sales) {
+      debugPrint('Saat: ${sale.hour}, Miktar: ${sale.amount}');
+    }
+    
     // Veri noktaları oluştur
     final spots = List.generate(25, (index) {
+      // Saat formatını 'index:00' olarak standardize et
+      String hourKey = '$index:00';
+      
       // Saat bazında veriyi bul
       final hourData = sales.firstWhere(
-        (s) => s.hour == '$index:00',
-        orElse: () => SalesData(hour: '$index:00', amount: 0.0),
+        (s) => s.hour == hourKey,
+        orElse: () => SalesData(hour: hourKey, amount: 0.0),
       );
       
       return FlSpot(index.toDouble(), hourData.amount ?? 0.0);
@@ -300,17 +311,15 @@ class _HomeViewState extends State<HomeView> {
   }
   
   Widget _buildPaymentTypesChart(StatisticsViewModel viewModel) {
-    final payments = viewModel.statistics?.nowDayPayments ?? [];
+    final List<PaymentData> payments = viewModel.statistics?.nowDayPayments ?? [];
     
     if (payments.isEmpty) {
-      return const Expanded(
-        child: Center(
-          child: Text(
-            'Veri yok',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
+      return const Center(
+        child: Text(
+          'Veri yok',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 16,
           ),
         ),
       );
@@ -319,82 +328,88 @@ class _HomeViewState extends State<HomeView> {
     // Toplam tutar hesapla
     final double totalAmount = payments.fold(0.0, (sum, payment) => sum + (payment.amount ?? 0.0));
     
-    return Expanded(
-      child: Row(
-        children: [
-          // Pasta grafiği
-          Expanded(
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
-                sections: payments.map((payment) {
-                  final double percentage = totalAmount > 0 
-                    ? ((payment.amount ?? 0.0) / totalAmount) * 100 
-                    : 0.0;
-                  
-                  // Her ödeme tipi için farklı renk oluştur
-                  final Color color = _getColorForPaymentType(payment.type ?? '');
-                  
-                  return PieChartSectionData(
-                    color: color,
-                    value: payment.amount ?? 0.0,
-                    title: '${percentage.toStringAsFixed(1)}%',
-                    radius: 60,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          
-          // Ödeme tipleri listesi ve açıklamalar
-          Expanded(
-            child: ListView.builder(
-              itemCount: payments.length,
-              itemBuilder: (context, index) {
-                final payment = payments[index];
-                final Color color = _getColorForPaymentType(payment.type ?? '');
+    return Row(
+      children: [
+        // Pasta grafiği
+        Expanded(
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
+              sections: payments.map((payment) {
+                final double percentage = totalAmount > 0 
+                  ? ((payment.amount ?? 0.0) / totalAmount) * 100 
+                  : 0.0;
                 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        color: color,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          payment.type ?? 'Bilinmeyen',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      Text(
-                        '${payment.amount?.toStringAsFixed(2)} TL',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                // API'den gelen renk kodunu kullan veya varsayılan renkler listesinden seç
+                final Color color = payment.color != null && payment.color!.startsWith('#')
+                    ? _hexToColor(payment.color!)
+                    : Colors.blue;
+                
+                return PieChartSectionData(
+                  color: color,
+                  value: payment.amount ?? 0.0,
+                  title: '${percentage.toStringAsFixed(1)}%',
+                  radius: 60,
+                  titleStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 );
-              },
+              }).toList(),
             ),
           ),
-        ],
-      ),
+        ),
+        
+        // Ödeme tipleri listesi ve açıklamalar
+        Expanded(
+          child: ListView.builder(
+            itemCount: payments.length,
+            itemBuilder: (context, index) {
+              final payment = payments[index];
+              
+              // API'den gelen renk kodunu kullan veya varsayılan renkler listesinden seç
+              final Color color = payment.color != null && payment.color!.startsWith('#')
+                  ? _hexToColor(payment.color!)
+                  : Colors.blue;
+              
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      color: color,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        payment.type ?? 'Bilinmeyen',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    Text(
+                      '${payment.amount?.toStringAsFixed(2)} TL',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
   
-  // Ödeme tipine göre renk döndür
-  Color _getColorForPaymentType(String type) {
-    // Basit bir hash fonksiyonu ile renk oluştur
-    final int hash = type.hashCode;
-    return Color(0xFF000000 + (hash % 0xFFFFFF));
+  // HexColor'ı Flutter Color'a dönüştürme
+  Color _hexToColor(String hexColor) {
+    hexColor = hexColor.replaceAll('#', '');
+    if (hexColor.length == 6) {
+      hexColor = 'FF$hexColor'; // Alfa kanalını ekle
+    }
+    return Color(int.parse('0x$hexColor'));
   }
 } 
