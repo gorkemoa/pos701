@@ -37,19 +37,36 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
     // Eğer halen tabController varsa, önce onu dispose et
     _disposeTabController();
     
-    await _viewModel.getTablesData(
-      userToken: widget.userToken,
-      compID: widget.compID,
-    );
-    
-    if (_viewModel.regions.isNotEmpty && mounted) {
+    try {
       setState(() {
-        _tabController = TabController(
-          length: _viewModel.regions.length,
-          vsync: this,
-        );
-        _isInitialized = true;
+        _isInitialized = false;
       });
+      
+      await _viewModel.getTablesData(
+        userToken: widget.userToken,
+        compID: widget.compID,
+      );
+      
+      if (_viewModel.regions.isNotEmpty && mounted) {
+        setState(() {
+          _tabController = TabController(
+            length: _viewModel.regions.length,
+            vsync: this,
+          );
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        // Hata durumunda kullanıcıya bilgi ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Veri yüklenirken bir hata oluştu: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
   
@@ -80,16 +97,40 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
 
           if (viewModel.errorMessage != null) {
             return Scaffold(
-              appBar: AppBar(title: Text(widget.title)),
+              appBar: AppBar(
+                title: Text(widget.title),
+                backgroundColor: Color(AppConstants.primaryColorValue),
+                leading: IconButton(
+                  icon: Icon(Icons.chevron_left, size: 30),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('${AppStrings.errorTitle}: ${viewModel.errorMessage}'),
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red.shade300,
+                    ),
                     const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Text(
+                        'Hata: ${viewModel.errorMessage}',
+                        style: const TextStyle(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _loadData,
-                      child: Text(AppStrings.retryButtonText),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(AppConstants.primaryColorValue),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      ),
+                      child: const Text('Yeniden Dene', style: TextStyle(fontSize: 16)),
                     ),
                   ],
                 ),
@@ -101,8 +142,51 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           
           if (regions.isEmpty) {
             return Scaffold(
-              appBar: AppBar(title: Text(widget.title)),
-              body: Center(child: Text(AppStrings.noRegionsFound)),
+              appBar: AppBar(
+                title: Text(widget.title),
+                backgroundColor: Color(AppConstants.primaryColorValue),
+                leading: IconButton(
+                  icon: Icon(Icons.chevron_left, size: 30),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _loadData,
+                  ),
+                ],
+              ),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.table_bar,
+                      size: 72,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Bölge bulunamadı',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Henüz bölge eklenmemiş veya görüntüleme izniniz bulunmuyor.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loadData,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Yeniden Dene'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(AppConstants.primaryColorValue),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 

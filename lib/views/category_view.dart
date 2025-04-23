@@ -304,13 +304,9 @@ class _CategoryViewState extends State<CategoryView> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            if (!basketViewModel.isEmpty) {
-              _viewBasket();
-            }
+            _goToBasket();
           },
-          backgroundColor: basketViewModel.isEmpty
-              ? Colors.grey
-              : Color(AppConstants.primaryColorValue),
+          backgroundColor: Color(AppConstants.primaryColorValue),
           child: Stack(
             children: [
               const Icon(Icons.shopping_cart),
@@ -569,7 +565,7 @@ class _CategoryViewState extends State<CategoryView> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => basketViewModel.addProduct(product),
+                    onTap: () => basketViewModel.addProduct(product, opID: 0),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       width: 32,
@@ -594,18 +590,30 @@ class _CategoryViewState extends State<CategoryView> {
     );
   }
 
-  void _viewBasket() {
-    Navigator.push(
-      context,
+  Future<void> _goToBasket() async {
+    debugPrint('🛒 Sepete yönlendiriliyor. TableID: ${widget.tableID}, OrderID: ${widget.orderID}, TableName: ${widget.tableName}');
+    
+    final Map<String, dynamic> arguments = {
+      'tableID': widget.tableID,
+      'tableName': widget.tableName,
+    };
+    
+    // Eğer sipariş varsa orderID ekleyelim
+    if (widget.orderID != null) {
+      arguments['orderID'] = widget.orderID;
+      debugPrint('🛒 Mevcut sipariş düzenleniyor. OrderID: ${widget.orderID}');
+    } else {
+      debugPrint('🛒 Yeni sipariş oluşturuluyor.');
+    }
+    
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => BasketView(
           tableName: widget.tableName,
+          orderID: widget.orderID,
         ),
         settings: RouteSettings(
-          arguments: {
-            'tableID': widget.tableID,
-            'tableName': widget.tableName,
-          },
+          arguments: arguments,
         ),
       ),
     );

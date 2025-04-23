@@ -13,6 +13,7 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:pos701/views/tables_view.dart';
+import 'package:pos701/views/basket_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +66,16 @@ void main() {
             primary: Color(AppConstants.primaryColorValue),
           ),
         ),
+        routes: {
+          '/basket': (context) => const BasketView(tableName: 'Sipariş Detayı'),
+          '/order_details': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+            return BasketView(
+              tableName: args['tableName'] ?? 'Sipariş Detayı',
+              orderID: args['orderID'],
+            );
+          },
+        },
         home: FutureBuilder<bool>(
           future: _checkIfLoggedIn(AuthService(ApiService())),
           builder: (context, snapshot) {

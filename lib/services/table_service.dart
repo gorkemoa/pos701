@@ -31,7 +31,7 @@ class TableService {
       debugPrint('Yanıt kodu: ${response.statusCode}');
       debugPrint('Yanıt içeriği: ${response.body}');
       
-      if (response.statusCode == 410) {
+      if (response.statusCode == 410 || response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         return TablesResponse.fromJson(data);
       } else {
@@ -185,6 +185,66 @@ class TableService {
       }
     } catch (e) {
       debugPrint('Adisyon aktarım işlemi sırasında hata: $e');
+      return {
+        'success': false,
+        'error_message': 'İstek gönderilirken bir hata oluştu: $e',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> fastPay({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    required int isDiscount,
+    required int discountType,
+    required int discount,
+    required int payType,
+    required String payAction,
+  }) async {
+    try {
+      final url = '${AppConstants.baseUrl}service/user/order/payment/fastPay';
+      debugPrint('Hızlı ödeme API isteği: $url');
+      
+      final requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        'orderID': orderID,
+        'isDiscount': isDiscount,
+        'discountType': discountType,
+        'discount': discount,
+        'payType': payType,
+        'payAction': payAction,
+      };
+      debugPrint('Hızlı ödeme istek verileri: $requestBody');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('Hızlı ödeme yanıt kodu: ${response.statusCode}');
+      debugPrint('Hızlı ödeme yanıt içeriği: ${response.body}');
+      
+      if (response.statusCode == 410 || response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error_message': 'Yetkilendirme hatası: Lütfen tekrar giriş yapın.',
+        };
+      } else {
+        return {
+          'success': false,
+          'error_message': 'Sunucu hatası: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      debugPrint('Hızlı ödeme işlemi sırasında hata: $e');
       return {
         'success': false,
         'error_message': 'İstek gönderilirken bir hata oluştu: $e',

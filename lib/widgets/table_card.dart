@@ -56,6 +56,9 @@ class TableCard extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(bottomSheetContext);
                     // Hızlı ödeme işlemi
+                    Future.microtask(() {
+                      _handleFastPay(context, viewModel);
+                    });
                   },
                 ),
                 const Divider(),
@@ -156,6 +159,116 @@ class TableCard extends StatelessWidget {
     );
   }
 
+  void _handleFastPay(BuildContext context, TablesViewModel viewModel) async {
+    // Onay diyaloğu göster
+    final confirmPay = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.payment, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Hızlı Ödeme'),
+          ],
+        ),
+        content: Text(
+          '${table.tableName} masasının ${table.orderAmount} ₺ tutarındaki hesabı hızlı ödeme ile kapatılacaktır. Onaylıyor musunuz?',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('İptal'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Onayla'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmPay != true) return;
+
+    // Yükleniyor diyaloğu göster
+    if (!context.mounted) return;
+    
+    late BuildContext loadingContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        loadingContext = context;
+        return const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Ödeme işlemi gerçekleştiriliyor...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    // Hızlı ödeme API çağrısı
+    final success = await viewModel.fastPay(
+      userToken: userToken,
+      compID: compID,
+      orderID: table.orderID,
+      isDiscount: 0,
+      discountType: 0,
+      discount: 0,
+      payType: 2,
+      payAction: "payClose",
+    );
+    
+    // Yükleniyor diyaloğunu kapat
+    if (context.mounted) {
+      try {
+        Navigator.of(loadingContext).pop();
+      } catch (e) {
+        debugPrint('Diyalog kapatma hatası: $e');
+      }
+    }
+    
+    if (success) {
+      // Başarılı mesajını göster
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.successMessage ?? 'Ödeme başarıyla tamamlandı'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      
+      // Tabloları yenile
+      await viewModel.getTablesData(
+        userToken: userToken,
+        compID: compID,
+      );
+    } else {
+      // Hata mesajını göster
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage ?? 'Ödeme işlemi başarısız oldu'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   void _handleTableUnmerge(BuildContext context, TablesViewModel viewModel) async {
     // Ayırma işleminden önce onay al
     final confirmUnmerge = await showDialog<bool>(
@@ -216,13 +329,7 @@ class TableCard extends StatelessWidget {
       },
     );
 
-    // Masa ayırma API çağrısı
-    final success = await viewModel.unmergeTables(
-      userToken: userToken,
-      compID: compID,
-      tableID: table.tableID,
-      orderID: table.orderID,
-    );
+    
     
     // Yükleniyor diyaloğunu kapat
     if (context.mounted) {
@@ -233,33 +340,14 @@ class TableCard extends StatelessWidget {
       }
     }
     
-    if (success) {
-      // Başarılı mesajını göster
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(viewModel.successMessage ?? 'Masalar başarıyla ayrıldı'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+
       
       // Tabloları yenile
       await viewModel.getTablesData(
         userToken: userToken,
         compID: compID,
       );
-    } else {
-      // Hata mesajını göster
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(viewModel.errorMessage ?? 'Masa ayırma işlemi başarısız oldu'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
-  }
 
   void _handleTableChange(BuildContext context, TablesViewModel viewModel) async {
     final inactiveTables = viewModel.inactiveTables;
@@ -665,24 +753,29 @@ class TableCard extends StatelessWidget {
     
     return GestureDetector(
       onTap: () {
-        // Masa aktif değilse, normal onTap fonksiyonunu çalıştır
-        // Masa aktifse, kategori ekranına yönlendir
-        if (table.isActive) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CategoryView(
-                tableName: table.tableName,
-                compID: compID,
-                userToken: userToken,
-                tableID: table.tableID,
-                orderID: table.orderID,
-              ),
+        // Masanın durumuna bakılmaksızın, her durumda CategoryView'a yönlendir
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CategoryView(
+              tableName: table.tableName,
+              compID: compID,
+              userToken: userToken,
+              tableID: table.tableID,
+              // Masa aktifse orderID'yi geçir, değilse null gönder
+              orderID: table.isActive ? table.orderID : null,
             ),
-          );
-        } else {
-          onTap();
-        }
+          ),
+        ).then((_) async {
+          // CategoryView'den geri döndükten sonra masa verilerini güncelle
+          if (context.mounted) {
+            final viewModel = Provider.of<TablesViewModel>(context, listen: false);
+            await viewModel.getTablesData(
+              userToken: userToken,
+              compID: compID,
+            );
+          }
+        });
       },
       onLongPress: table.isActive ? () => _showTableOptions(context) : null,
       child: Container(

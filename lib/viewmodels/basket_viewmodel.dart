@@ -3,58 +3,92 @@ import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
 
 class BasketViewModel extends ChangeNotifier {
-  final Basket _basket = Basket();
+  Basket _basket = Basket();
   
   List<BasketItem> get items => _basket.items;
   double get totalAmount => _basket.totalAmount;
   double get discount => _basket.discount;
   double get collectedAmount => _basket.collectedAmount;
   double get remainingAmount => _basket.remainingAmount;
+  bool get isEmpty => _basket.items.isEmpty;
+  int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.quantity);
   
-  void addProduct(Product product) {
-    _basket.addProduct(product);
+  // Ürün ekleme (tekil olarak)
+  void addProduct(Product product, {int opID = 0}) {
+    final existingIndex = _basket.items.indexWhere((item) => item.product.proID == product.proID);
+    
+    if (existingIndex != -1) {
+      // Mevcut ürün miktarını artır
+      _basket.items[existingIndex].quantity++;
+    } else {
+      // Yeni ürün ekle
+      _basket.items.add(BasketItem(
+        product: product,
+        quantity: 1,
+        opID: opID
+      ));
+    }
+    
     notifyListeners();
   }
   
+  // Sepete ürün ekleme/güncelleme (özel opID ile)
+  void addProductWithOpID(Product product, int quantity, int opID) {
+    final existingIndex = _basket.items.indexWhere((item) => 
+        item.product.proID == product.proID && item.opID == opID);
+    
+    if (existingIndex != -1) {
+      // Aynı ürün ve opID varsa miktarını güncelle
+      _basket.items[existingIndex].quantity = quantity;
+    } else {
+      // Yeni ürün ekle
+      _basket.items.add(BasketItem(
+        product: product,
+        quantity: quantity,
+        opID: opID
+      ));
+    }
+    
+    notifyListeners();
+  }
+  
+  // Ürün kaldırma
   void removeProduct(int productId) {
     _basket.removeProduct(productId);
     notifyListeners();
   }
   
+  // Miktar artırma
   void incrementQuantity(int productId) {
     _basket.incrementQuantity(productId);
     notifyListeners();
   }
   
+  // Miktar azaltma
   void decrementQuantity(int productId) {
     _basket.decrementQuantity(productId);
     notifyListeners();
   }
   
-  void setDiscount(double value) {
-    _basket.discount = value;
-    notifyListeners();
-  }
-  
-  void setCollectedAmount(double value) {
-    _basket.collectedAmount = value;
-    notifyListeners();
-  }
-  
+  // Sepeti temizleme
   void clearBasket() {
     _basket.clear();
     notifyListeners();
   }
   
-  bool get isEmpty => _basket.items.isEmpty;
-  int get itemCount => _basket.items.length;
-  int get totalQuantity {
-    int total = 0;
-    for (var item in _basket.items) {
-      total += item.quantity;
-    }
-    return total;
+  // İndirim uygulama
+  void applyDiscount(double amount) {
+    _basket.discount = amount;
+    notifyListeners();
   }
+  
+  // Tahsil edilen tutarı güncelleme
+  void updateCollectedAmount(double amount) {
+    _basket.collectedAmount = amount;
+    notifyListeners();
+  }
+
+  int get itemCount => _basket.items.length;
 
   int getProductQuantity(Product product) {
     final existingItem = _basket.items.firstWhere(

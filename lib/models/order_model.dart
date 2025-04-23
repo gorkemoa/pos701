@@ -33,6 +33,7 @@ class CustomerAddress {
 }
 
 class OrderProduct {
+  final int opID;
   final int postID;
   final int proID;
   final int proQty;
@@ -41,6 +42,7 @@ class OrderProduct {
   final bool isGift;
 
   OrderProduct({
+    this.opID = 0,
     required this.postID,
     required this.proID,
     required this.proQty,
@@ -51,6 +53,7 @@ class OrderProduct {
 
   Map<String, dynamic> toJson() {
     return {
+      'opID': opID,
       'postID': postID,
       'proID': proID,
       'proQty': proQty,
@@ -62,6 +65,7 @@ class OrderProduct {
 
   factory OrderProduct.fromJson(Map<String, dynamic> json) {
     return OrderProduct(
+      opID: json['opID'] ?? 0,
       postID: json['postID'] ?? 0,
       proID: json['proID'] ?? 0,
       proQty: json['proQty'] ?? 0,
@@ -144,9 +148,194 @@ class OrderResponse {
 
   factory OrderResponse.fromJson(Map<String, dynamic> json) {
     return OrderResponse(
-      orderID: json['orderID'] ?? 0,
-      message: json['message'] ?? '',
-      success: json['success'] ?? false,
+      orderID: json['orderID'],
+      message: json['message'],
+      success: json['success'],
     );
+  }
+}
+
+class OrderDetailRequest {
+  final String userToken;
+  final int compID;
+  final int orderID;
+
+  OrderDetailRequest({
+    required this.userToken,
+    required this.compID,
+    required this.orderID,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userToken': userToken,
+      'compID': compID,
+      'orderID': orderID,
+    };
+  }
+}
+
+class OrderDetail {
+  final int orderID;
+  final int tableID;
+  final int custID;
+  final String orderCode;
+  final String orderName;
+  final double orderAmount;
+  final double orderDiscount;
+  final String orderDesc;
+  final int orderGuest;
+  final String orderStatus;
+  final String orderDate;
+  final bool isActive;
+  final bool isCanceled;
+  final List<dynamic> customer;
+  final List<OrderDetailProduct> products;
+
+  OrderDetail({
+    required this.orderID,
+    required this.tableID,
+    required this.custID,
+    required this.orderCode,
+    required this.orderName,
+    required this.orderAmount,
+    required this.orderDiscount,
+    required this.orderDesc,
+    required this.orderGuest,
+    required this.orderStatus,
+    required this.orderDate,
+    required this.isActive,
+    required this.isCanceled,
+    required this.customer,
+    required this.products,
+  });
+
+  factory OrderDetail.fromJson(Map<String, dynamic> json) {
+    return OrderDetail(
+      orderID: json['orderID'],
+      tableID: json['tableID'],
+      custID: json['custID'],
+      orderCode: json['orderCode'],
+      orderName: json['orderName'],
+      orderAmount: (json['orderAmount'] ?? 0).toDouble(),
+      orderDiscount: (json['orderDiscount'] ?? 0).toDouble(),
+      orderDesc: json['orderDesc'],
+      orderGuest: json['orderGuest'],
+      orderStatus: json['orderStatus'],
+      orderDate: json['orderDate'],
+      isActive: json['isActive'],
+      isCanceled: json['isCanceled'],
+      customer: json['customer'],
+      products: List<OrderDetailProduct>.from(
+        (json['products'] ?? []).map((product) => OrderDetailProduct.fromJson(product))
+      ),
+    );
+  }
+}
+
+class OrderDetailProduct {
+  final int opID;
+  final int postID;
+  final int proID;
+  final String proName;
+  final String proUnit;
+  final int proQty;
+  final int paidQty;
+  final int currentQty;
+  final double retailPrice;
+  final double price;
+  final bool isCanceled;
+  final bool isGift;
+  final bool isPaid;
+
+  OrderDetailProduct({
+    this.opID = 0,
+    required this.postID,
+    required this.proID,
+    required this.proName,
+    required this.proUnit,
+    required this.proQty,
+    required this.paidQty,
+    required this.currentQty,
+    required this.retailPrice,
+    required this.price,
+    required this.isCanceled,
+    required this.isGift,
+    required this.isPaid,
+  });
+
+  factory OrderDetailProduct.fromJson(Map<String, dynamic> json) {
+    return OrderDetailProduct(
+      opID: json['opID'],
+      postID: json['postID'],
+      proID: json['proID'],
+      proName: json['proName'],
+      proUnit: json['proUnit'],
+      proQty: json['proQty'],
+      paidQty: json['paidQty'],
+      currentQty: json['currentQty'],
+      retailPrice: (json['retailPrice'] ?? 0).toDouble(),
+      price: (json['price'] ?? 0).toDouble(),
+      isCanceled: json['isCanceled'],
+      isGift: json['isGift'],
+      isPaid: json['isPaid'],
+    );
+  }
+}
+
+// Sipariş Güncelleme İstek Modeli
+class OrderUpdateRequest {
+  final String userToken;
+  final int compID;
+  final int orderID;
+  final int custID;
+  final String orderName;
+  final String orderDesc;
+  final int orderGuest;
+  final int kuverQty;
+  final int isKuver;
+  final int isWaiter;
+  final int isCust;
+  final String custName;
+  final String custPhone;
+  final List<dynamic> custAdrs;
+  final List<OrderProduct> products;
+
+  OrderUpdateRequest({
+    required this.userToken,
+    required this.compID,
+    required this.orderID,
+    this.custID = 0,
+    this.orderName = '',
+    this.orderDesc = '',
+    this.orderGuest = 1,
+    this.kuverQty = 1,
+    this.isKuver = 0,
+    this.isWaiter = 0,
+    this.isCust = 0,
+    this.custName = '',
+    this.custPhone = '',
+    this.custAdrs = const [],
+    required this.products,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userToken': userToken,
+      'compID': compID,
+      'orderID': orderID,
+      'custID': custID,
+      'orderName': orderName,
+      'orderDesc': orderDesc,
+      'orderGuest': orderGuest,
+      'kuverQty': kuverQty,
+      'isKuver': isKuver,
+      'isWaiter': isWaiter,
+      'isCust': isCust,
+      'custName': custName,
+      'custPhone': custPhone,
+      'custAdrs': custAdrs,
+      'products': products.map((product) => product.toJson()).toList(),
+    };
   }
 } 
