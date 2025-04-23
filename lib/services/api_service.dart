@@ -165,7 +165,15 @@ class ApiService {
 
   Future<String?> getToken() async {
     await _initPrefs();
-    return _prefs?.getString(AppConstants.tokenKey);
+    final token = _prefs?.getString(AppConstants.tokenKey);
+    
+    if (token == null || token.isEmpty) {
+      _logger.w('Token bulunamadı veya boş');
+      return null;
+    }
+    
+    _logger.d('Token alındı: ${token.substring(0, 10)}...');
+    return token;
   }
 
   Future<int?> getUserId() async {

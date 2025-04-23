@@ -6,6 +6,8 @@ import 'package:pos701/widgets/table_selection_dialog.dart';
 import 'package:pos701/widgets/table_merge_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/views/category_view.dart';
+import 'package:pos701/viewmodels/user_viewmodel.dart';
+import 'package:pos701/models/user_model.dart';
 
 class TableCard extends StatelessWidget {
   final TableItem table;
@@ -160,19 +162,101 @@ class TableCard extends StatelessWidget {
   }
 
   void _handleFastPay(BuildContext context, TablesViewModel viewModel) async {
-    // Onay diyaloğu göster
-    final confirmPay = await showDialog<bool>(
+    // Kullanıcı bilgilerini al
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    
+    // Kullanıcının ödeme tiplerini kontrol et
+    if (userViewModel.userInfo == null || userViewModel.userInfo!.company == null || 
+        userViewModel.userInfo!.company!.compPayTypes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ödeme bilgileri alınamadı. Lütfen tekrar giriş yapın.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Ödeme tiplerini al
+    final List<PaymentType> paymentTypes = userViewModel.userInfo!.company!.compPayTypes;
+    PaymentType? selectedPaymentType;
+    
+    // Ödeme tipi seçme diyaloğu göster
+    await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Row(
           children: [
             Icon(Icons.payment, color: Colors.red),
             SizedBox(width: 10),
-            Text('Hızlı Ödeme'),
+            Text('Ödeme Tipi Seçin'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: MediaQuery.of(context).size.height * 0.4,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: paymentTypes.length,
+            itemBuilder: (context, index) {
+              final paymentType = paymentTypes[index];
+              Color typeColor;
+              try {
+                typeColor = Color(int.parse(paymentType.typeColor.replaceFirst('#', '0xFF')));
+              } catch (e) {
+                typeColor = Colors.grey;
+              }
+              
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: typeColor.withOpacity(0.2),
+                  child: paymentType.typeImg.isNotEmpty 
+                    ? Image.network(
+                        paymentType.typeImg,
+                        width: 24,
+                        height: 24,
+                        errorBuilder: (context, error, stackTrace) => 
+                            Icon(Icons.payment, color: typeColor),
+                      )
+                    : Icon(Icons.payment, color: typeColor),
+                ),
+                title: Text(paymentType.typeName),
+                onTap: () {
+                  selectedPaymentType = paymentType;
+                  Navigator.of(dialogContext).pop();
+                },
+                trailing: Icon(Icons.chevron_right, color: typeColor),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('İptal'),
+          ),
+        ],
+      ),
+    );
+    
+    // Eğer ödeme tipi seçilmediyse işlemi iptal et
+    if (selectedPaymentType == null) {
+      return;
+    }
+    
+    // Onay diyaloğu göster
+    final confirmPay = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.payment, color: Colors.red),
+            SizedBox(width: 10),
+            Text('${selectedPaymentType!.typeName} ile Ödeme'),
           ],
         ),
         content: Text(
-          '${table.tableName} masasının ${table.orderAmount} ₺ tutarındaki hesabı hızlı ödeme ile kapatılacaktır. Onaylıyor musunuz?',
+          '${table.tableName} masasının ${table.orderAmount} ₺ tutarındaki hesabı ${selectedPaymentType!.typeName} ile ödenecektir. Onaylıyor musunuz?',
           style: const TextStyle(fontSize: 16),
         ),
         actions: [
@@ -227,7 +311,7 @@ class TableCard extends StatelessWidget {
       isDiscount: 0,
       discountType: 0,
       discount: 0,
-      payType: 2,
+      payType: selectedPaymentType!.typeID,
       payAction: "payClose",
     );
     
@@ -245,7 +329,7 @@ class TableCard extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(viewModel.successMessage ?? 'Ödeme başarıyla tamamlandı'),
+          content: Text('${selectedPaymentType!.typeName} ile ${viewModel.successMessage ?? 'ödeme başarıyla tamamlandı'}'),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 3),
         ),

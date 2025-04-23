@@ -19,30 +19,34 @@ class StatisticsService {
       _logger.d('İstatistik verileri alınıyor. CompID: $compID');
       
       final token = await _apiService.getToken();
-      if (token == null) {
-        _logger.w('Token bulunamadı');
+      if (token == null || token.isEmpty) {
+        _logger.w('Token bulunamadı veya geçersiz');
         return ApiResponseModel<StatisticsModel>(
           error: true,
           success: false,
-          errorCode: 'Token bulunamadı',
+          errorCode: 'Token bulunamadı veya geçersiz. Lütfen tekrar giriş yapın.',
         );
       }
       
       // Yeni bir Dio örneği oluştur ve Basic Auth ile yapılandır
       final dio = Dio();
       dio.options.baseUrl = AppConstants.baseUrl;
-      dio.options.connectTimeout = const Duration(seconds: 10);
-      dio.options.receiveTimeout = const Duration(seconds: 10);
+      dio.options.connectTimeout = const Duration(seconds: 15); // Zaman aşımını artır
+      dio.options.receiveTimeout = const Duration(seconds: 15); // Zaman aşımını artır
       
-      // AppConstants'taki Basic Auth bilgilerini kullan
+      // Basic Auth bilgilerini daha güvenli bir şekilde oluştur
       final credentials = '${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
       final basicAuthHeader = 'Basic $encodedCredentials';
+      
+      _logger.d('Kimlik doğrulama bilgileri hazırlandı');
       
       dio.options.headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': basicAuthHeader,
+        'Connection': 'keep-alive',
+        'User-Agent': 'POS701/${AppConstants.appVersion}',
       };
       
       // API'nin özel durum kodlarını başarılı kabul et
@@ -55,10 +59,34 @@ class StatisticsService {
         "compID": compID
       };
       
-      _logger.d('İstatistik verisi isteği gönderiliyor: $data');
+      _logger.d('İstatistik verisi isteği hazırlandı');
       
       final endpoint = 'service/user/account/statistics';
-      final response = await dio.put(endpoint, data: jsonEncode(data));
+      
+      // Retry mekanizması ekle
+      Response? response;
+      int retryCount = 0;
+      int maxRetries = 2;
+      
+      while (retryCount <= maxRetries) {
+        try {
+          _logger.d('İstatistik verisi isteği gönderiliyor (Deneme: ${retryCount + 1}): $data');
+          response = await dio.put(endpoint, data: jsonEncode(data));
+          break; // Başarılı olursa döngüden çık
+        } catch (e) {
+          retryCount++;
+          if (retryCount > maxRetries) {
+            throw e; // Tüm denemeler başarısız olursa hatayı fırlat
+          }
+          
+          _logger.w('İstek başarısız oldu. Yeniden deneniyor (${retryCount}/${maxRetries})');
+          await Future.delayed(Duration(milliseconds: 500 * retryCount)); // Her denemede bekle
+        }
+      }
+      
+      if (response == null) {
+        throw Exception('API yanıtı alınamadı (tüm denemeler başarısız)');
+      }
       
       int statusCode = response.statusCode ?? 0;
       String statusMessage = response.statusMessage ?? 'Durum mesajı yok';
