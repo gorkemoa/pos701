@@ -1,5 +1,6 @@
 import 'package:pos701/utils/app_logger.dart';
 
+
 class UserModel {
   final int userID;
   final int? compID;
@@ -18,6 +19,7 @@ class UserModel {
   final String? userToken;
   final String? platform;
   final String? version;
+  final CompanyInfo? company;
 
   UserModel({
     required this.userID,
@@ -37,6 +39,7 @@ class UserModel {
     this.userToken,
     this.platform,
     this.version,
+    this.company,
   });
 
   factory UserModel.fromLoginJson(Map<String, dynamic> json) {
@@ -132,6 +135,12 @@ class UserModel {
       tokenValue = userData['userToken']?.toString() ?? '';
     }
     
+    // Şirket bilgisi
+    CompanyInfo? companyInfo;
+    if (userData.containsKey('company') && userData['company'] is Map<String, dynamic>) {
+      companyInfo = CompanyInfo.fromJson(userData['company'] as Map<String, dynamic>);
+    }
+    
     return UserModel(
       userID: userId,
       compID: compId,
@@ -150,6 +159,7 @@ class UserModel {
       userToken: userData['userToken']?.toString(),
       platform: userData['platform']?.toString(),
       version: userData['version']?.toString(),
+      company: companyInfo,
     );
   }
 
@@ -172,6 +182,77 @@ class UserModel {
       'userToken': userToken,
       'platform': platform,
       'version': version,
+      'company': company?.toJson(),
     };
   }
 } 
+class PaymentType {
+  final int typeID;
+  final String typeName;
+  final String typeColor;
+  final String typeImg;
+
+  PaymentType({
+    required this.typeID,
+    required this.typeName,
+    required this.typeColor,
+    required this.typeImg,
+  });
+
+  factory PaymentType.fromJson(Map<String, dynamic> json) {
+    return PaymentType(
+      typeID: json['typeID'] ?? 0,
+      typeName: json['typeName'] ?? '',
+      typeColor: json['typeColor'] ?? '#000000',
+      typeImg: json['typeImg'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'typeID': typeID,
+      'typeName': typeName,
+      'typeColor': typeColor,
+      'typeImg': typeImg,
+    };
+  }
+}
+
+class CompanyInfo {
+  final int compID;
+  final String compName;
+  final bool compKuverWaiter;
+  final List<PaymentType> compPayTypes;
+
+  CompanyInfo({
+    required this.compID,
+    required this.compName,
+    required this.compKuverWaiter,
+    required this.compPayTypes,
+  });
+
+  factory CompanyInfo.fromJson(Map<String, dynamic> json) {
+    List<PaymentType> payTypes = [];
+    if (json.containsKey('compPayTypes') && json['compPayTypes'] is List) {
+      payTypes = (json['compPayTypes'] as List)
+          .map((payType) => PaymentType.fromJson(payType))
+          .toList();
+    }
+
+    return CompanyInfo(
+      compID: json['compID'] ?? 0,
+      compName: json['compName'] ?? '',
+      compKuverWaiter: json['compKuverWaiter'] ?? false,
+      compPayTypes: payTypes,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'compID': compID,
+      'compName': compName,
+      'compKuverWaiter': compKuverWaiter,
+      'compPayTypes': compPayTypes.map((payType) => payType.toJson()).toList(),
+    };
+  }
+}

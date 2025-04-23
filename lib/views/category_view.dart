@@ -10,6 +10,7 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/services/product_service.dart';
 import 'package:pos701/views/basket_view.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
+import 'package:pos701/viewmodels/tables_viewmodel.dart';
 
 class CategoryView extends StatefulWidget {
   final int compID;
@@ -370,19 +371,25 @@ class _CategoryViewState extends State<CategoryView> {
                   ),
                   Expanded(
                     child: InkWell(
-                      onTap: () {},
+                      onTap: widget.orderID != null ? _showPaymentDialog : null,
                       child: Container(
                         color: Color(AppConstants.primaryColorValue),
-                        child: const Center(
+                        child: Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                              Icon(Icons.payment, 
+                                color: widget.orderID != null ? Colors.white : Colors.white.withOpacity(0.5), 
+                                size: 18
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 'Ödeme Al',
-                                style: TextStyle(color: Colors.white, fontSize: 14),
+                                style: TextStyle(
+                                  color: widget.orderID != null ? Colors.white : Colors.white.withOpacity(0.5), 
+                                  fontSize: 14
+                                ),
                               ),
                             ],
                           ),
@@ -617,5 +624,144 @@ class _CategoryViewState extends State<CategoryView> {
         ),
       ),
     );
+  }
+  
+  /// Ödeme tipi seçme diyaloğunu göster
+  Future<void> _showPaymentDialog() async {
+    if (widget.orderID == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ödeme almak için aktif bir sipariş gereklidir.'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    
+    if (basketViewModel.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ödeme almak için sepette ürün olmalıdır.'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    // Kullanıcı bilgilerini kontrol et, company ve ödeme tipleri var mı?
+    if (userViewModel.userInfo == null || userViewModel.userInfo!.company == null || 
+        userViewModel.userInfo!.company!.compPayTypes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ödeme tipleri bulunamadı.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    
+    // Ödeme diyaloğunu göster
+    final List<PaymentType> paymentTypes = userViewModel.userInfo!.company!.compPayTypes;
+    
+    PaymentType? selectedPaymentType;
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ödeme Tipi Seçin', style: TextStyle(fontSize: 18)),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: MediaQuery.of(context).size.height * 0.4,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: paymentTypes.length,
+            itemBuilder: (context, index) {
+              final paymentType = paymentTypes[index];
+              Color typeColor;
+              try {
+                typeColor = Color(int.parse(paymentType.typeColor.replaceFirst('#', '0xFF')));
+              } catch (e) {
+                typeColor = Colors.grey;
+              }
+              
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: typeColor.withOpacity(0.2),
+                  child: paymentType.typeImg.isNotEmpty 
+                      ? Image.network(
+                          paymentType.typeImg,
+                          width: 24,
+                          height: 24,
+                          errorBuilder: (context, error, stackTrace) => 
+                              Icon(Icons.payment, color: typeColor),
+                        )
+                      : Icon(Icons.payment, color: typeColor),
+                ),
+                title: Text(paymentType.typeName),
+                onTap: () {
+                  selectedPaymentType = paymentType;
+                  Navigator.of(context).pop();
+                },
+                trailing: Icon(Icons.chevron_right, color: typeColor),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('İptal'),
+          ),
+        ],
+      ),
+    );
+    
+    // Ödeme tipi seçildiyse ödeme işlemini gerçekleştir
+    if (selectedPaymentType != null) {
+      _processPayment(selectedPaymentType!);
+    }
+  }
+  
+  /// Seçilen ödeme tipi ile ödeme işlemini gerçekleştir
+  Future<void> _processPayment(PaymentType paymentType) async {
+    setState(() => _isInitialized = false); // Yükleniyor durumunu göster
+    
+    try {
+      final tablesViewModel = Provider.of<TablesViewModel>(context, listen: false);
+      
+      // Hızlı ödeme işlemini gerçekleştir
+      final bool success = await tablesViewModel.fastPay(
+        userToken: widget.userToken,
+        compID: widget.compID,
+        orderID: widget.orderID!,
+        isDiscount: 0, // İndirim yok
+        discountType: 0, // İndirim tipi yok
+        discount: 0, // İndirim miktarı 0
+        payType: paymentType.typeID,
+        payAction: 'PAYMENT', // Ödeme işlemi
+      );
+      
+      setState(() => _isInitialized = true);
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${paymentType.typeName} ile ödeme başarıyla alındı.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Ana sayfaya geri dön
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ödeme işlemi başarısız: ${tablesViewModel.errorMessage ?? "Bilinmeyen hata"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isInitialized = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ödeme işlemi sırasında hata oluştu: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 } 
