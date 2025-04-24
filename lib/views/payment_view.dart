@@ -33,14 +33,16 @@ class _PaymentViewState extends State<PaymentView> {
   bool _isLoading = false;
   bool _isPartialPayment = false;
   PaymentType? _selectedPaymentType;
-  Map<int, bool> _selectedItems = {};
-  Map<int, bool> _paidItems = {};
+  Map<String, bool> _selectedItems = {};
+  Map<String, bool> _paidItems = {};
   String _amountStr = "0";
   int _selectedAction = 0;
   int _selectedDiscountType = 0;
   double _discountAmount = 0;
   bool _applyDiscount = false;
   bool _showPaymentTypeSelection = false;
+  
+  List<ExpandedBasketItem> _expandedItems = [];
   
   final List<String> _payActions = [
     "pay", // Öde
@@ -61,22 +63,37 @@ class _PaymentViewState extends State<PaymentView> {
     super.initState();
     _amountStr = widget.totalAmount.toStringAsFixed(2);
     
-    // Varsayılan olarak tüm ürünleri seçili yap
-    for (var item in widget.basketItems) {
-      _selectedItems[item.product.proID] = false;
-    }
+    _expandBasketItems();
     
-    // Kullanıcı bilgilerini yükle (ödeme tipleri için)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndLoadUserInfo();
     });
   }
   
-  // Kullanıcı bilgilerini kontrol et ve gerekirse yükle
+  void _expandBasketItems() {
+    _expandedItems = [];
+    
+    for (var item in widget.basketItems) {
+      for (int i = 0; i < item.quantity; i++) {
+        final String key = "${item.product.proID}-${item.opID}-$i";
+        
+        _expandedItems.add(ExpandedBasketItem(
+          basketItem: item,
+          unitIndex: i,
+          key: key,
+        ));
+        
+        _selectedItems[key] = false;
+        _paidItems[key] = false;
+      }
+    }
+    
+    debugPrint('📦 Sepet öğeleri genişletildi. Toplam: ${_expandedItems.length} birim');
+  }
+  
   Future<void> _checkAndLoadUserInfo() async {
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
     
-    // Kullanıcı bilgileri veya ödeme tipleri yoksa yeniden yükle
     if (userViewModel.userInfo == null || 
         userViewModel.userInfo!.company == null || 
         userViewModel.userInfo!.company!.compPayTypes.isEmpty) {
@@ -94,7 +111,7 @@ class _PaymentViewState extends State<PaymentView> {
     }
     
     for (var item in widget.basketItems) {
-      if (_selectedItems[item.product.proID] == true) {
+      if (_selectedItems[item.opID] == true) {
         total += item.totalPrice;
       }
     }
@@ -132,7 +149,6 @@ class _PaymentViewState extends State<PaymentView> {
       builder: (context) {
         final userViewModel = Provider.of<UserViewModel>(context, listen: false);
         
-        // Kullanıcı bilgisi durumunu kontrol et ve hata mesajlarını iyileştir
         if (userViewModel.userInfo == null) {
           return AlertDialog(
             title: const Text('Hata'),
@@ -170,13 +186,12 @@ class _PaymentViewState extends State<PaymentView> {
               ),
               TextButton(
                 onPressed: () async {
-                  // Kullanıcı bilgilerini yeniden yükle
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Kullanıcı bilgileri yenileniyor...'))
                   );
                   await userViewModel.loadUserInfo();
-                  _showPaymentTypesDialog(); // Diyalogu tekrar göster
+                  _showPaymentTypesDialog();
                 },
                 child: const Text('Yenile'),
               ),
@@ -274,7 +289,7 @@ class _PaymentViewState extends State<PaymentView> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(); // Ödeme ekranını kapat
+        Navigator.of(context).pop();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -297,7 +312,6 @@ class _PaymentViewState extends State<PaymentView> {
   void _processPartialPayment() async {
     if (_isLoading || _selectedPaymentType == null) return;
     
-    // Seçili ürün kontrolü
     bool anySelected = _selectedItems.values.any((selected) => selected);
     if (!anySelected) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -315,12 +329,12 @@ class _PaymentViewState extends State<PaymentView> {
       final tablesViewModel = Provider.of<TablesViewModel>(context, listen: false);
       bool allSuccess = true;
       int successCount = 0;
-      List<BasketItem> paidItems = []; // Ödenen ürünleri toplayacağız
+      List<String> successKeys = [];
       
-      // Her seçili ürün için ödeme işlemi yap
-      for (var item in widget.basketItems) {
-        if (_selectedItems[item.product.proID] == true) {
-          // opID geçerliliğini kontrol et
+      for (var expandedItem in _expandedItems) {
+        if (_selectedItems[expandedItem.key] == true) {
+          final item = expandedItem.basketItem;
+          
           if (item.opID <= 0) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -328,31 +342,31 @@ class _PaymentViewState extends State<PaymentView> {
                 backgroundColor: Colors.orange,
               ),
             );
-            continue; // Bu ürünü atla, diğerlerine devam et
+            continue;
           }
           
-          debugPrint('🔄 Parçalı ödeme işleniyor: Ürün=${item.product.proName}, opID=${item.opID}, Miktar=${item.quantity}');
+          debugPrint('🔄 Parçalı ödeme işleniyor: Ürün=${item.product.proName}, opID=${item.opID}, Birim=${expandedItem.unitIndex + 1}');
           
           final bool success = await tablesViewModel.partPay(
             userToken: widget.userToken,
             compID: widget.compID,
             orderID: widget.orderID,
             opID: item.opID,
-            opQty: item.quantity,
+            opQty: 1,
             payType: _selectedPaymentType!.typeID,
           );
           
           if (success) {
             successCount++;
-            paidItems.add(item); // Başarıyla ödenen ürünü kaydet
-            _paidItems[item.product.proID] = true; // Ödendi olarak işaretle
-            debugPrint('✅ Parçalı ödeme başarılı: Ürün=${item.product.proName}, opID=${item.opID}');
+            successKeys.add(expandedItem.key);
+            _paidItems[expandedItem.key] = true;
+            debugPrint('✅ Parçalı ödeme başarılı: Ürün=${item.product.proName}, opID=${item.opID}, Birim=${expandedItem.unitIndex + 1}');
           } else {
             allSuccess = false;
-            debugPrint('❌ Parçalı ödeme başarısız: Ürün=${item.product.proName}, opID=${item.opID}, Hata=${tablesViewModel.errorMessage}');
+            debugPrint('❌ Parçalı ödeme başarısız: Ürün=${item.product.proName}, opID=${item.opID}, Birim=${expandedItem.unitIndex + 1}, Hata=${tablesViewModel.errorMessage}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('${item.product.proName} için ödeme alınamadı: ${tablesViewModel.errorMessage}'),
+                content: Text('${item.product.proName} (Birim ${expandedItem.unitIndex + 1}) için ödeme alınamadı: ${tablesViewModel.errorMessage}'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -363,25 +377,16 @@ class _PaymentViewState extends State<PaymentView> {
       setState(() => _isLoading = false);
       
       if (successCount > 0) {
-        // Ödenen ürünleri callback üzerinden ana sayfaya bildir
-        // Bu ürünler burada listeden çıkarılmaz, basket_view'da çıkarılır
         widget.onPaymentSuccess();
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_selectedPaymentType!.typeName} ile $successCount ürün için ödeme başarıyla alındı.'),
+            content: Text('${_selectedPaymentType!.typeName} ile $successCount ürün birimi için ödeme başarıyla alındı.'),
             backgroundColor: Colors.green,
           ),
         );
         
-        // Tüm ürünler ödendiyse sayfayı kapat
-        bool allItemsPaid = true;
-        for (var item in widget.basketItems) {
-          if (_paidItems[item.product.proID] != true) {
-            allItemsPaid = false;
-            break;
-          }
-        }
+        bool allItemsPaid = _expandedItems.every((item) => _paidItems[item.key] == true);
         
         if (allItemsPaid) {
           Navigator.of(context).pop();
@@ -445,32 +450,33 @@ class _PaymentViewState extends State<PaymentView> {
   Widget _buildPartialPaymentView() {
     return Column(
       children: [
-        // Ürün listesi
         Expanded(
           child: ListView.separated(
-            itemCount: widget.basketItems.length,
+            itemCount: _expandedItems.length,
             separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
-              final item = widget.basketItems[index];
-              final isSelected = _selectedItems[item.product.proID] ?? false;
-              final isPaid = _paidItems[item.product.proID] ?? false;
+              final expandedItem = _expandedItems[index];
+              final item = expandedItem.basketItem;
+              final isSelected = _selectedItems[expandedItem.key] ?? false;
+              final isPaid = _paidItems[expandedItem.key] ?? false;
               
-              // opID kontrolü - 0 ise ödeme için uygun değil
               final bool hasValidOpId = item.opID > 0;
-              final bool canSelect = hasValidOpId && !isPaid; // Ödenmediyse ve geçerli opID varsa seçilebilir
+              final bool canSelect = hasValidOpId && !isPaid;
+              
+              final double unitPrice = item.totalPrice / item.quantity;
               
               return ListTile(
                 leading: Checkbox(
                   value: isSelected,
                   onChanged: canSelect ? (value) {
                     setState(() {
-                      _selectedItems[item.product.proID] = value ?? false;
+                      _selectedItems[expandedItem.key] = value ?? false;
                     });
-                  } : null, // Ödendiyse veya geçersiz opID varsa seçilemez
+                  } : null,
                   activeColor: const Color(AppConstants.primaryColorValue),
                 ),
                 title: Text(
-                  "${item.quantity} Tam | ${item.product.proName}",
+                  "1 Tam | ${item.product.proName}",
                   style: TextStyle(
                     fontWeight: isPaid ? FontWeight.normal : FontWeight.bold,
                     color: isPaid ? Colors.grey : Colors.black,
@@ -483,7 +489,7 @@ class _PaymentViewState extends State<PaymentView> {
                       ? Text("Adisyon Kalemi ID: ${item.opID}", style: TextStyle(fontSize: 12, color: Colors.green[700]))
                       : Text("Ödeme yapılamaz: Adisyon Kalemi ID bulunamadı", style: TextStyle(fontSize: 12, color: Colors.red[700])),
                 trailing: Text(
-                  "₺${item.totalPrice.toStringAsFixed(2)}",
+                  "₺${unitPrice.toStringAsFixed(2)}",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -493,10 +499,9 @@ class _PaymentViewState extends State<PaymentView> {
                 ),
                 onTap: canSelect ? () {
                   setState(() {
-                    _selectedItems[item.product.proID] = !isSelected;
+                    _selectedItems[expandedItem.key] = !isSelected;
                   });
                 } : isPaid ? () {
-                  // Ödenen ürün için bilgi mesajı
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Bu ürün için ödeme zaten alındı.'),
@@ -505,7 +510,6 @@ class _PaymentViewState extends State<PaymentView> {
                     ),
                   );
                 } : () {
-                  // Uyarı mesajı göster
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Bu ürün parçalı ödeme için uygun değil. Adisyon kalemi ID bulunamadı.'),
@@ -513,14 +517,13 @@ class _PaymentViewState extends State<PaymentView> {
                     ),
                   );
                 },
-                enabled: true, // Her zaman etkin, ancak sadece seçilebilirlik durumu değişir
-                tileColor: isPaid ? Colors.grey[100] : null, // Ödenen ürünler için hafif gri arkaplan
+                enabled: true,
+                tileColor: isPaid ? Colors.grey[100] : null,
               );
             },
           ),
         ),
         
-        // Alt butonlar
         Container(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -568,7 +571,6 @@ class _PaymentViewState extends State<PaymentView> {
   Widget _buildFullPaymentView() {
     return Column(
       children: [
-        // Toplam bilgisi
         Container(
           color: Colors.grey[200],
           padding: const EdgeInsets.all(16),
@@ -593,7 +595,6 @@ class _PaymentViewState extends State<PaymentView> {
           ),
         ),
         
-        // İndirim seçenekleri
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -651,7 +652,6 @@ class _PaymentViewState extends State<PaymentView> {
           ),
         ),
         
-        // Ödeme aksiyon seçimi
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: DropdownButtonFormField<int>(
@@ -675,7 +675,6 @@ class _PaymentViewState extends State<PaymentView> {
           ),
         ),
         
-        // Tuş takımı
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -722,7 +721,6 @@ class _PaymentViewState extends State<PaymentView> {
           ),
         ),
         
-        // Alt butonlar
         Container(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -790,4 +788,16 @@ class _PaymentViewState extends State<PaymentView> {
       ),
     );
   }
+}
+
+class ExpandedBasketItem {
+  final BasketItem basketItem;
+  final int unitIndex;
+  final String key;
+  
+  ExpandedBasketItem({
+    required this.basketItem,
+    required this.unitIndex,
+    required this.key,
+  });
 } 

@@ -65,31 +65,53 @@ class Basket {
 
   double get remainingAmount => totalAmount - discount - collectedAmount;
 
-  void addProduct(Product product) {
-    developer.log("Sepete ürün ekleniyor: ${product.proName}, ID: ${product.proID}, Fiyat: ${product.proPrice}");
+  void addProduct(Product product, {int opID = 0}) {
+    developer.log("Sepete ürün ekleniyor: ${product.proName}, ID: ${product.proID}, Fiyat: ${product.proPrice}, OpID: $opID");
     
-    final existingItemIndex = items.indexWhere((item) => item.product.proID == product.proID);
+    // OpID'yi de dikkate alarak mevcut ürünü ara
+    final existingItemIndex = items.indexWhere(
+      (item) => item.product.proID == product.proID && item.opID == opID
+    );
     
     if (existingItemIndex != -1) {
       items[existingItemIndex].quantity++;
-      developer.log("Mevcut ürün miktarı artırıldı: ${items[existingItemIndex].quantity}");
+      developer.log("Mevcut ürün miktarı artırıldı: ${items[existingItemIndex].quantity}, OpID: $opID");
     } else {
-      items.add(BasketItem(product: product, quantity: 1));
-      developer.log("Yeni ürün sepete eklendi. Sepetteki ürün sayısı: ${items.length}");
+      items.add(BasketItem(product: product, quantity: 1, opID: opID));
+      developer.log("Yeni ürün sepete eklendi. Sepetteki ürün sayısı: ${items.length}, OpID: $opID");
     }
   }
 
-  void removeProduct(int productId) {
-    developer.log("Sepetten ürün kaldırılıyor. Ürün ID: $productId");
-    items.removeWhere((item) => item.product.proID == productId);
+  void removeProduct(int productId, {int? opID}) {
+    developer.log("Sepetten ürün kaldırılıyor. Ürün ID: $productId, OpID: ${opID ?? 'tümü'}");
+    
+    if (opID != null) {
+      // Belirli bir opID'ye sahip ürünü kaldır
+      items.removeWhere((item) => item.product.proID == productId && item.opID == opID);
+    } else {
+      // Tüm ürünleri kaldır (proID'ye göre)
+      items.removeWhere((item) => item.product.proID == productId);
+    }
+    
     developer.log("Sepetteki ürün sayısı: ${items.length}");
   }
 
   void incrementQuantity(int productId) {
     try {
+      // Önce opID=0 olan ürünleri ara (yeni eklenmiş ürünler)
+      var newItems = items.where((item) => item.product.proID == productId && item.opID == 0).toList();
+      
+      if (newItems.isNotEmpty) {
+        // Yeni eklenmiş ürün varsa ilk onu artır
+        newItems.first.quantity++;
+        developer.log("Yeni eklenen ürün miktarı artırıldı. Ürün: ${newItems.first.product.proName}, Miktar: ${newItems.first.quantity}");
+        return;
+      }
+      
+      // Eğer yeni eklenmiş ürün yoksa, ilk bulunan ürünü artır
       final item = items.firstWhere((item) => item.product.proID == productId);
       item.quantity++;
-      developer.log("Ürün miktarı artırıldı. Ürün: ${item.product.proName}, Miktar: ${item.quantity}");
+      developer.log("Ürün miktarı artırıldı. Ürün: ${item.product.proName}, Miktar: ${item.quantity}, OpID: ${item.opID}");
     } catch (e) {
       developer.log("Ürün miktarını artırırken hata: $e", error: e);
     }
@@ -97,13 +119,29 @@ class Basket {
 
   void decrementQuantity(int productId) {
     try {
+      // Önce opID=0 olan ürünleri ara (yeni eklenmiş ürünler)
+      var newItems = items.where((item) => item.product.proID == productId && item.opID == 0).toList();
+      
+      if (newItems.isNotEmpty) {
+        // Yeni eklenmiş ürün varsa ilk onu azalt
+        if (newItems.first.quantity > 1) {
+          newItems.first.quantity--;
+          developer.log("Yeni eklenen ürün miktarı azaltıldı. Ürün: ${newItems.first.product.proName}, Miktar: ${newItems.first.quantity}");
+        } else {
+          items.remove(newItems.first);
+          developer.log("Yeni eklenen ürün sepetten kaldırıldı. Son ürün olduğu için.");
+        }
+        return;
+      }
+      
+      // Eğer yeni eklenmiş ürün yoksa, ilk bulunan ürünü azalt
       final item = items.firstWhere((item) => item.product.proID == productId);
       if (item.quantity > 1) {
         item.quantity--;
-        developer.log("Ürün miktarı azaltıldı. Ürün: ${item.product.proName}, Miktar: ${item.quantity}");
+        developer.log("Ürün miktarı azaltıldı. Ürün: ${item.product.proName}, Miktar: ${item.quantity}, OpID: ${item.opID}");
       } else {
-        removeProduct(productId);
-        developer.log("Ürün sepetten kaldırıldı. Son ürün olduğu için.");
+        items.remove(item);
+        developer.log("Ürün sepetten kaldırıldı. Son ürün olduğu için. OpID: ${item.opID}");
       }
     } catch (e) {
       developer.log("Ürün miktarını azaltırken hata: $e", error: e);

@@ -44,36 +44,45 @@ class OrderViewModel extends ChangeNotifier {
   
   /// Sepeti sipariş modeline dönüştürür
   List<OrderProduct> sepettenSiparisUrunleriOlustur(List<BasketItem> items) {
-    // Burada aynı ürünleri gruplarız (proID ve postID'ye göre grupla)
-    final Map<String, OrderProduct> productMap = {};
+    // Aynı ürün ve opID'li ürünleri bir araya getirerek dizi oluştur
+    final Map<String, List<BasketItem>> productGroups = {};
 
     for (var item in items) {
-      // Ürün kimliğini oluştur (proID-postID)
-      final key = '${item.product.proID}-${item.product.postID}';
+      // Ürün ve opID'ye göre bir anahtar oluştur (proID-postID-opID)
+      final key = '${item.product.proID}-${item.product.postID}-${item.opID}';
       
-      if (productMap.containsKey(key)) {
-        // Aynı ürünse miktarını arttır
-        final existingProduct = productMap[key]!;
-        productMap[key] = OrderProduct(
-          opID: item.opID, // opID korunur
-          postID: item.product.postID,
-          proID: item.product.proID,
-          proQty: existingProduct.proQty + item.quantity,
-          proPrice: item.product.proPrice,
-        );
+      if (productGroups.containsKey(key)) {
+        // Aynı ürün ve opID'li ürün zaten varsa listeye ekle
+        productGroups[key]!.add(item);
       } else {
-        // Yeni bir ürünse yeni ekleme yap
-        productMap[key] = OrderProduct(
-          opID: item.opID,
-          postID: item.product.postID,
-          proID: item.product.proID,
-          proQty: item.quantity,
-          proPrice: item.product.proPrice,
-        );
+        // Yeni bir ürünse yeni bir liste oluştur
+        productGroups[key] = [item];
       }
     }
     
-    return productMap.values.toList();
+    // Grupları OrderProduct listesine dönüştür
+    final List<OrderProduct> orderProducts = [];
+    
+    productGroups.forEach((key, groupItems) {
+      // İlk ürünün bilgilerini al
+      final firstItem = groupItems.first;
+      
+      // Toplam miktarı hesapla
+      final totalQuantity = groupItems.fold(0, (sum, item) => sum + item.quantity);
+      
+      // OrderProduct oluştur
+      orderProducts.add(OrderProduct(
+        opID: firstItem.opID,
+        postID: firstItem.product.postID,
+        proID: firstItem.product.proID,
+        proQty: totalQuantity,
+        proPrice: firstItem.product.proPrice,
+      ));
+      
+      debugPrint('🔄 [ORDER_VM] Ürün grubu oluşturuldu: ${firstItem.product.proName}, Miktar: $totalQuantity, opID: ${firstItem.opID}');
+    });
+    
+    return orderProducts;
   }
   
   /// Yeni bir sipariş oluşturur
@@ -223,15 +232,14 @@ class OrderViewModel extends ChangeNotifier {
       // Kalan ödenmemiş miktar hesaplanır (proQty - paidQty)
       final int kalanMiktar = product.proQty - product.paidQty;
       
-      // Önemli: Aynı üründen birden fazla varsa, her biri için ayrı sepet öğeleri oluştur
-      // Bu, parçalı ödeme için gereklidir - kullanıcı her bir ürünü ayrı ayrı seçebilmelidir
-      for (int i = 0; i < kalanMiktar; i++) {
-        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Birim: ${i+1}/$kalanMiktar, OpID: ${product.opID}');
+      // Birden fazla aynı ürün varsa, bunları tek bir sepet öğesi olarak ekle
+      if (kalanMiktar > 0) {
+        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Toplam miktar: $kalanMiktar, OpID: ${product.opID}');
         
-        // Her birim için ayrı bir sepet öğesi oluştur
+        // Tek bir sepet öğesi oluştur
         final BasketItem sepetItem = BasketItem(
           product: urun,
-          quantity: 1, // Her öğe için miktar 1 olmalı
+          quantity: kalanMiktar, // Toplam miktar
           opID: product.opID, // OpID'ler aynı kalır - API hangi sipariş kalemi olduğunu bilmeli
         );
         
@@ -239,7 +247,7 @@ class OrderViewModel extends ChangeNotifier {
       }
     }
     
-    debugPrint('🛒 [ORDER_VM] Sepete aktarılan toplam ürün sayısı: ${sepetItems.length}');
+    debugPrint('🛒 [ORDER_VM] Sepete ${sepetItems.length} ürün çeşidi eklendi (toplam adet: ${sepetItems.fold(0, (sum, item) => sum + item.quantity)})');
     return sepetItems;
   }
   

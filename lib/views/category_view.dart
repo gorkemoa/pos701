@@ -464,6 +464,7 @@ class _CategoryViewState extends State<CategoryView> {
   Widget _buildProductCard(Product product) {
     final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
     final isInBasket = basketViewModel.getProductQuantity(product) > 0;
+    final quantity = basketViewModel.getProductQuantity(product);
     
     return Card(
       elevation: 2,
@@ -559,7 +560,7 @@ class _CategoryViewState extends State<CategoryView> {
                 Container(
                   constraints: BoxConstraints(minWidth: 32),
                   child: Text(
-                    '${basketViewModel.getProductQuantity(product)}',
+                    '$quantity',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

@@ -604,7 +604,7 @@ class _BasketViewState extends State<BasketView> {
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () {
                 Provider.of<BasketViewModel>(context, listen: false)
-                    .removeProduct(item.product.proID);
+                    .removeProduct(item.product.proID, opID: item.opID);
               },
             ),
           ],

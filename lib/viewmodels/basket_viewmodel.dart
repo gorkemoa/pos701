@@ -15,7 +15,9 @@ class BasketViewModel extends ChangeNotifier {
   
   // Ürün ekleme (tekil olarak)
   void addProduct(Product product, {int opID = 0}) {
-    final existingIndex = _basket.items.indexWhere((item) => item.product.proID == product.proID);
+    final existingIndex = _basket.items.indexWhere(
+      (item) => item.product.proID == product.proID && item.opID == opID
+    );
     
     if (existingIndex != -1) {
       // Mevcut ürün miktarını artır
@@ -53,8 +55,8 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Ürün kaldırma
-  void removeProduct(int productId) {
-    _basket.removeProduct(productId);
+  void removeProduct(int productId, {int? opID}) {
+    _basket.removeProduct(productId, opID: opID);
     notifyListeners();
   }
   
@@ -91,14 +93,36 @@ class BasketViewModel extends ChangeNotifier {
   int get itemCount => _basket.items.length;
 
   int getProductQuantity(Product product) {
-    final existingItem = _basket.items.firstWhere(
-      (item) => item.product.proID == product.proID,
-      orElse: () => BasketItem(product: product, quantity: 0),
-    );
-    return existingItem.quantity;
+    int totalQuantity = 0;
+    
+    // Ürün sepetteki tüm öğeleri kontrol et
+    for (var item in _basket.items) {
+      // Sadece proID kontrolü değil, opID=0 olan veya aynı opID'ye sahip ürünleri say
+      if (item.product.proID == product.proID) {
+        totalQuantity += item.quantity;
+      }
+    }
+    
+    return totalQuantity;
   }
 
   void decreaseProduct(Product product) {
+    // Önce opID=0 olan ürünleri azalt (yeni eklenmiş ürünler)
+    final newProductIndex = _basket.items.indexWhere(
+      (item) => item.product.proID == product.proID && item.opID == 0,
+    );
+    
+    if (newProductIndex != -1) {
+      if (_basket.items[newProductIndex].quantity > 1) {
+        _basket.items[newProductIndex].quantity--;
+      } else {
+        _basket.items.removeAt(newProductIndex);
+      }
+      notifyListeners();
+      return;
+    }
+    
+    // Yeni eklenen ürün yoksa, var olan ürünlerden herhangi birini azalt
     final existingItemIndex = _basket.items.indexWhere(
       (item) => item.product.proID == product.proID,
     );
