@@ -284,12 +284,13 @@ class TableCard extends StatelessWidget {
     // Yükleniyor diyaloğu göster
     if (!context.mounted) return;
     
-    late BuildContext loadingContext;
+    BuildContext? loadingContext;
+    // ignore: use_build_context_synchronously
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        loadingContext = context;
+      builder: (ctx) {
+        loadingContext = ctx;
         return const AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -303,53 +304,76 @@ class TableCard extends StatelessWidget {
       },
     );
 
-    // Hızlı ödeme API çağrısı
-    final success = await viewModel.fastPay(
-      userToken: userToken,
-      compID: compID,
-      orderID: table.orderID,
-      isDiscount: 0,
-      discountType: 0,
-      discount: 0,
-      payType: selectedPaymentType!.typeID,
-      payAction: "payClose",
-    );
-    
-    // Yükleniyor diyaloğunu kapat
-    if (context.mounted) {
-      try {
-        Navigator.of(loadingContext).pop();
-      } catch (e) {
-        debugPrint('Diyalog kapatma hatası: $e');
-      }
-    }
-    
-    if (success) {
-      // Başarılı mesajını göster
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${selectedPaymentType!.typeName} ile ${viewModel.successMessage ?? 'ödeme başarıyla tamamlandı'}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      
-      // Tabloları yenile
-      await viewModel.getTablesData(
+    try {
+      // Hızlı ödeme API çağrısı
+      final success = await viewModel.fastPay(
         userToken: userToken,
         compID: compID,
+        orderID: table.orderID,
+        isDiscount: 0,
+        discountType: 0,
+        discount: 0,
+        payType: selectedPaymentType!.typeID,
+        payAction: "payClose",
       );
-    } else {
+      
+      // Yükleniyor diyaloğunu kapat
+      if (loadingContext != null && context.mounted) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingContext!).pop();
+        loadingContext = null;
+      }
+      
+      if (success) {
+        // Başarılı mesajını göster
+        if (!context.mounted) return;
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${selectedPaymentType!.typeName} ile ${viewModel.successMessage ?? 'ödeme başarıyla tamamlandı'}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Tabloları yenile
+        await viewModel.refreshTablesDataSilently(
+          userToken: userToken,
+          compID: compID,
+        );
+      } else {
+        // Hata mesajını göster
+        if (!context.mounted) return;
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(viewModel.errorMessage ?? 'Ödeme işlemi başarısız oldu'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Hızlı ödeme hatası: $e');
+      
+      // Yükleniyor diyaloğunu kapat (hata durumunda da)
+      if (loadingContext != null && context.mounted) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingContext!).pop();
+        loadingContext = null;
+      }
+      
       // Hata mesajını göster
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(viewModel.errorMessage ?? 'Ödeme işlemi başarısız oldu'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      if (context.mounted) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ödeme işlemi sırasında hata oluştu: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -391,15 +415,16 @@ class TableCard extends StatelessWidget {
 
     if (confirmUnmerge != true) return;
 
-    // Yükleniyor diyaloğu göster
+    // Yükleniyor diyaloğunu göster
     if (!context.mounted) return;
     
-    late BuildContext loadingContext;
+    BuildContext? loadingContext;
+    // ignore: use_build_context_synchronously
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        loadingContext = context;
+      builder: (ctx) {
+        loadingContext = ctx;
         return const AlertDialog(
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -413,25 +438,76 @@ class TableCard extends StatelessWidget {
       },
     );
 
-    
-    
-    // Yükleniyor diyaloğunu kapat
-    if (context.mounted) {
-      try {
-        Navigator.of(loadingContext).pop();
-      } catch (e) {
-        debugPrint('Diyalog kapatma hatası: $e');
-      }
-    }
-    
-
-      
-      // Tabloları yenile
-      await viewModel.getTablesData(
+    try {
+      // Masa ayırma API çağrısı
+      final success = await viewModel.unMergeTables(
         userToken: userToken,
         compID: compID,
+        tableID: table.tableID,
+        orderID: table.orderID,
       );
+      
+      // Yükleniyor diyaloğunu kapat
+      if (loadingContext != null && context.mounted) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingContext!).pop();
+        loadingContext = null;
+      }
+      
+      if (success) {
+        // Başarılı mesajını göster
+        if (!context.mounted) return;
+        
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(viewModel.successMessage ?? 'Masalar başarıyla ayrıldı'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Tabloları yenile
+        await viewModel.refreshTablesDataSilently(
+          userToken: userToken,
+          compID: compID,
+        );
+      } else {
+        // Hata mesajını göster
+        if (!context.mounted) return;
+        
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(viewModel.errorMessage ?? 'Masa ayırma işlemi başarısız oldu'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Masa ayırma hatası: $e');
+      
+      // Yükleniyor diyaloğunu kapat (hata durumunda da)
+      if (loadingContext != null && context.mounted) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingContext!).pop();
+        loadingContext = null;
+      }
+      
+      // Hata mesajını göster
+      if (context.mounted) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Masa ayırma işlemi sırasında hata oluştu: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
+  }
 
   void _handleTableChange(BuildContext context, TablesViewModel viewModel) async {
     final inactiveTables = viewModel.inactiveTables;
@@ -454,12 +530,13 @@ class TableCard extends StatelessWidget {
           // Yükleniyor diyaloğu göster
           if (!dialogContext.mounted) return;
           
-          late BuildContext loadingContext;
+          BuildContext? loadingContext;
+          // ignore: use_build_context_synchronously
           showDialog(
             context: dialogContext,
             barrierDismissible: false,
-            builder: (context) {
-              loadingContext = context;
+            builder: (ctx) {
+              loadingContext = ctx;
               return const AlertDialog(
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -473,41 +550,67 @@ class TableCard extends StatelessWidget {
             },
           );
 
-          // Masa değiştirme API çağrısı
-          final success = await viewModel.changeTable(
-            userToken: userToken,
-            compID: compID,
-            orderID: table.orderID,
-            tableID: selectedTable.tableID,
-          );
-          
-          // Yükleniyor diyaloğunu kapat
-          if (dialogContext.mounted) {
-            try {
-              Navigator.of(loadingContext).pop();
-            } catch (e) {
-              debugPrint('Diyalog kapatma hatası: $e');
-            }
-          }
-          
-          if (success) {
-            // Başarılı mesajını göster
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(viewModel.successMessage ?? 'Masa başarıyla değiştirildi')),
-            );
-            
-            // Tabloları yenile
-            await viewModel.getTablesData(
+          try {
+            // Masa değiştirme API çağrısı
+            final success = await viewModel.changeTable(
               userToken: userToken,
               compID: compID,
+              orderID: table.orderID,
+              tableID: selectedTable.tableID,
             );
-          } else {
+            
+            // Yükleniyor diyaloğunu kapat
+            if (loadingContext != null && dialogContext.mounted) {
+              // ignore: use_build_context_synchronously
+              Navigator.of(loadingContext!).pop();
+              loadingContext = null;
+            }
+            
+            if (success) {
+              // Başarılı mesajını göster
+              if (!context.mounted) return;
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(viewModel.successMessage ?? 'Masa başarıyla değiştirildi')),
+              );
+              
+              // Tabloları yenile
+              await viewModel.refreshTablesDataSilently(
+                userToken: userToken,
+                compID: compID,
+              );
+            } else {
+              // Hata mesajını göster
+              if (!context.mounted) return;
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(viewModel.errorMessage ?? 'Masa değiştirme işlemi başarısız oldu'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          } catch (e) {
+            debugPrint('Masa değiştirme hatası: $e');
+            
+            // Yükleniyor diyaloğunu kapat (hata durumunda da)
+            if (loadingContext != null && dialogContext.mounted) {
+              // ignore: use_build_context_synchronously
+              Navigator.of(loadingContext!).pop();
+              loadingContext = null;
+            }
+            
             // Hata mesajını göster
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(viewModel.errorMessage ?? 'Masa değiştirme işlemi başarısız oldu')),
-            );
+            if (context.mounted) {
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Masa değiştirme sırasında hata oluştu: $e'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
           }
         },
       ),
@@ -593,12 +696,13 @@ class TableCard extends StatelessWidget {
                         // Yükleme dialogu göster
                         if (!context.mounted) return;
                         
-                        late BuildContext loadingContext;
+                        BuildContext? loadingContext;
+                        // ignore: use_build_context_synchronously
                         showDialog(
                           context: context,
                           barrierDismissible: false,
-                          builder: (context) {
-                            loadingContext = context;
+                          builder: (ctx) {
+                            loadingContext = ctx;
                             return const AlertDialog(
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -612,44 +716,66 @@ class TableCard extends StatelessWidget {
                           },
                         );
                         
-                        // Adisyon aktarma işlemini gerçekleştir
-                        final success = await viewModel.transferOrder(
-                          userToken: userToken,
-                          compID: compID,
-                          oldOrderID: table.orderID,
-                          newOrderID: targetTable.orderID,
-                        );
-                        
-                        // Yükleme dialogunu kapat
-                        if (context.mounted) {
-                          try {
-                            Navigator.of(loadingContext).pop();
-                          } catch (e) {
-                            debugPrint('Diyalog kapatma hatası: $e');
-                          }
-                        }
-                        
-                        // Sonucu göster
-                        if (!context.mounted) return;
-                        
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              success
-                                ? (viewModel.successMessage ?? 'Adisyon başarıyla aktarıldı')
-                                : (viewModel.errorMessage ?? 'Adisyon aktarma işlemi başarısız oldu')
-                            ),
-                            backgroundColor: success ? Colors.green : Colors.red,
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                        
-                        if (success) {
-                          // Tabloları yenile
-                          await viewModel.getTablesData(
+                        try {
+                          // Adisyon aktarma işlemini gerçekleştir
+                          final success = await viewModel.transferOrder(
                             userToken: userToken,
                             compID: compID,
+                            oldOrderID: table.orderID,
+                            newOrderID: targetTable.orderID,
                           );
+                          
+                          // Yükleme dialogunu kapat
+                          if (loadingContext != null && context.mounted) {
+                            // ignore: use_build_context_synchronously
+                            Navigator.of(loadingContext!).pop();
+                            loadingContext = null;
+                          }
+                          
+                          // Sonucu göster
+                          if (!context.mounted) return;
+                          
+                          // ignore: use_build_context_synchronously
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                  ? (viewModel.successMessage ?? 'Adisyon başarıyla aktarıldı')
+                                  : (viewModel.errorMessage ?? 'Adisyon aktarma işlemi başarısız oldu')
+                              ),
+                              backgroundColor: success ? Colors.green : Colors.red,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                          
+                          if (success) {
+                            // Tabloları yenile
+                            await viewModel.refreshTablesDataSilently(
+                              userToken: userToken,
+                              compID: compID,
+                            );
+                          }
+                        } catch (e) {
+                          debugPrint('Adisyon aktarma hatası: $e');
+                          
+                          // Yükleme dialogunu kapat (hata durumunda da)
+                          if (loadingContext != null && context.mounted) {
+                            // ignore: use_build_context_synchronously
+                            Navigator.of(loadingContext!).pop();
+                            loadingContext = null;
+                          }
+                          
+                          // Hata mesajını göster
+                          if (context.mounted) {
+                            // ignore: use_build_context_synchronously
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Adisyon aktarma işlemi sırasında hata oluştu: $e'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
                         }
                       },
                     );
@@ -696,12 +822,13 @@ class TableCard extends StatelessWidget {
           if (!dialogContext.mounted) return;
           
           // Yükleniyor diyaloğunu göster
-          late BuildContext loadingContext;
+          BuildContext? loadingContext;
+          // ignore: use_build_context_synchronously
           showDialog(
             context: dialogContext,
             barrierDismissible: false,
-            builder: (context) {
-              loadingContext = context;
+            builder: (ctx) {
+              loadingContext = ctx;
               return const AlertDialog(
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -715,88 +842,111 @@ class TableCard extends StatelessWidget {
             },
           );
 
-          // Masa birleştirme API çağrısı
-          final success = await viewModel.mergeTables(
-            userToken: userToken,
-            compID: compID,
-            mainTableID: table.tableID,
-            orderID: table.orderID,
-            tablesToMerge: selectedTableIds,
-          );
-          
           try {
-            // Yükleniyor diyaloğunu kapat
-            if (dialogContext.mounted) {
-              Navigator.of(loadingContext).pop();
-            }
-          } catch (e) {
-            debugPrint('Diyalog kapatma hatası: $e');
-          }
-          
-          if (success) {
-            // Başarılı mesajını göster
-            if (context.mounted) {
-              // Başarılı bir birleştirme için özel bir diyalog göster
-              showDialog(
-                context: context,
-                builder: (successContext) => AlertDialog(
-                  title: Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: Color(AppConstants.primaryColorValue),
-                      ),
-                      const SizedBox(width: 10),
-                      const Text('İşlem Başarılı'),
-                    ],
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('${table.tableName} masası başarıyla birleştirildi.'),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Birleştirilen masalar sol üst köşedeki insan simgesiyle işaretlenmiştir.',
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(successContext).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(AppConstants.primaryColorValue),
-                      ),
-                      child: const Text('Tamam'),
-                    ),
-                  ],
-                ),
-              );
-              
-              // SnackBar ile de bildirim göster
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(viewModel.successMessage ?? 'Masalar başarıyla birleştirildi'),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            }
-            
-            // Tabloları yenile
-            await viewModel.getTablesData(
+            // Masa birleştirme API çağrısı
+            final success = await viewModel.mergeTables(
               userToken: userToken,
               compID: compID,
+              mainTableID: table.tableID,
+              orderID: table.orderID,
+              tablesToMerge: selectedTableIds,
             );
-          } else {
+            
+            // Yükleniyor diyaloğunu kapat
+            if (loadingContext != null && dialogContext.mounted) {
+              // ignore: use_build_context_synchronously
+              Navigator.of(loadingContext!).pop();
+              loadingContext = null;
+            }
+            
+            if (success) {
+              // Başarılı mesajını göster
+              if (context.mounted) {
+                // Başarılı bir birleştirme için özel bir diyalog göster
+                // ignore: use_build_context_synchronously
+                showDialog(
+                  context: context,
+                  builder: (successContext) => AlertDialog(
+                    title: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Color(AppConstants.primaryColorValue),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text('İşlem Başarılı'),
+                      ],
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${table.tableName} masası başarıyla birleştirildi.'),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Birleştirilen masalar sol üst köşedeki insan simgesiyle işaretlenmiştir.',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(successContext).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(AppConstants.primaryColorValue),
+                        ),
+                        child: const Text('Tamam'),
+                      ),
+                    ],
+                  ),
+                );
+                
+                // SnackBar ile de bildirim göster
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(viewModel.successMessage ?? 'Masalar başarıyla birleştirildi'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+              
+              // Tabloları yenile
+              await viewModel.refreshTablesDataSilently(
+                userToken: userToken,
+                compID: compID,
+              );
+            } else {
+              // Hata mesajını göster
+              if (context.mounted) {
+                // ignore: use_build_context_synchronously
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(viewModel.errorMessage ?? 'Masa birleştirme işlemi başarısız oldu'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } catch (e) {
+            debugPrint('Masa birleştirme hatası: $e');
+            
+            // Yükleniyor diyaloğunu kapat (hata durumunda da)
+            if (loadingContext != null && dialogContext.mounted) {
+              // ignore: use_build_context_synchronously
+              Navigator.of(loadingContext!).pop();
+              loadingContext = null;
+            }
+            
             // Hata mesajını göster
             if (context.mounted) {
+              // ignore: use_build_context_synchronously
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(viewModel.errorMessage ?? 'Masa birleştirme işlemi başarısız oldu'),
+                  content: Text('Masa birleştirme sırasında hata oluştu: $e'),
                   backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
                 ),
               );
             }
@@ -854,7 +1004,7 @@ class TableCard extends StatelessWidget {
           // CategoryView'den geri döndükten sonra masa verilerini güncelle
           if (context.mounted) {
             final viewModel = Provider.of<TablesViewModel>(context, listen: false);
-            await viewModel.getTablesData(
+            await viewModel.refreshTablesDataSilently(
               userToken: userToken,
               compID: compID,
             );

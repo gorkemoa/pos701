@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pos701/views/home_view.dart';
 import 'package:pos701/views/tables_view.dart';
+import 'package:pos701/views/kitchen_view.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/services/auth_service.dart';
@@ -57,6 +59,12 @@ class _AppDrawerState extends State<AppDrawer> {
                     title: const Text('Anasayfa', style: TextStyle(fontSize: 16)),
                     onTap: () {
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HomeView(),
+                        ),
+                      );
                     },
                   ),
                   const Divider(height: 1),
@@ -83,7 +91,16 @@ class _AppDrawerState extends State<AppDrawer> {
                     title: const Text('Mutfak', style: TextStyle(fontSize: 16)),
                     onTap: () {
                       Navigator.pop(context);
-                      // Mutfak sayfasına yönlendirme
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => KitchenView(
+                            userToken: userViewModel.userInfo?.userToken ?? '',
+                            compID: userViewModel.userInfo?.compID ?? 0,
+                            title: 'Mutfak',
+                          ),
+                        ),
+                      );
                     },
                   ),
                   const Divider(height: 1),

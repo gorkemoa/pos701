@@ -240,9 +240,9 @@ class CompanyInfo {
     }
 
     return CompanyInfo(
-      compID: json['compID'] ?? 0,
-      compName: json['compName'] ?? '',
-      compKuverWaiter: json['compKuverWaiter'] ?? false,
+      compID: json['compID'],
+      compName: json['compName'],
+      compKuverWaiter: json['compKuverWaiter'],
       compPayTypes: payTypes,
     );
   }

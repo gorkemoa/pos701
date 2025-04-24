@@ -19,17 +19,20 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Kullanıcı bilgilerini yükle
       final userViewModel = Provider.of<UserViewModel>(context, listen: false);
       if (userViewModel.userInfo == null) {
-        userViewModel.loadUserInfo();
+        // Kullanıcı bilgilerinin yüklenmesini bekle
+        await userViewModel.loadUserInfo();
       }
       
-      // İstatistik verilerini yükle
-      final statisticsViewModel = Provider.of<StatisticsViewModel>(context, listen: false);
-      final int compID = userViewModel.userInfo?.compID ?? 0;
-      statisticsViewModel.loadStatistics(compID);
+      // Kullanıcı bilgileri yüklendikten sonra istatistik verilerini yükle
+      if (mounted) {
+        final statisticsViewModel = Provider.of<StatisticsViewModel>(context, listen: false);
+        final int compID = userViewModel.userInfo?.compID ?? 0;
+        statisticsViewModel.loadStatistics(compID);
+      }
     });
   }
 
@@ -52,8 +55,11 @@ class _HomeViewState extends State<HomeView> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () {
-              userViewModel.loadUserInfo();
+            onPressed: () async {
+              // Önce kullanıcı bilgilerini güncelle
+              await userViewModel.loadUserInfo();
+              
+              // Sonra güncel compID ile istatistikleri yenile
               final int compID = userViewModel.userInfo?.compID ?? 0;
               statisticsViewModel.refreshStatistics(compID);
             },
@@ -146,26 +152,24 @@ class _HomeViewState extends State<HomeView> {
                               ),
                             ],
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    color: Colors.pink,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text('Ödeme Tipleri'),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Expanded(
-                                child: _buildPaymentTypesChart(statisticsViewModel),
+                          child: _buildPaymentTypesChart(statisticsViewModel),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          height: 350,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                spreadRadius: 1,
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
                               ),
                             ],
                           ),
+                          child: _buildOccupancyChart(statisticsViewModel),
                         ),
                       ],
                     ),
@@ -187,12 +191,6 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
       );
-    }
-    
-    // Mevcut verileri debug amaçlı yazdır
-    debugPrint('Satış verileri: ${sales.length} adet');
-    for (var sale in sales) {
-      debugPrint('Saat: ${sale.hour}, Miktar: ${sale.amount}');
     }
     
     // Veri noktaları oluştur
@@ -324,80 +322,489 @@ class _HomeViewState extends State<HomeView> {
         ),
       );
     }
+
+    // En yüksek tutarı bul (grafik ölçeği için)
+    double maxY = 0;
+    for (var payment in payments) {
+      if ((payment.amount ?? 0) > maxY) {
+        maxY = payment.amount ?? 0;
+      }
+    }
     
-    // Toplam tutar hesapla
+    // Yuvarlama işlemi yap ve ekstra boşluk ekle
+    maxY = (maxY * 1.2).ceilToDouble(); 
+    
+    // Toplam tutarı hesapla (yüzdeler için)
     final double totalAmount = payments.fold(0.0, (sum, payment) => sum + (payment.amount ?? 0.0));
     
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Pasta grafiği
+        const Text(
+          'Ödeme Tipleri',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Grafik
         Expanded(
-          child: PieChart(
-            PieChartData(
-              sectionsSpace: 2,
-              centerSpaceRadius: 40,
-              sections: payments.map((payment) {
-                final double percentage = totalAmount > 0 
-                  ? ((payment.amount ?? 0.0) / totalAmount) * 100 
-                  : 0.0;
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.center,
+              maxY: maxY,
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  tooltipBgColor: Colors.blueGrey.shade800,
+                  tooltipRoundedRadius: 8,
+                  tooltipPadding: const EdgeInsets.all(8),
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final payment = payments[groupIndex];
+                    final percentage = totalAmount > 0 
+                      ? ((payment.amount ?? 0.0) / totalAmount * 100).toStringAsFixed(1)
+                      : '0.0';
+                    return BarTooltipItem(
+                      '${payment.type}\n${payment.amount?.toStringAsFixed(2)} TL\n%$percentage',
+                      const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      if (value.toInt() >= 0 && value.toInt() < payments.length) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            payments[value.toInt()].type ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF444444),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                    reservedSize: 36,
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 50,
+                    interval: maxY > 2000 ? maxY / 4 : maxY / 3,
+                    getTitlesWidget: (value, meta) {
+                      String formattedValue;
+                      if (value >= 1000) {
+                        formattedValue = '${(value / 1000).toStringAsFixed(1)}K';
+                      } else {
+                        formattedValue = value.toInt().toString();
+                      }
+                      
+                      return Text(
+                        formattedValue,
+                        style: const TextStyle(
+                          fontSize: 10, 
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF666666),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: maxY > 2000 ? maxY / 4 : maxY / 3,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(
+                    color: Colors.grey.shade200,
+                    strokeWidth: 1,
+                    dashArray: [5, 5],
+                  );
+                },
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                  left: BorderSide(color: Colors.grey.shade300, width: 1),
+                ),
+              ),
+              barGroups: payments.asMap().entries.map((entry) {
+                final int index = entry.key;
+                final payment = entry.value;
                 
-                // API'den gelen renk kodunu kullan veya varsayılan renkler listesinden seç
                 final Color color = payment.color != null && payment.color!.startsWith('#')
                     ? _hexToColor(payment.color!)
                     : Colors.blue;
                 
-                return PieChartSectionData(
-                  color: color,
-                  value: payment.amount ?? 0.0,
-                  title: '${percentage.toStringAsFixed(1)}%',
-                  radius: 60,
-                  titleStyle: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                final double barWidth = payments.length > 3 ? 16 : 25;
+
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: payment.amount ?? 0,
+                      color: color,
+                      width: barWidth,
+                      backDrawRodData: BackgroundBarChartRodData(
+                        show: true,
+                        toY: maxY,
+                        color: Colors.grey.shade100,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(6),
+                        topRight: Radius.circular(6),
+                      ),
+                    ),
+                  ],
                 );
               }).toList(),
             ),
           ),
         ),
         
-        // Ödeme tipleri listesi ve açıklamalar
-        Expanded(
-          child: ListView.builder(
-            itemCount: payments.length,
-            itemBuilder: (context, index) {
-              final payment = payments[index];
-              
-              // API'den gelen renk kodunu kullan veya varsayılan renkler listesinden seç
+        // Tutarlar ve yüzdeler
+        Container(
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: payments.map((payment) {
               final Color color = payment.color != null && payment.color!.startsWith('#')
                   ? _hexToColor(payment.color!)
                   : Colors.blue;
               
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
+              final double percentage = totalAmount > 0 
+                  ? ((payment.amount ?? 0.0) / totalAmount * 100)
+                  : 0.0;
+              
+              return Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              payment.type ?? 'Bilinmeyen',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF333333),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${payment.amount?.toStringAsFixed(2)} TL (%${percentage.toStringAsFixed(1)})',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF666666),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Masa doluluk oranını gösteren pasta grafiği 
+  Widget _buildOccupancyChart(StatisticsViewModel viewModel) {
+    final int totalTables = viewModel.statistics?.totalTables ?? 0;
+    final int orderTables = viewModel.statistics?.orderTables ?? 0;
+    final int emptyTables = totalTables - orderTables;
+    
+    if (totalTables <= 0) {
+      return const Center(
+        child: Text(
+          'Masa verisi yok',
+          style: TextStyle(
+            color: Colors.grey,
+            fontSize: 16,
+          ),
+        ),
+      );
+    }
+    
+    final double occupancyPercentage = totalTables > 0 
+        ? (orderTables / totalTables * 100)
+        : 0.0;
+    
+    // Dolu ve boş masalar için renkler
+    const Color occupiedColor = Color(0xFFFF4560);
+    const Color emptyColor = Color(0xFF13D8AA);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Masa Doluluk Oranı',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: Column(
+            children: [
+              // Pasta grafiği
+              Expanded(
+                flex: 2,
                 child: Row(
                   children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      color: color,
-                    ),
-                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        payment.type ?? 'Bilinmeyen',
-                        style: const TextStyle(fontSize: 12),
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 0,
+                          centerSpaceRadius: 60,
+                          startDegreeOffset: -90,
+                          sections: [
+                            // Dolu masalar
+                            PieChartSectionData(
+                              color: occupiedColor,
+                              value: orderTables.toDouble(),
+                              title: '',
+                              radius: 50,
+                              titleStyle: const TextStyle(fontSize: 0),
+                            ),
+                            // Boş masalar
+                            PieChartSectionData(
+                              color: emptyColor,
+                              value: emptyTables.toDouble(),
+                              title: '',
+                              radius: 50,
+                              titleStyle: const TextStyle(fontSize: 0),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    Text(
-                      '${payment.amount?.toStringAsFixed(2)} TL',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Merkezdeki doluluk oranı
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    blurRadius: 6,
+                                    color: Colors.black.withOpacity(0.05),
+                                    spreadRadius: 2,
+                                  )
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    '${occupancyPercentage.toStringAsFixed(1)}%',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF333333),
+                                    ),
+                                  ),
+                                  const Text(
+                                    'Doluluk',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF666666),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+              
+              // Açıklamalar
+              Expanded(
+                flex: 1,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      // Dolu masalar
+                      Expanded(
+                        child: _buildTableInfoRow(
+                          color: occupiedColor,
+                          title: 'Dolu Masalar',
+                          count: orderTables,
+                          percentage: occupancyPercentage,
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 16),
+                      
+                      // Boş masalar
+                      Expanded(
+                        child: _buildTableInfoRow(
+                          color: emptyColor,
+                          title: 'Boş Masalar',
+                          count: emptyTables,
+                          percentage: 100 - occupancyPercentage,
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 16),
+                      
+                      // Toplam masalar
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.table_restaurant,
+                              size: 16,
+                              color: Color(0xFF666666),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Toplam Masalar',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF666666),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '$totalTables masa',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF333333),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Masa bilgi satırı widget'ı
+  Widget _buildTableInfoRow({
+    required Color color,
+    required String title,
+    required int count,
+    required double percentage,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF666666),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                '$count masa (${percentage.toStringAsFixed(1)}%)',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF333333),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ],
@@ -408,7 +815,7 @@ class _HomeViewState extends State<HomeView> {
   Color _hexToColor(String hexColor) {
     hexColor = hexColor.replaceAll('#', '');
     if (hexColor.length == 6) {
-      hexColor = 'FF$hexColor'; // Alfa kanalını ekle
+      hexColor = 'FF$hexColor';
     }
     return Color(int.parse('0x$hexColor'));
   }

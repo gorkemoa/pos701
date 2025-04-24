@@ -42,6 +42,33 @@ class TablesViewModel extends ChangeNotifier {
     }
   }
   
+  // Arka planda veri güncellemesi - Ana ekranı bloke etmeden
+  Future<bool> refreshTablesDataSilently({
+    required String userToken,
+    required int compID,
+  }) async {
+    // Loading durumunu değiştirmiyoruz ve notifyListeners çağırmıyoruz
+    // bu sayede kullanıcı arayüzünde kesinti olmayacak
+    _errorMessage = null;
+    _successMessage = null;
+    
+    try {
+      final response = await _tableService.getTables(
+        userToken: userToken,
+        compID: compID,
+      );
+      
+      // Yeni yanıtı ayarla ve güncelleme olduğunu bildir
+      _tablesResponse = response;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      // Hata durumunda eski verileri koru
+      debugPrint('Arka plan veri yenileme hatası: $e');
+      return false;
+    }
+  }
+  
   Future<bool> changeTable({
     required String userToken,
     required int compID,
@@ -149,6 +176,47 @@ class TablesViewModel extends ChangeNotifier {
         return true;
       } else {
         _errorMessage = response['error_message'] ?? 'Adisyon aktarma işlemi başarısız oldu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  // Masa ayırma (unmerge) işlemi
+  Future<bool> unMergeTables({
+    required String userToken,
+    required int compID,
+    required int tableID,
+    required int orderID,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    
+    try {
+      final response = await _tableService.mergeTables(
+        userToken: userToken,
+        compID: compID,
+        tableID: tableID,
+        orderID: orderID,
+        mergeTables: [], // Boş liste göndermek yeterli
+        step: 'unmerged', // Ayırma işlemi
+      );
+      
+      _isLoading = false;
+      
+      if (response['success'] == true) {
+        _successMessage = response['success_message'] ?? 'Masalar başarıyla ayrıldı';
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'Masa ayırma işlemi başarısız oldu';
         notifyListeners();
         return false;
       }

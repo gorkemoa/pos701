@@ -104,7 +104,9 @@ class _CategoryViewState extends State<CategoryView> {
           actions: [
             IconButton(
               icon: Icon(Icons.menu),
-              onPressed: () {},
+              onPressed: () {
+                _showMenuDialog();
+              },
             ),
           ],
         ),
@@ -763,5 +765,152 @@ class _CategoryViewState extends State<CategoryView> {
         ),
       );
     }
+  }
+
+  void _showMenuDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(0),
+        ),
+        insetPadding: EdgeInsets.zero,
+        alignment: Alignment.topRight,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.7,
+          height: MediaQuery.of(context).size.height,
+          color: Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                color: Color(AppConstants.primaryColorValue),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const Text(
+                      'Menü',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildMenuItem(
+                      icon: Icons.description,
+                      title: 'NOT',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // NOT işlemi
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.people,
+                      title: 'Misafir Sayısı',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Misafir sayısı işlemi
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.person,
+                      title: 'Müşteri',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Müşteri işlemi
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.attach_money,
+                      title: 'Kuver Ücreti Ekle',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Kuver ücreti işlemi
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.monetization_on,
+                      title: 'Garsoniye Ücreti Ekle',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Garsoniye ücreti işlemi
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.print,
+                      title: 'Yazdır',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Yazdır işlemi
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.qr_code,
+                      title: 'Barkod',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Barkod işlemi
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.close,
+                      title: 'Masayı Kapat',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Masayı kapat işlemi
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      onTap: onTap,
+    );
   }
 } 

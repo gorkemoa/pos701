@@ -5,6 +5,7 @@ import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/widgets/table_card.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/category_view.dart';
+import 'dart:async'; // Timer için import ekle
 
 class TablesView extends StatefulWidget {
   final String userToken;
@@ -26,11 +27,42 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
   TabController? _tabController;
   final TablesViewModel _viewModel = TablesViewModel();
   bool _isInitialized = false;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    
+    // 20 saniyede bir verileri otomatik yenile
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (timer) {
+      if (mounted) {
+        _refreshDataSilently();
+      }
+    });
+  }
+
+  Future<void> _refreshDataSilently() async {
+    if (!mounted) return;
+    
+    // Arka planda veri yenileme - gösterge olmadan
+    await _viewModel.refreshTablesDataSilently(
+      userToken: widget.userToken,
+      compID: widget.compID,
+    );
+    
+    // TabController durumunu güncelle
+    if (_viewModel.regions.isNotEmpty && mounted) {
+      if (_tabController == null || _tabController!.length != _viewModel.regions.length) {
+        _disposeTabController();
+        setState(() {
+          _tabController = TabController(
+            length: _viewModel.regions.length,
+            vsync: this,
+          );
+        });
+      }
+    }
   }
 
   Future<void> _loadData() async {
@@ -80,6 +112,8 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
   @override
   void dispose() {
     _disposeTabController();
+    // Timer'ı temizle
+    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -210,6 +244,27 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       // Destek işlevi
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Destek İletişim'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text('Telefon: +90 555 123 4567'),
+                              SizedBox(height: 8),
+                              Text('E-posta: destek@pos701.com'),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Kapat'),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.support_agent, color: Colors.white),
                     label: const Text('Destek İste', style: TextStyle(color: Colors.white)),

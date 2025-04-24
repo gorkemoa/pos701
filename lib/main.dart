@@ -4,11 +4,13 @@ import 'package:pos701/views/login_view.dart';
 import 'package:pos701/services/api_service.dart';
 import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/services/statistics_service.dart';
+import 'package:pos701/services/kitchen_service.dart';
 import 'package:pos701/viewmodels/login_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/viewmodels/statistics_viewmodel.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/viewmodels/order_viewmodel.dart';
+import 'package:pos701/viewmodels/kitchen_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
@@ -35,6 +37,9 @@ void main() {
         ProxyProvider<ApiService, StatisticsService>(
           update: (_, apiService, __) => StatisticsService(apiService),
         ),
+        ProxyProvider<ApiService, KitchenService>(
+          update: (_, apiService, __) => KitchenService(apiService: apiService),
+        ),
         ChangeNotifierProxyProvider2<AuthService, ApiService, LoginViewModel>(
           create: (context) => LoginViewModel(
             Provider.of<AuthService>(context, listen: false),
@@ -49,6 +54,10 @@ void main() {
         ChangeNotifierProxyProvider<StatisticsService, StatisticsViewModel>(
           create: (_) => StatisticsViewModel(StatisticsService(ApiService())),
           update: (_, statisticsService, __) => StatisticsViewModel(statisticsService),
+        ),
+        ChangeNotifierProxyProvider<KitchenService, KitchenViewModel>(
+          create: (_) => KitchenViewModel(kitchenService: KitchenService()),
+          update: (_, kitchenService, __) => KitchenViewModel(kitchenService: kitchenService),
         ),
         ChangeNotifierProvider<BasketViewModel>(
           create: (_) => BasketViewModel(),
