@@ -5,6 +5,7 @@ import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/widgets/table_card.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/category_view.dart';
+import 'package:pos701/widgets/app_drawer.dart';
 import 'dart:async'; // Timer için import ekle
 
 class TablesView extends StatefulWidget {
@@ -139,6 +140,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
+              drawer: const AppDrawer(),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -190,6 +192,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                   ),
                 ],
               ),
+              drawer: const AppDrawer(),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -303,6 +306,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                 )).toList(),
               ),
             ),
+            drawer: const AppDrawer(),
             body: TabBarView(
               controller: _tabController,
               children: regions.map((region) => _buildTablesGrid(region)).toList(),
