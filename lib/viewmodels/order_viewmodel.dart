@@ -198,9 +198,15 @@ class OrderViewModel extends ChangeNotifier {
     final List<BasketItem> sepetItems = [];
     
     for (var product in _orderDetail!.products) {
-      // İptal edilmiş veya hediye ürünleri sepete eklememek için kontrol
+      // İptal edilmiş veya ödenmiş ürünleri sepete eklememek için kontrol
       if (product.isCanceled) {
         debugPrint('ℹ️ [ORDER_VM] İptal edilmiş ürün sepete eklenmedi: ${product.proName}');
+        continue;
+      }
+      
+      // Ödenmiş ürünleri kontrol et (isPaid flag'i veya paidQty değerine göre)
+      if (product.isPaid == true || product.paidQty >= product.proQty) {
+        debugPrint('💰 [ORDER_VM] Ödenmiş ürün sepete eklenmedi: ${product.proName}, opID: ${product.opID}');
         continue;
       }
       
@@ -214,16 +220,23 @@ class OrderViewModel extends ChangeNotifier {
         proPrice: product.price.toString(),
       );
       
-      debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Miktar: ${product.proQty}, OpID: ${product.opID}');
+      // Kalan ödenmemiş miktar hesaplanır (proQty - paidQty)
+      final int kalanMiktar = product.proQty - product.paidQty;
       
-      // Sepet öğesi oluştur
-      final BasketItem sepetItem = BasketItem(
-        product: urun,
-        quantity: product.proQty,
-        opID: product.opID,
-      );
-      
-      sepetItems.add(sepetItem);
+      // Önemli: Aynı üründen birden fazla varsa, her biri için ayrı sepet öğeleri oluştur
+      // Bu, parçalı ödeme için gereklidir - kullanıcı her bir ürünü ayrı ayrı seçebilmelidir
+      for (int i = 0; i < kalanMiktar; i++) {
+        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Birim: ${i+1}/$kalanMiktar, OpID: ${product.opID}');
+        
+        // Her birim için ayrı bir sepet öğesi oluştur
+        final BasketItem sepetItem = BasketItem(
+          product: urun,
+          quantity: 1, // Her öğe için miktar 1 olmalı
+          opID: product.opID, // OpID'ler aynı kalır - API hangi sipariş kalemi olduğunu bilmeli
+        );
+        
+        sepetItems.add(sepetItem);
+      }
     }
     
     debugPrint('🛒 [ORDER_VM] Sepete aktarılan toplam ürün sayısı: ${sepetItems.length}');

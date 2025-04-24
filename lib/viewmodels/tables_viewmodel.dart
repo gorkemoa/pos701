@@ -324,59 +324,34 @@ class TablesViewModel extends ChangeNotifier {
     required int payType,
   }) async {
     _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
     notifyListeners();
     
     try {
-      final url = "${AppConstants.baseUrl}/service/user/order/payment/partPay";
-      
-      final requestBody = {
-        "userToken": userToken,
-        "compID": compID,
-        "orderID": orderID,
-        "opID": opID,
-        "opQty": opQty,
-        "payType": payType
-      };
-      
-      debugPrint('📤 Parçalı ödeme gönderiliyor: $requestBody');
-      
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(requestBody),
+      final response = await _tableService.partPay(
+        userToken: userToken,
+        compID: compID,
+        orderID: orderID,
+        opID: opID,
+        opQty: opQty,
+        payType: payType,
       );
       
-      debugPrint('📥 Parçalı ödeme yanıtı alındı: ${response.statusCode}');
+      _isLoading = false;
       
-      if (response.statusCode == 410) {
-        final responseData = jsonDecode(response.body);
-        
-        if (responseData['error'] == false) {
-          debugPrint('✅ Parçalı ödeme başarılı: ${responseData['data']}');
-          _errorMessage = null;
-          _isLoading = false;
-          notifyListeners();
-          return true;
-        } else {
-          debugPrint('⛔️ Parçalı ödeme hatası: ${responseData['message']}');
-          _errorMessage = responseData['message'] ?? 'Parçalı ödeme alınamadı.';
-          _isLoading = false;
-          notifyListeners();
-          return false;
-        }
+      if (response['success'] == true) {
+        _successMessage = response['message'] ?? 'Parçalı ödeme başarıyla tamamlandı';
+        notifyListeners();
+        return true;
       } else {
-        debugPrint('🔴 Parçalı ödeme API hatası: ${response.statusCode}');
-        _errorMessage = 'Sunucu hatası: ${response.statusCode}';
-        _isLoading = false;
+        _errorMessage = response['error_message'] ?? 'Parçalı ödeme işlemi başarısız oldu';
         notifyListeners();
         return false;
       }
     } catch (e) {
-      debugPrint('🔴 Parçalı ödeme exception: $e');
-      _errorMessage = 'Ödeme işlemi sırasında hata oluştu: $e';
       _isLoading = false;
+      _errorMessage = e.toString();
       notifyListeners();
       return false;
     }

@@ -16,14 +16,14 @@ class PaymentView extends StatefulWidget {
   final VoidCallback onPaymentSuccess;
 
   const PaymentView({
-    Key? key,
+    super.key,
     required this.userToken,
     required this.compID,
     required this.orderID,
     required this.totalAmount,
     required this.basketItems,
     required this.onPaymentSuccess,
-  }) : super(key: key);
+  });
 
   @override
   State<PaymentView> createState() => _PaymentViewState();
@@ -34,6 +34,7 @@ class _PaymentViewState extends State<PaymentView> {
   bool _isPartialPayment = false;
   PaymentType? _selectedPaymentType;
   Map<int, bool> _selectedItems = {};
+  Map<int, bool> _paidItems = {};
   String _amountStr = "0";
   int _selectedAction = 0;
   int _selectedDiscountType = 0;
@@ -63,6 +64,23 @@ class _PaymentViewState extends State<PaymentView> {
     // Varsayılan olarak tüm ürünleri seçili yap
     for (var item in widget.basketItems) {
       _selectedItems[item.product.proID] = false;
+    }
+    
+    // Kullanıcı bilgilerini yükle (ödeme tipleri için)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndLoadUserInfo();
+    });
+  }
+  
+  // Kullanıcı bilgilerini kontrol et ve gerekirse yükle
+  Future<void> _checkAndLoadUserInfo() async {
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    
+    // Kullanıcı bilgileri veya ödeme tipleri yoksa yeniden yükle
+    if (userViewModel.userInfo == null || 
+        userViewModel.userInfo!.company == null || 
+        userViewModel.userInfo!.company!.compPayTypes.isEmpty) {
+      await userViewModel.loadUserInfo();
     }
   }
 
@@ -114,15 +132,53 @@ class _PaymentViewState extends State<PaymentView> {
       builder: (context) {
         final userViewModel = Provider.of<UserViewModel>(context, listen: false);
         
-        if (userViewModel.userInfo == null || userViewModel.userInfo!.company == null || 
-            userViewModel.userInfo!.company!.compPayTypes.isEmpty) {
+        // Kullanıcı bilgisi durumunu kontrol et ve hata mesajlarını iyileştir
+        if (userViewModel.userInfo == null) {
           return AlertDialog(
             title: const Text('Hata'),
-            content: const Text('Ödeme tipleri bulunamadı.'),
+            content: const Text('Kullanıcı bilgileri yüklenemedi. Lütfen tekrar giriş yapın.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Tamam'),
+              ),
+            ],
+          );
+        }
+        
+        if (userViewModel.userInfo!.company == null) {
+          return AlertDialog(
+            title: const Text('Hata'),
+            content: const Text('Şirket bilgileri bulunamadı. Lütfen yöneticinizle iletişime geçin.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Tamam'),
+              ),
+            ],
+          );
+        }
+        
+        if (userViewModel.userInfo!.company!.compPayTypes.isEmpty) {
+          return AlertDialog(
+            title: const Text('Hata'),
+            content: const Text('Ödeme tipleri bulunamadı. Lütfen yönetici panelinizden ödeme tiplerini tanımlayın.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Tamam'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  // Kullanıcı bilgilerini yeniden yükle
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Kullanıcı bilgileri yenileniyor...'))
+                  );
+                  await userViewModel.loadUserInfo();
+                  _showPaymentTypesDialog(); // Diyalogu tekrar göster
+                },
+                child: const Text('Yenile'),
               ),
             ],
           );
@@ -258,24 +314,42 @@ class _PaymentViewState extends State<PaymentView> {
     try {
       final tablesViewModel = Provider.of<TablesViewModel>(context, listen: false);
       bool allSuccess = true;
+      int successCount = 0;
+      List<BasketItem> paidItems = []; // Ödenen ürünleri toplayacağız
       
       // Her seçili ürün için ödeme işlemi yap
       for (var item in widget.basketItems) {
         if (_selectedItems[item.product.proID] == true) {
-          // opID varsa kullan, yoksa 0 gönder
-          final opID = item.opID ?? 0;
+          // opID geçerliliğini kontrol et
+          if (item.opID <= 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${item.product.proName} için geçerli bir adisyon kalemi ID bulunamadı.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            continue; // Bu ürünü atla, diğerlerine devam et
+          }
+          
+          debugPrint('🔄 Parçalı ödeme işleniyor: Ürün=${item.product.proName}, opID=${item.opID}, Miktar=${item.quantity}');
           
           final bool success = await tablesViewModel.partPay(
             userToken: widget.userToken,
             compID: widget.compID,
             orderID: widget.orderID,
-            opID: opID,
+            opID: item.opID,
             opQty: item.quantity,
             payType: _selectedPaymentType!.typeID,
           );
           
-          if (!success) {
+          if (success) {
+            successCount++;
+            paidItems.add(item); // Başarıyla ödenen ürünü kaydet
+            _paidItems[item.product.proID] = true; // Ödendi olarak işaretle
+            debugPrint('✅ Parçalı ödeme başarılı: Ürün=${item.product.proName}, opID=${item.opID}');
+          } else {
             allSuccess = false;
+            debugPrint('❌ Parçalı ödeme başarısız: Ürün=${item.product.proName}, opID=${item.opID}, Hata=${tablesViewModel.errorMessage}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${item.product.proName} için ödeme alınamadı: ${tablesViewModel.errorMessage}'),
@@ -288,18 +362,44 @@ class _PaymentViewState extends State<PaymentView> {
       
       setState(() => _isLoading = false);
       
-      if (allSuccess) {
+      if (successCount > 0) {
+        // Ödenen ürünleri callback üzerinden ana sayfaya bildir
+        // Bu ürünler burada listeden çıkarılmaz, basket_view'da çıkarılır
         widget.onPaymentSuccess();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_selectedPaymentType!.typeName} ile parçalı ödeme başarıyla alındı.'),
+            content: Text('${_selectedPaymentType!.typeName} ile $successCount ürün için ödeme başarıyla alındı.'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop(); // Ödeme ekranını kapat
+        
+        // Tüm ürünler ödendiyse sayfayı kapat
+        bool allItemsPaid = true;
+        for (var item in widget.basketItems) {
+          if (_paidItems[item.product.proID] != true) {
+            allItemsPaid = false;
+            break;
+          }
+        }
+        
+        if (allItemsPaid) {
+          Navigator.of(context).pop();
+        }
+      } else if (allSuccess == false) {
+        // Hiçbir başarılı işlem yoksa ve en az bir hata varsa
+        // Not: Mesajlar zaten yukarıda gösterildi
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hiçbir ürün için ödeme yapılamadı.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } catch (e) {
       setState(() => _isLoading = false);
+      debugPrint('🔴 Parçalı ödeme genel hatası: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Ödeme işlemi sırasında hata oluştu: $e'),
@@ -314,7 +414,7 @@ class _PaymentViewState extends State<PaymentView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isPartialPayment ? "Parçalı Öde" : "Ödeme Al"),
-        backgroundColor: const Color(0xFFE52C2C),
+        backgroundColor: const Color(AppConstants.primaryColorValue),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -353,30 +453,68 @@ class _PaymentViewState extends State<PaymentView> {
             itemBuilder: (context, index) {
               final item = widget.basketItems[index];
               final isSelected = _selectedItems[item.product.proID] ?? false;
+              final isPaid = _paidItems[item.product.proID] ?? false;
+              
+              // opID kontrolü - 0 ise ödeme için uygun değil
+              final bool hasValidOpId = item.opID > 0;
+              final bool canSelect = hasValidOpId && !isPaid; // Ödenmediyse ve geçerli opID varsa seçilebilir
               
               return ListTile(
                 leading: Checkbox(
                   value: isSelected,
-                  onChanged: (value) {
+                  onChanged: canSelect ? (value) {
                     setState(() {
                       _selectedItems[item.product.proID] = value ?? false;
                     });
-                  },
-                  activeColor: const Color(0xFFE52C2C),
+                  } : null, // Ödendiyse veya geçersiz opID varsa seçilemez
+                  activeColor: const Color(AppConstants.primaryColorValue),
                 ),
-                title: Text("${item.quantity} Tam | ${item.product.proName}"),
-                trailing: Text(
-                  "₺${item.totalPrice.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                title: Text(
+                  "${item.quantity} Tam | ${item.product.proName}",
+                  style: TextStyle(
+                    fontWeight: isPaid ? FontWeight.normal : FontWeight.bold,
+                    color: isPaid ? Colors.grey : Colors.black,
+                    decoration: isPaid ? TextDecoration.lineThrough : TextDecoration.none,
                   ),
                 ),
-                onTap: () {
+                subtitle: isPaid
+                    ? Text("Ödendi", style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold))
+                    : hasValidOpId 
+                      ? Text("Adisyon Kalemi ID: ${item.opID}", style: TextStyle(fontSize: 12, color: Colors.green[700]))
+                      : Text("Ödeme yapılamaz: Adisyon Kalemi ID bulunamadı", style: TextStyle(fontSize: 12, color: Colors.red[700])),
+                trailing: Text(
+                  "₺${item.totalPrice.toStringAsFixed(2)}",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isPaid ? Colors.grey : Colors.black,
+                    decoration: isPaid ? TextDecoration.lineThrough : TextDecoration.none,
+                  ),
+                ),
+                onTap: canSelect ? () {
                   setState(() {
                     _selectedItems[item.product.proID] = !isSelected;
                   });
+                } : isPaid ? () {
+                  // Ödenen ürün için bilgi mesajı
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Bu ürün için ödeme zaten alındı.'),
+                      backgroundColor: Colors.blue,
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                } : () {
+                  // Uyarı mesajı göster
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Bu ürün parçalı ödeme için uygun değil. Adisyon kalemi ID bulunamadı.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
                 },
+                enabled: true, // Her zaman etkin, ancak sadece seçilebilirlik durumu değişir
+                tileColor: isPaid ? Colors.grey[100] : null, // Ödenen ürünler için hafif gri arkaplan
               );
             },
           ),

@@ -672,10 +672,13 @@ class _BasketViewState extends State<BasketView> {
           basketItems: basketViewModel.items,
           onPaymentSuccess: () {
             // Ödeme başarılı olduğunda çağrılacak
-            basketViewModel.clearBasket();
+            // Parçalı ödeme yapıldıysa, ödenmiş ürünleri sepetten çıkar
+            // Not: Tam ödeme yapıldıysa tüm sepet temizlenir
+            _refreshSiparisDetayi();
+            
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Ödeme başarıyla alındı.'),
+                content: Text('Ödeme başarıyla alındı. Ödenen ürünler sepetten kaldırıldı.'),
                 backgroundColor: Colors.green,
               ),
             );
@@ -683,5 +686,62 @@ class _BasketViewState extends State<BasketView> {
         ),
       ),
     );
+  }
+  
+  // Sipariş detaylarını yeniden yükle (Ödeme sonrası)
+  Future<void> _refreshSiparisDetayi() async {
+    if (_userToken == null || _compID == null || widget.orderID == null) {
+      debugPrint('⛔️ Ürün yenilemesi yapılamıyor: Kullanıcı bilgileri veya sipariş ID eksik');
+      return;
+    }
+    
+    setState(() => _isLoading = true);
+    debugPrint('🔄 Ödeme sonrası sepet yenileniyor. OrderID: ${widget.orderID}');
+    
+    try {
+      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+      
+      // Mevcut sepeti temizle
+      basketViewModel.clearBasket();
+      debugPrint('🧹 Sepet temizlendi, yeni ürünler yüklenecek');
+      
+      // Sipariş detaylarını yeniden yükle
+      final success = await orderViewModel.getSiparisDetayi(
+        userToken: _userToken!,
+        compID: _compID!,
+        orderID: widget.orderID!,
+      );
+      
+      if (success && orderViewModel.orderDetail != null) {
+        // Sipariş ürünlerini sepete ekle
+        final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
+        debugPrint('📦 API\'den ${sepetItems.length} adet ürün alındı');
+        
+        if (sepetItems.isEmpty) {
+          debugPrint('✅ Tüm ürünler ödenmiş, sepet boş kalacak');
+        } else {
+          // Sepeti doldur - Burada sadece ödenmemiş ürünler olmalı
+          for (var item in sepetItems) {
+            debugPrint('➕ Sepete ekleniyor: ${item.product.proName}, Miktar: ${item.quantity}, OpID: ${item.opID}');
+            basketViewModel.addProductWithOpID(
+              item.product, 
+              item.quantity,
+              item.opID
+            );
+          }
+          debugPrint('✅ Sepet güncellendi. Yeni ürün sayısı: ${basketViewModel.items.length}');
+        }
+      } else {
+        debugPrint('❌ Sipariş detayları alınamadı: ${orderViewModel.errorMessage}');
+      }
+    } catch (e) {
+      debugPrint('🔴 Sipariş detayları yenilenemedi: $e');
+    } finally {
+      // İşlem tamamlandı, yükleme durumunu kapat
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 } 
