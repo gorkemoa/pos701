@@ -7,6 +7,7 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/category_view.dart';
 import 'package:pos701/widgets/app_drawer.dart';
 import 'dart:async'; // Timer için import ekle
+import 'package:pos701/views/order_list_view.dart'; // OrderListView import'u ekle
 
 class TablesView extends StatefulWidget {
   final String userToken;
@@ -292,7 +293,70 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                 IconButton(
                   icon: const Icon(Icons.more_vert),
                   onPressed: () {
-                    // Daha fazla işlevi
+                    // iOS tarzında BottomSheet göster
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      builder: (BuildContext context) {
+                        return Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20.0),
+                              topRight: Radius.circular(20.0),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 4,
+                                margin: const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.receipt_long),
+                                title: const Text('Tüm Siparişler'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  // Sipariş Listesi sayfasına yönlendir
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => OrderListView(
+                                        userToken: widget.userToken,
+                                        compID: widget.compID,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.history),
+                                title: const Text('Sipariş Geçmişi'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  // Sipariş geçmişini göster
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.settings),
+                                title: const Text('Masa Ayarları'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  // Masa ayarları sayfasına yönlendir
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        );
+                      },
+                    );
                   },
                 ),
               ],

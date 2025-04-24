@@ -338,4 +338,87 @@ class OrderUpdateRequest {
       'products': products.map((product) => product.toJson()).toList(),
     };
   }
+}
+
+class OrderModel {
+  final List<Order> orders;
+
+  OrderModel({
+    required this.orders,
+  });
+
+  factory OrderModel.fromJson(Map<String, dynamic> json) {
+    return OrderModel(
+      orders: List<Order>.from(
+        json['data']['orders'].map((order) => Order.fromJson(order)),
+      ),
+    );
+  }
+}
+
+class Order {
+  final int orderID;
+  final String orderCode;
+  final String orderName;
+  final String orderUserName;
+  final String orderStatusID;
+  final String orderStatus;
+  final String orderDate;
+  final int orderTime;
+  final String orderPayment;
+  final String orderAmount;
+  final String payAmount;
+  final String remainingAmount;
+  final List<Payment> payments;
+
+  Order({
+    required this.orderID,
+    required this.orderCode,
+    required this.orderName,
+    required this.orderUserName,
+    required this.orderStatusID,
+    required this.orderStatus,
+    required this.orderDate,
+    required this.orderTime,
+    required this.orderPayment,
+    required this.orderAmount,
+    required this.payAmount,
+    required this.remainingAmount,
+    required this.payments,
+  });
+
+  factory Order.fromJson(Map<String, dynamic> json) {
+    return Order(
+      orderID: json['orderID'],
+      orderCode: json['orderCode'],
+      orderName: json['orderName'],
+      orderUserName: json['orderUserName'],
+      orderStatusID: json['orderStatusID'],
+      orderStatus: json['orderStatus'],
+      orderDate: json['orderDate'],
+      orderTime: json['orderTime'],
+      orderPayment: json['orderPayment'] ?? '',
+      orderAmount: json['orderAmount'],
+      payAmount: json['payAmount'],
+      remainingAmount: json['remainingAmount'],
+      payments: json['payments'] != null
+          ? List<Payment>.from(
+              json['payments'].map((payment) => Payment.fromJson(payment)))
+          : [],
+    );
+  }
+}
+
+class Payment {
+  final String payType;
+
+  Payment({
+    required this.payType,
+  });
+
+  factory Payment.fromJson(Map<String, dynamic> json) {
+    return Payment(
+      payType: json['payType'],
+    );
+  }
 } 

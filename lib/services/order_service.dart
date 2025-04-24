@@ -370,4 +370,73 @@ class OrderService {
       );
     }
   }
+
+  Future<OrderModel> getOrderList({
+    required String userToken,
+    required int compID,
+  }) async {
+    const url = '${AppConstants.baseUrl}/service/user/order/orderList';
+    
+    try {
+      debugPrint('🔵 [SİPARİŞ LİSTESİ] İstek başlatılıyor...');
+      
+      // SharedPreferences'tan token veya kimlik bilgilerini alarak header'ları hazırla
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? savedToken = prefs.getString(AppConstants.tokenKey);
+      
+      debugPrint('🔵 [SİPARİŞ LİSTESİ] Token: ${savedToken ?? "Token bulunamadı"}');
+      
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+      };
+      
+      // Eğer token varsa, header'a ekle
+      if (savedToken != null && savedToken.isNotEmpty) {
+        headers['X-Auth-Token'] = savedToken;
+      }
+      
+      debugPrint('🔵 [SİPARİŞ LİSTESİ] Headers: $headers');
+      
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode({
+          'userToken': userToken,
+          'compID': compID,
+        }),
+      );
+      
+      debugPrint('🔵 [SİPARİŞ LİSTESİ] HTTP yanıt kodu: ${response.statusCode}');
+      
+      // UTF-8 karakter kodlamasını kullan
+      final String responseBody = utf8.decode(response.bodyBytes);
+      debugPrint('🔵 [SİPARİŞ LİSTESİ] HTTP yanıt gövdesi: $responseBody');
+      
+      final responseData = jsonDecode(responseBody);
+      
+      // Tüm olası yanıt kodlarını işle
+      if (response.statusCode == 200 || response.statusCode == 410) {
+        if (responseData['success'] == true) {
+          return OrderModel.fromJson(responseData);
+        } else {
+          throw Exception('Veri alınamadı: ${responseData['message'] ?? 'Bilinmeyen hata'}');
+        }
+      } else if (response.statusCode == 417) {
+        debugPrint('🔵 [SİPARİŞ LİSTESİ] Sipariş yok mesajı (417)');
+        // Bu özel durum için bir OrderModel döndür, ancak boş liste ile
+        return OrderModel(orders: []);
+      } else if (response.statusCode == 401) {
+        debugPrint('🔴 [SİPARİŞ LİSTESİ] Yetkilendirme hatası (401)');
+        // Token ile ilgili sorun olabilir, token'ı temizle
+        await prefs.remove(AppConstants.tokenKey);
+        throw Exception('Oturum süresi dolmuş olabilir. Lütfen yeniden giriş yapın.');
+      } else {
+        throw Exception('Sunucu hatası: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('🔴 [SİPARİŞ LİSTESİ] Hata: $e');
+      throw Exception('Sipariş listesi alınırken hata oluştu: $e');
+    }
+  }
 } 
