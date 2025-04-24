@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pos701/models/table_model.dart';
 import 'package:pos701/services/table_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:pos701/constants/app_constants.dart';
 
 class TablesViewModel extends ChangeNotifier {
   final TableService _tableService = TableService();
@@ -306,6 +309,74 @@ class TablesViewModel extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Parçalı ödeme alma metodu
+  Future<bool> partPay({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    required int opID,
+    required int opQty,
+    required int payType,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      final url = "${AppConstants.baseUrl}/service/user/order/payment/partPay";
+      
+      final requestBody = {
+        "userToken": userToken,
+        "compID": compID,
+        "orderID": orderID,
+        "opID": opID,
+        "opQty": opQty,
+        "payType": payType
+      };
+      
+      debugPrint('📤 Parçalı ödeme gönderiliyor: $requestBody');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('📥 Parçalı ödeme yanıtı alındı: ${response.statusCode}');
+      
+      if (response.statusCode == 410) {
+        final responseData = jsonDecode(response.body);
+        
+        if (responseData['error'] == false) {
+          debugPrint('✅ Parçalı ödeme başarılı: ${responseData['data']}');
+          _errorMessage = null;
+          _isLoading = false;
+          notifyListeners();
+          return true;
+        } else {
+          debugPrint('⛔️ Parçalı ödeme hatası: ${responseData['message']}');
+          _errorMessage = responseData['message'] ?? 'Parçalı ödeme alınamadı.';
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+      } else {
+        debugPrint('🔴 Parçalı ödeme API hatası: ${response.statusCode}');
+        _errorMessage = 'Sunucu hatası: ${response.statusCode}';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      debugPrint('🔴 Parçalı ödeme exception: $e');
+      _errorMessage = 'Ödeme işlemi sırasında hata oluştu: $e';
+      _isLoading = false;
       notifyListeners();
       return false;
     }
