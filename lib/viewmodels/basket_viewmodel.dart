@@ -9,9 +9,14 @@ class BasketViewModel extends ChangeNotifier {
   double get totalAmount => _basket.totalAmount;
   double get discount => _basket.discount;
   double get collectedAmount => _basket.collectedAmount;
-  double get remainingAmount => _basket.remainingAmount;
+  double get remainingAmount {
+    // Debug için hesaplama adımlarını logla
+    final total = _basket.totalAmount;
+    debugPrint('💰 [BASKET_VM] RemainingAmount hesaplanıyor: Total: $total, Discount: ${_basket.discount}, Collected: ${_basket.collectedAmount}');
+    return total - _basket.discount - _basket.collectedAmount;
+  }
   bool get isEmpty => _basket.items.isEmpty;
-  int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.quantity);
+  int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.proQty);
   
   // Ürün ekleme (tekil olarak)
   void addProduct(Product product, {int opID = 0}) {
@@ -21,12 +26,12 @@ class BasketViewModel extends ChangeNotifier {
     
     if (existingIndex != -1) {
       // Mevcut ürün miktarını artır
-      _basket.items[existingIndex].quantity++;
+      _basket.items[existingIndex].proQty++;
     } else {
       // Yeni ürün ekle
       _basket.items.add(BasketItem(
         product: product,
-        quantity: 1,
+        proQty: 1,
         opID: opID
       ));
     }
@@ -36,20 +41,35 @@ class BasketViewModel extends ChangeNotifier {
   
   // Sepete ürün ekleme/güncelleme (özel opID ile)
   void addProductWithOpID(Product product, int quantity, int opID) {
+    // Önce debug log ekleyerek ne eklediğimizi görelim
+    debugPrint('📥 [BASKET_VM] Sepete ürün ekleniyor: ${product.proName}, ProID: ${product.proID}, Miktar: $quantity, OpID: $opID');
+    
+    // Mevcut sepetteki ürünleri logla
+    for (var item in _basket.items) {
+      debugPrint('🔍 [BASKET_VM] Mevcut sepet ürünü: ${item.product.proName}, ProID: ${item.product.proID}, Miktar: ${item.proQty}, OpID: ${item.opID}');
+    }
+
+    // Aynı ürün ve opID varsa miktarını güncelle, yoksa ekle
     final existingIndex = _basket.items.indexWhere((item) => 
         item.product.proID == product.proID && item.opID == opID);
     
     if (existingIndex != -1) {
       // Aynı ürün ve opID varsa miktarını güncelle
-      _basket.items[existingIndex].quantity = quantity;
+      final oldQuantity = _basket.items[existingIndex].proQty;
+      _basket.items[existingIndex].proQty = quantity;
+      debugPrint('🔄 [BASKET_VM] Ürün güncellendi: ${product.proName}, ProID: ${product.proID}, Eski miktar: $oldQuantity, Yeni miktar: $quantity, OpID: $opID');
     } else {
       // Yeni ürün ekle
       _basket.items.add(BasketItem(
         product: product,
-        quantity: quantity,
+        proQty: quantity,
         opID: opID
       ));
+      debugPrint('➕ [BASKET_VM] Yeni ürün eklendi: ${product.proName}, ProID: ${product.proID}, Miktar: $quantity, OpID: $opID');
     }
+    
+    // Güncellenmiş sepet bilgisini göster
+    debugPrint('📦 [BASKET_VM] Sepet durumu: ${_basket.items.length} çeşit ürün, Toplam: ${_basket.items.fold(0, (sum, item) => sum + item.proQty)} adet');
     
     notifyListeners();
   }
@@ -99,7 +119,7 @@ class BasketViewModel extends ChangeNotifier {
     for (var item in _basket.items) {
       // Sadece proID kontrolü değil, opID=0 olan veya aynı opID'ye sahip ürünleri say
       if (item.product.proID == product.proID) {
-        totalQuantity += item.quantity;
+        totalQuantity += item.proQty;
       }
     }
     
@@ -113,8 +133,8 @@ class BasketViewModel extends ChangeNotifier {
     );
     
     if (newProductIndex != -1) {
-      if (_basket.items[newProductIndex].quantity > 1) {
-        _basket.items[newProductIndex].quantity--;
+      if (_basket.items[newProductIndex].proQty > 1) {
+        _basket.items[newProductIndex].proQty--;
       } else {
         _basket.items.removeAt(newProductIndex);
       }
@@ -128,8 +148,8 @@ class BasketViewModel extends ChangeNotifier {
     );
     
     if (existingItemIndex != -1) {
-      if (_basket.items[existingItemIndex].quantity > 1) {
-        _basket.items[existingItemIndex].quantity--;
+      if (_basket.items[existingItemIndex].proQty > 1) {
+        _basket.items[existingItemIndex].proQty--;
       } else {
         _basket.items.removeAt(existingItemIndex);
       }
@@ -144,10 +164,10 @@ class BasketViewModel extends ChangeNotifier {
     
     if (existingItemIndex != -1) {
       // Eğer ürün sepette varsa, porsiyonu güncelle
-      final int mevcutMiktar = _basket.items[existingItemIndex].quantity;
+      final int mevcutMiktar = _basket.items[existingItemIndex].proQty;
       _basket.items[existingItemIndex] = BasketItem(
         product: yeniPorsiyon,
-        quantity: mevcutMiktar,
+        proQty: mevcutMiktar,
       );
     } else {
       // Eğer ürün sepette yoksa, yeni ürün olarak ekle

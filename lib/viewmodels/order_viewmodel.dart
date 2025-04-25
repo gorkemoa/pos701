@@ -44,43 +44,27 @@ class OrderViewModel extends ChangeNotifier {
   
   /// Sepeti sipariş modeline dönüştürür
   List<OrderProduct> sepettenSiparisUrunleriOlustur(List<BasketItem> items) {
-    // Aynı ürün ve opID'li ürünleri bir araya getirerek dizi oluştur
-    final Map<String, List<BasketItem>> productGroups = {};
+    // Her bir sepet öğesini ayrı ayrı sipariş ürünü olarak oluştur
+    final List<OrderProduct> orderProducts = [];
 
     for (var item in items) {
-      // Ürün ve opID'ye göre bir anahtar oluştur (proID-postID-opID)
-      final key = '${item.product.proID}-${item.product.postID}-${item.opID}';
-      
-      if (productGroups.containsKey(key)) {
-        // Aynı ürün ve opID'li ürün zaten varsa listeye ekle
-        productGroups[key]!.add(item);
-      } else {
-        // Yeni bir ürünse yeni bir liste oluştur
-        productGroups[key] = [item];
-      }
-    }
-    
-    // Grupları OrderProduct listesine dönüştür
-    final List<OrderProduct> orderProducts = [];
-    
-    productGroups.forEach((key, groupItems) {
-      // İlk ürünün bilgilerini al
-      final firstItem = groupItems.first;
-      
-      // Toplam miktarı hesapla
-      final totalQuantity = groupItems.fold(0, (sum, item) => sum + item.quantity);
+      // Debug için ürün bilgilerini logla
+      debugPrint('🔄 [ORDER_VM] Sipariş ürünü hazırlanıyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}');
       
       // OrderProduct oluştur
       orderProducts.add(OrderProduct(
-        opID: firstItem.opID,
-        postID: firstItem.product.postID,
-        proID: firstItem.product.proID,
-        proQty: totalQuantity,
-        proPrice: firstItem.product.proPrice,
+        opID: item.opID,
+        postID: item.product.postID,
+        proID: item.product.proID,
+        proQty: item.proQty, // Sepetteki miktarı doğrudan kullan
+        proPrice: item.product.proPrice,
       ));
-      
-      debugPrint('🔄 [ORDER_VM] Ürün grubu oluşturuldu: ${firstItem.product.proName}, Miktar: $totalQuantity, opID: ${firstItem.opID}');
-    });
+    }
+    
+    // Oluşturulan sipariş ürünlerinin sayısını ve toplam miktarını logla
+    final int toplamUrun = orderProducts.length;
+    final int toplamMiktar = orderProducts.fold(0, (sum, product) => sum + product.proQty);
+    debugPrint('✅ [ORDER_VM] Toplam ${toplamUrun} ürün hazırlandı, toplam miktar: $toplamMiktar');
     
     return orderProducts;
   }
@@ -161,8 +145,11 @@ class OrderViewModel extends ChangeNotifier {
           debugPrint('✅ [ORDER_VM] Sipariş detayları alındı. Ürün sayısı: ${orderDetail.products.length}');
           // Ürünlerin detaylarını logla
           for (var product in orderDetail.products) {
-            debugPrint('🛒 [ORDER_VM] Ürün: ${product.proName}, ID: ${product.proID}, Miktar: ${product.proQty}, Fiyat: ${product.price}');
+            debugPrint('🛒 [ORDER_VM] Ürün: ${product.proName}, ID: ${product.proID}, Miktar: ${product.proQty}, RetailPrice: ${product.retailPrice}, Toplam: ${product.price}');
           }
+          
+          // Tahsil edilen tutarı logla
+          debugPrint('💰 [ORDER_VM] Sipariş toplam tutar: ${orderDetail.orderAmount}, Tahsil edilen: ${orderDetail.orderPayAmount}, İndirim: ${orderDetail.orderDiscount}');
           
           // Sepeti temizle ve sipariş ürünlerini sepete ekle
           _siparisDetayiniSepeteAktar(orderDetail);
@@ -205,6 +192,7 @@ class OrderViewModel extends ChangeNotifier {
     }
     
     final List<BasketItem> sepetItems = [];
+    debugPrint('📊 [ORDER_VM] Sipariş detayları sepete aktarılıyor, toplam ${_orderDetail!.products.length} ürün...');
     
     for (var product in _orderDetail!.products) {
       // İptal edilmiş veya ödenmiş ürünleri sepete eklememek için kontrol
@@ -219,6 +207,10 @@ class OrderViewModel extends ChangeNotifier {
         continue;
       }
       
+      // Fiyat bilgilerini kontrol et ve düzgün tara
+      String fiyatStr = product.price.toString().trim();
+      debugPrint('💲 [ORDER_VM] Ürün fiyatı: ${product.proName} - ${fiyatStr}');
+      
       // OrderDetailProduct'tan Product nesnesine dönüştür
       final Product urun = Product(
         proID: product.proID,
@@ -226,7 +218,7 @@ class OrderViewModel extends ChangeNotifier {
         proName: product.proName,
         proUnit: product.proUnit,
         proStock: "0", // Stok bilgisi olmadığı için 0 olarak gönderildi
-        proPrice: product.price.toString(),
+        proPrice: product.retailPrice.toString(), // product.price yerine product.retailPrice (birim fiyat) kullanıldı
       );
       
       // Kalan ödenmemiş miktar hesaplanır (proQty - paidQty)
@@ -234,12 +226,12 @@ class OrderViewModel extends ChangeNotifier {
       
       // Birden fazla aynı ürün varsa, bunları tek bir sepet öğesi olarak ekle
       if (kalanMiktar > 0) {
-        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Toplam miktar: $kalanMiktar, OpID: ${product.opID}');
+        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Toplam miktar: $kalanMiktar, OpID: ${product.opID}, Fiyat: ${urun.proPrice}');
         
         // Tek bir sepet öğesi oluştur
         final BasketItem sepetItem = BasketItem(
           product: urun,
-          quantity: kalanMiktar, // Toplam miktar
+          proQty: kalanMiktar, // Toplam miktar
           opID: product.opID, // OpID'ler aynı kalır - API hangi sipariş kalemi olduğunu bilmeli
         );
         
@@ -247,7 +239,18 @@ class OrderViewModel extends ChangeNotifier {
       }
     }
     
-    debugPrint('🛒 [ORDER_VM] Sepete ${sepetItems.length} ürün çeşidi eklendi (toplam adet: ${sepetItems.fold(0, (sum, item) => sum + item.quantity)})');
+    // Her bir sepet öğesi için detaylı bilgi göster
+    double toplamFiyat = 0;
+    for (var item in sepetItems) {
+      double itemTotalPrice = item.birimFiyat * item.proQty;
+      toplamFiyat += itemTotalPrice;
+      
+      debugPrint('🔢 [ORDER_VM] Sepet öğesi: ${item.product.proName}, Birim Fiyat: ${item.birimFiyat}, Miktar: ${item.proQty}, Toplam: $itemTotalPrice');
+    }
+    
+    debugPrint('🛒 [ORDER_VM] Sepete ${sepetItems.length} ürün çeşidi eklendi.');
+    debugPrint('💰 [ORDER_VM] Toplam hesaplanan tutar: $toplamFiyat');
+    
     return sepetItems;
   }
   

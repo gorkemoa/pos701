@@ -74,7 +74,7 @@ class _PaymentViewState extends State<PaymentView> {
     _expandedItems = [];
     
     for (var item in widget.basketItems) {
-      for (int i = 0; i < item.quantity; i++) {
+      for (int i = 0; i < item.proQty; i++) {
         final String key = "${item.product.proID}-${item.opID}-$i";
         
         _expandedItems.add(ExpandedBasketItem(
@@ -463,7 +463,7 @@ class _PaymentViewState extends State<PaymentView> {
               final bool hasValidOpId = item.opID > 0;
               final bool canSelect = hasValidOpId && !isPaid;
               
-              final double unitPrice = item.totalPrice / item.quantity;
+              final double unitPrice = item.totalPrice / item.proQty;
               
               return ListTile(
                 leading: Checkbox(

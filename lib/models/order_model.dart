@@ -182,6 +182,7 @@ class OrderDetail {
   final String orderCode;
   final String orderName;
   final double orderAmount;
+  final double orderPayAmount;
   final double orderDiscount;
   final String orderDesc;
   final int orderGuest;
@@ -199,6 +200,7 @@ class OrderDetail {
     required this.orderCode,
     required this.orderName,
     required this.orderAmount,
+    this.orderPayAmount = 0.0,
     required this.orderDiscount,
     required this.orderDesc,
     required this.orderGuest,
@@ -218,6 +220,7 @@ class OrderDetail {
       orderCode: json['orderCode'],
       orderName: json['orderName'],
       orderAmount: (json['orderAmount'] ?? 0).toDouble(),
+      orderPayAmount: (json['orderPayAmount'] ?? 0).toDouble(),
       orderDiscount: (json['orderDiscount'] ?? 0).toDouble(),
       orderDesc: json['orderDesc'],
       orderGuest: json['orderGuest'],

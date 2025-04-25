@@ -712,6 +712,11 @@ class TableCard extends StatelessWidget {
                         
                         if (confirmTransfer != true) return;
                         
+                        // Kaynak ve hedef sipariş ID'lerini logla
+                        debugPrint('📋 ADISYON AKTARIM BAŞLIYOR:');
+                        debugPrint('📋 Kaynak Sipariş ID: ${table.orderID}, Masa: ${table.tableName}');
+                        debugPrint('📋 Hedef Sipariş ID: ${targetTable.orderID}, Masa: ${targetTable.tableName}');
+                        
                         // İlk diyaloğu kapat
                         if (Navigator.canPop(dialogContext)) {
                           Navigator.of(dialogContext).pop();
@@ -745,6 +750,7 @@ class TableCard extends StatelessWidget {
                         
                         try {
                           // Adisyon aktarma işlemini gerçekleştir
+                          debugPrint('📋 Adisyon aktarma API çağrısı yapılıyor...');
                           final success = await viewModel.transferOrder(
                             userToken: userToken,
                             compID: compID,
@@ -765,6 +771,14 @@ class TableCard extends StatelessWidget {
                           // Sonucu göster
                           if (!context.mounted) return;
                           
+                          if (success) {
+                            debugPrint('✅ Adisyon aktarma başarılı!');
+                            debugPrint('✅ Yanıt: ${viewModel.successMessage}');
+                          } else {
+                            debugPrint('❌ Adisyon aktarma başarısız!');
+                            debugPrint('❌ Hata: ${viewModel.errorMessage}');
+                          }
+                          
                           // ignore: use_build_context_synchronously
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -780,13 +794,15 @@ class TableCard extends StatelessWidget {
                           
                           if (success) {
                             // Tabloları yenile
+                            debugPrint('🔄 Tablolar yenileniyor...');
                             await viewModel.refreshTablesDataSilently(
                               userToken: userToken,
                               compID: compID,
                             );
+                            debugPrint('✅ Tablolar başarıyla yenilendi');
                           }
                         } catch (e) {
-                          debugPrint('Adisyon aktarma hatası: $e');
+                          debugPrint('🔴 Adisyon aktarma hatası: $e');
                           
                           // Yükleme dialogunu kapat (hata durumunda da)
                           if (loadingContext != null && Navigator.canPop(loadingContext!)) {

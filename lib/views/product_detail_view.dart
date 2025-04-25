@@ -124,12 +124,12 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         // Eski ürünü sepetten bul
         final existingItem = basketViewModel.items.firstWhere(
           (item) => item.product.proID == oldProID,
-          orElse: () => BasketItem(product: product, quantity: 0),
+          orElse: () => BasketItem(product: product, proQty: 0),
         );
         
-        if (existingItem.quantity > 0) {
+        if (existingItem.proQty > 0) {
           // Sadece seçili öğeyi güncelle, miktar korunacak
-          basketViewModel.updateSpecificItem(oldProID, product, existingItem.quantity);
+          basketViewModel.updateSpecificItem(oldProID, product, existingItem.proQty);
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

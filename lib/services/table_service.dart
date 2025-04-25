@@ -148,7 +148,7 @@ class TableService {
   }) async {
     try {
       final url = '${AppConstants.baseUrl}service/user/order/tableOrderTransfer';
-      debugPrint('Adisyon aktarım API isteği: $url');
+      debugPrint('🌐 Adisyon aktarım API isteği: $url');
       
       final requestBody = {
         'userToken': userToken,
@@ -156,7 +156,10 @@ class TableService {
         'oldOrderID': oldOrderID,
         'newOrderID': newOrderID,
       };
-      debugPrint('Adisyon aktarım istek verileri: $requestBody');
+      debugPrint('📤 Adisyon aktarım istek verileri: $requestBody');
+      
+      // API yanıt süresini ölçmek için başlangıç zamanı
+      final startTime = DateTime.now();
       
       final response = await http.put(
         Uri.parse(url),
@@ -167,24 +170,64 @@ class TableService {
         body: jsonEncode(requestBody),
       );
       
-      debugPrint('Adisyon aktarım yanıt kodu: ${response.statusCode}');
-      debugPrint('Adisyon aktarım yanıt içeriği: ${response.body}');
+      // API yanıt süresini hesapla
+      final duration = DateTime.now().difference(startTime);
+      debugPrint('⏱️ Adisyon aktarım API yanıt süresi: ${duration.inMilliseconds}ms');
+      
+      debugPrint('📊 Adisyon aktarım yanıt kodu: ${response.statusCode}');
+      
+      // Yanıt başarılı olmasa bile içeriği logla
+      debugPrint('📋 Adisyon aktarım yanıt içeriği: ${response.body}');
       
       if (response.statusCode == 410 || response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final responseData = jsonDecode(response.body);
+        
+        // Yanıtı daha detaylı logla
+        final success = responseData['success'] ?? false;
+        final message = responseData['success_message'] ?? responseData['error_message'] ?? 'Bilinmeyen yanıt';
+        
+        debugPrint('${success ? "✅" : "❌"} Adisyon aktarım sonucu: $message');
+        
+        // İşlem başarılıysa, yanıttaki ürün detaylarını da loglamaya çalış
+        if (success && responseData.containsKey('data') && responseData['data'] != null) {
+          try {
+            final data = responseData['data'];
+            if (data is Map && data.containsKey('products')) {
+              final products = data['products'];
+              if (products is List) {
+                debugPrint('📦 Aktarılan ürünler: ${products.length} adet');
+                
+                // Ürün miktarlarının toplamını hesapla
+                int totalQty = 0;
+                for (var product in products) {
+                  if (product is Map && product.containsKey('proQty')) {
+                    totalQty += (product['proQty'] as num).toInt();
+                  }
+                }
+                debugPrint('📦 Aktarılan toplam ürün miktarı: $totalQty');
+              }
+            }
+          } catch (e) {
+            debugPrint('⚠️ Ürün detayları loglama hatası: $e');
+          }
+        }
+        
+        return responseData;
       } else if (response.statusCode == 401) {
+        debugPrint('🔒 Adisyon aktarım yetkilendirme hatası (401)');
         return {
           'success': false,
           'error_message': 'Yetkilendirme hatası: Lütfen tekrar giriş yapın.',
         };
       } else {
+        debugPrint('⛔ Adisyon aktarım sunucu hatası: ${response.statusCode}');
         return {
           'success': false,
           'error_message': 'Sunucu hatası: ${response.statusCode}',
         };
       }
     } catch (e) {
-      debugPrint('Adisyon aktarım işlemi sırasında hata: $e');
+      debugPrint('🔴 Adisyon aktarım işlemi sırasında hata: $e');
       return {
         'success': false,
         'error_message': 'İstek gönderilirken bir hata oluştu: $e',
