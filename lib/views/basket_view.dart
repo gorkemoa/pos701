@@ -108,9 +108,17 @@ class _BasketViewState extends State<BasketView> {
         final orderDetail = orderViewModel.orderDetail!;
         debugPrint('✅ Sipariş detayları alındı. Ürün sayısı: ${orderDetail.products.length}');
         
-        // Sipariş tutarı bilgilerini güncelle
+        // API'den gelen sipariş tutarını güncelle
+        debugPrint('💰 API sipariş tutarı: ${orderDetail.orderAmount}');
+        basketViewModel.setOrderAmount(orderDetail.orderAmount);
+        
+        // Tahsil edilen tutar bilgilerini güncelle
         debugPrint('💰 Tahsil edilen tutar güncelleniyor: ${orderDetail.orderPayAmount}');
         basketViewModel.updateCollectedAmount(orderDetail.orderPayAmount);
+        
+        // Kalan tutar hesaplaması
+        final double kalanTutar = orderDetail.orderAmount - orderDetail.orderPayAmount - orderDetail.orderDiscount;
+        debugPrint('💸 API değerlerinden kalan tutar hesaplandı: orderAmount(${orderDetail.orderAmount}) - orderPayAmount(${orderDetail.orderPayAmount}) - orderDiscount(${orderDetail.orderDiscount}) = $kalanTutar');
         
         // İndirim bilgisini güncelle
         if (orderDetail.orderDiscount > 0) {
@@ -419,16 +427,23 @@ class _BasketViewState extends State<BasketView> {
                         double manuelToplam = 0;
                         for (var item in basketViewModel.items) {
                           debugPrint('🧮 [BASKET_VIEW] Ürün: ${item.product.proName}, Miktar: ${item.proQty}, Birim: ${item.birimFiyat}, Toplam: ${item.totalPrice}');
-                          manuelToplam += item.birimFiyat * item.proQty;
+                          manuelToplam += item.totalPrice;
                         }
                         debugPrint('💲 [BASKET_VIEW] Manuel hesaplanan toplam: $manuelToplam');
                         debugPrint('💲 [BASKET_VIEW] ViewModel toplam: ${basketViewModel.totalAmount}');
+                        debugPrint('💲 [BASKET_VIEW] API sipariş tutarı: ${basketViewModel.orderAmount}');
+                        debugPrint('💰 [BASKET_VIEW] Tahsil edilen tutar: ${basketViewModel.collectedAmount}');
+                        debugPrint('💳 [BASKET_VIEW] İndirim tutarı: ${basketViewModel.discount}');
+                        
+                        // Manuel kalan hesapla
+                        final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.collectedAmount;
+                        debugPrint('💸 [BASKET_VIEW] Manuel kalan: $manuelKalan');
                         
                         return Column(
                           children: [
                             _buildInfoRow(
                               "Toplam Tutar",
-                              "₺${manuelToplam.toStringAsFixed(2)}",
+                              "₺${basketViewModel.orderAmount.toStringAsFixed(2)}",
                             ),
                             _buildInfoRow(
                               "İndirim",
@@ -440,7 +455,7 @@ class _BasketViewState extends State<BasketView> {
                             ),
                             _buildInfoRow(
                               "Kalan",
-                              "₺${(manuelToplam - basketViewModel.discount - basketViewModel.collectedAmount).toStringAsFixed(2)}",
+                              "₺${manuelKalan.toStringAsFixed(2)}",
                               isBold: true,
                             ),
                           ],

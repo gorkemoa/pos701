@@ -4,19 +4,23 @@ import 'package:pos701/models/product_model.dart';
 
 class BasketViewModel extends ChangeNotifier {
   Basket _basket = Basket();
+  double _orderAmount = 0; // API'den gelen sipariş tutarını saklamak için özel değişken
   
   List<BasketItem> get items => _basket.items;
   double get totalAmount => _basket.totalAmount;
   double get discount => _basket.discount;
   double get collectedAmount => _basket.collectedAmount;
-  double get remainingAmount {
-    // Debug için hesaplama adımlarını logla
-    final total = _basket.totalAmount;
-    debugPrint('💰 [BASKET_VM] RemainingAmount hesaplanıyor: Total: $total, Discount: ${_basket.discount}, Collected: ${_basket.collectedAmount}');
-    return total - _basket.discount - _basket.collectedAmount;
-  }
+  double get orderAmount => _orderAmount; // API'den gelen değeri döndür
+  double get remainingAmount => orderAmount - discount - collectedAmount;
   bool get isEmpty => _basket.items.isEmpty;
   int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.proQty);
+  
+  // API'den gelen sipariş tutarını ayarlamak için metod
+  void setOrderAmount(double amount) {
+    _orderAmount = amount;
+    debugPrint('💲 [BASKET_VM] API sipariş tutarı ayarlandı: $_orderAmount');
+    notifyListeners();
+  }
   
   // Ürün ekleme (tekil olarak)
   void addProduct(Product product, {int opID = 0}) {
