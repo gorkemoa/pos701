@@ -42,7 +42,7 @@ class OrderProduct {
   final bool isGift;
 
   OrderProduct({
-    this.opID = 0,
+    required this.opID,
     required this.postID,
     required this.proID,
     required this.proQty,

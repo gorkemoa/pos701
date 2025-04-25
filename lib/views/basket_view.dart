@@ -33,6 +33,7 @@ class _BasketViewState extends State<BasketView> {
   int? _tableID;
   bool _isLoading = true;
   String _errorMessage = '';
+  bool _isProcessing = false; // İşlem yapılıp yapılmadığını takip etmek için flag
 
   @override
   void initState() {
@@ -178,7 +179,10 @@ class _BasketViewState extends State<BasketView> {
       return;
     }
     
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isProcessing = true; // İşlem başladı
+    });
     
     final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
     
@@ -237,286 +241,325 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
+  // Aktif olmayan masa kontrolü
+  bool _isInactiveTable() {
+    // orderID null ise ve geri dönülüyorsa, bu aktif olmayan bir masa demektir
+    return widget.orderID == null;
+  }
+
+  // Geri dönüş kontrolü
+  Future<bool> _onWillPop() async {
+    // Aktif olmayan masa ve işlem yapılmamışsa sepeti temizle
+    if (_isInactiveTable() && !_isProcessing) {
+      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+      if (!basketViewModel.isEmpty) {
+        debugPrint('🧹 Aktif olmayan masadan çıkıldı, sepet temizleniyor');
+        basketViewModel.clearBasket();
+      }
+    }
+    return true; // Geri dönüşe izin ver
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(AppConstants.primaryColorValue),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.tableName.toUpperCase(),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            if (widget.orderID != null)
-              Text("Sipariş #${widget.orderID}", style: const TextStyle(fontSize: 14)),
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Color(AppConstants.primaryColorValue),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.tableName.toUpperCase(),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              if (widget.orderID != null)
+                Text("Sipariş #${widget.orderID}", style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () async {
+              if (_isInactiveTable() && !_isProcessing) {
+                final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+                if (!basketViewModel.isEmpty) {
+                  debugPrint('🧹 Aktif olmayan masadan çıkıldı, sepet temizleniyor');
+                  basketViewModel.clearBasket();
+                }
+              }
+              Navigator.of(context).pop();
+            },
+          ),
+          actions: [
+            IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
           ],
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "${widget.tableName} Siparişi",
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      // Sipariş ID varsa sipariş detaylarını göster
-                      if (widget.orderID != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: Color(AppConstants.primaryColorValue).withOpacity(0.3),
-                            ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "${widget.tableName} Siparişi",
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
                           ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.edit_note, 
-                                size: 18, 
-                                color: Color(AppConstants.primaryColorValue),
+                        ),
+                        // Sipariş ID varsa sipariş detaylarını göster
+                        if (widget.orderID != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Color(AppConstants.primaryColorValue).withOpacity(0.3),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                "#${widget.orderID}",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.edit_note, 
+                                  size: 18, 
                                   color: Color(AppConstants.primaryColorValue),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  "#${widget.orderID}",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(AppConstants.primaryColorValue),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                
-                // Sipariş güncelleme bilgi mesajı
-                if (widget.orderID != null)
+                  
+                  // Sipariş güncelleme bilgi mesajı
+                  if (widget.orderID != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: Colors.amber.withOpacity(0.1),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Mevcut siparişi düzenliyorsunuz. Güncellemek için tüm ürünleri ekleyin ve Güncelle butonuna basın.",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.amber.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  // Sepet Öğeleri Listesi
+                  Expanded(
+                    child: Consumer<BasketViewModel>(
+                      builder: (context, basketViewModel, child) {
+                        if (basketViewModel.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              "Sepetiniz boş",
+                              style: TextStyle(fontSize: 18, color: Colors.grey),
+                            ),
+                          );
+                        }
+                        
+                        return ListView.separated(
+                          itemCount: basketViewModel.items.length,
+                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final item = basketViewModel.items[index];
+                            return _buildBasketItem(context, item);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  
+                  // Toplam Bilgileri
                   Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    color: Colors.amber.withOpacity(0.1),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                    ),
+                    child: Consumer<BasketViewModel>(
+                      builder: (context, basketViewModel, child) {
+                        return Column(
+                          children: [
+                            _buildInfoRow(
+                              "Toplam Tutar",
+                              "₺${basketViewModel.totalAmount.toStringAsFixed(2)}",
+                            ),
+                            _buildInfoRow(
+                              "İndirim",
+                              "₺${basketViewModel.discount.toStringAsFixed(2)}",
+                            ),
+                            _buildInfoRow(
+                              "Tahsil Edilen",
+                              "₺${basketViewModel.collectedAmount.toStringAsFixed(2)}",
+                            ),
+                            _buildInfoRow(
+                              "Kalan",
+                              "₺${basketViewModel.remainingAmount.toStringAsFixed(2)}",
+                              isBold: true,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  
+                  // Alt Butonlar
+                  SizedBox(
+                    height: 90,
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
-                        const SizedBox(width: 8),
+                        // Kaydet Butonu
                         Expanded(
-                          child: Text(
-                            "Mevcut siparişi düzenliyorsunuz. Güncellemek için tüm ürünleri ekleyin ve Güncelle butonuna basın.",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.amber.shade800,
+                          child: ElevatedButton(
+                            onPressed: _siparisGonder,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(AppConstants.primaryColorValue),
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.check_circle_outline, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Text(
+                                  widget.orderID != null ? "Güncelle" : "Kaydet", 
+                                  style: const TextStyle(color: Colors.white, fontSize: 14)
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        
+                        // Ödeme Al Butonu
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: widget.orderID != null ? () {
+                              if (_userToken == null || _compID == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Ödeme işlemi için gerekli bilgiler eksik.'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+                              
+                              if (basketViewModel.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Sepette ürün bulunmamaktadır.'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              setState(() {
+                                _isProcessing = true; // İşlem başladı
+                              });
+                              
+                              // Doğrudan ödeme sayfasına git
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => PaymentView(
+                                    userToken: _userToken!,
+                                    compID: _compID!,
+                                    orderID: widget.orderID!,
+                                    totalAmount: basketViewModel.totalAmount,
+                                    basketItems: basketViewModel.items,
+                                    onPaymentSuccess: () {
+                                      basketViewModel.clearBasket();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Ödeme başarıyla alındı.'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              );
+                            } : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: widget.orderID != null 
+                                  ? Color(AppConstants.primaryColorValue)
+                                  : Colors.grey,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.payment, color: Colors.white, size: 18),
+                                SizedBox(width: 4),
+                                Text("Ödeme Al", style: TextStyle(color: Colors.white, fontSize: 14)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        
+                        // Yazdır Butonu
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _isProcessing = true; // İşlem başladı
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(AppConstants.primaryColorValue),
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.print, color: Colors.white, size: 18),
+                                SizedBox(width: 4),
+                                Text("Yazdır", style: TextStyle(color: Colors.white, fontSize: 14)),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                
-                // Sepet Öğeleri Listesi
-                Expanded(
-                  child: Consumer<BasketViewModel>(
-                    builder: (context, basketViewModel, child) {
-                      if (basketViewModel.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            "Sepetiniz boş",
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
-                          ),
-                        );
-                      }
-                      
-                      return ListView.separated(
-                        itemCount: basketViewModel.items.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final item = basketViewModel.items[index];
-                          return _buildBasketItem(context, item);
-                        },
-                      );
-                    },
-                  ),
-                ),
-                
-                // Toplam Bilgileri
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: Colors.grey.shade300)),
-                  ),
-                  child: Consumer<BasketViewModel>(
-                    builder: (context, basketViewModel, child) {
-                      return Column(
-                        children: [
-                          _buildInfoRow(
-                            "Toplam Tutar",
-                            "₺${basketViewModel.totalAmount.toStringAsFixed(2)}",
-                          ),
-                          _buildInfoRow(
-                            "İndirim",
-                            "₺${basketViewModel.discount.toStringAsFixed(2)}",
-                          ),
-                          _buildInfoRow(
-                            "Tahsil Edilen",
-                            "₺${basketViewModel.collectedAmount.toStringAsFixed(2)}",
-                          ),
-                          _buildInfoRow(
-                            "Kalan",
-                            "₺${basketViewModel.remainingAmount.toStringAsFixed(2)}",
-                            isBold: true,
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                
-                // Alt Butonlar
-                SizedBox(
-                  height: 90,
-                  child: Row(
-                    children: [
-                      // Kaydet Butonu
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _siparisGonder,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(AppConstants.primaryColorValue),
-                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.check_circle_outline, color: Colors.white),
-                              const SizedBox(width: 8),
-                              Text(
-                                widget.orderID != null ? "Güncelle" : "Kaydet", 
-                                style: const TextStyle(color: Colors.white, fontSize: 14)
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      // Ödeme Al Butonu
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: widget.orderID != null ? () {
-                            if (_userToken == null || _compID == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Ödeme işlemi için gerekli bilgiler eksik.'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                              return;
-                            }
-                            
-                            final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-                            
-                            if (basketViewModel.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Sepette ürün bulunmamaktadır.'),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                              return;
-                            }
-                            
-                            // Doğrudan ödeme sayfasına git
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => PaymentView(
-                                  userToken: _userToken!,
-                                  compID: _compID!,
-                                  orderID: widget.orderID!,
-                                  totalAmount: basketViewModel.totalAmount,
-                                  basketItems: basketViewModel.items,
-                                  onPaymentSuccess: () {
-                                    basketViewModel.clearBasket();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Ödeme başarıyla alındı.'),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            );
-                          } : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: widget.orderID != null 
-                                ? Color(AppConstants.primaryColorValue)
-                                : Colors.grey,
-                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.payment, color: Colors.white, size: 18),
-                              SizedBox(width: 4),
-                              Text("Ödeme Al", style: TextStyle(color: Colors.white, fontSize: 14)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      // Yazdır Butonu
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(AppConstants.primaryColorValue),
-                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.print, color: Colors.white, size: 18),
-                              SizedBox(width: 4),
-                              Text("Yazdır", style: TextStyle(color: Colors.white, fontSize: 14)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -526,6 +569,9 @@ class _BasketViewState extends State<BasketView> {
       child: InkWell(
         onTap: () {
           if (_userToken != null && _compID != null) {
+            setState(() {
+              _isProcessing = true; // İşlem başladı
+            });
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -659,6 +705,10 @@ class _BasketViewState extends State<BasketView> {
     if (_userToken == null || _compID == null || widget.orderID == null) {
       return;
     }
+    
+    setState(() {
+      _isProcessing = true; // İşlem başladı
+    });
     
     // Ödeme sayfasını göster
     final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);

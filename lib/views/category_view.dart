@@ -63,6 +63,15 @@ class _CategoryViewState extends State<CategoryView> {
     setState(() {
       _isInitialized = true;
     });
+
+    // Kategoriler başarıyla yüklendiyse ve en az bir kategori varsa, ilk kategoriyi seç
+    if (success && _categoryViewModel.hasCategories) {
+      setState(() {
+        _selectedCategory = _categoryViewModel.categories[0];
+      });
+      // İlk kategorinin ürünlerini yükle
+      _loadProducts(_selectedCategory!.catID, _selectedCategory!.catName);
+    }
   }
   
   Future<void> _loadProducts(int catID, String categoryName) async {
@@ -214,15 +223,6 @@ class _CategoryViewState extends State<CategoryView> {
                       Expanded(
                         child: Consumer<ProductViewModel>(
                           builder: (context, productViewModel, child) {
-                            if (_selectedCategory == null) {
-                              return Center(
-                                child: Text(
-                                  'Lütfen bir kategori seçin',
-                                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                                ),
-                              );
-                            }
-                            
                             if (productViewModel.isLoading) {
                               return const Center(
                                 child: CircularProgressIndicator(),
