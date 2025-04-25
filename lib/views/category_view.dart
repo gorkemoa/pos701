@@ -476,126 +476,129 @@ class _CategoryViewState extends State<CategoryView> {
           width: 1,
         ),
       ),
-      child: Column(
-        children: [
-          // Ürün Adı ve Fiyat Bölümü
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        product.proName.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+      child: InkWell(
+        onTap: () => basketViewModel.addProduct(product, opID: 0),
+        child: Column(
+          children: [
+            // Ürün Adı ve Fiyat Bölümü
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          product.proName.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '₺${product.proPrice.replaceAll(" TL", "")}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(AppConstants.primaryColorValue),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Alt Kontrol Bölümü
+            Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                border: Border(
+                  top: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Eksi Butonu
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: isInBasket ? () => basketViewModel.decreaseProduct(product) : null,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isInBasket 
+                              ? Color(AppConstants.primaryColorValue).withOpacity(0.1)
+                              : Colors.grey.shade200,
+                        ),
+                        child: Icon(
+                          Icons.remove,
+                          size: 16,
+                          color: isInBasket 
+                              ? Color(AppConstants.primaryColorValue)
+                              : Colors.grey.shade400,
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  // Miktar
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                    constraints: BoxConstraints(minWidth: 32),
                     child: Text(
-                      '₺${product.proPrice.replaceAll(" TL", "")}',
+                      '$quantity',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(AppConstants.primaryColorValue),
+                        color: isInBasket 
+                            ? Color(AppConstants.primaryColorValue)
+                            : Colors.grey.shade400,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  // Artı Butonu
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => basketViewModel.addProduct(product, opID: 0),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                        ),
+                        child: Icon(
+                          Icons.add,
+                          size: 16,
+                          color: Color(AppConstants.primaryColorValue),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          // Alt Kontrol Bölümü
-          Container(
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              border: Border(
-                top: BorderSide(color: Colors.grey.shade200),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Eksi Butonu
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: isInBasket ? () => basketViewModel.decreaseProduct(product) : null,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isInBasket 
-                            ? Color(AppConstants.primaryColorValue).withOpacity(0.1)
-                            : Colors.grey.shade200,
-                      ),
-                      child: Icon(
-                        Icons.remove,
-                        size: 16,
-                        color: isInBasket 
-                            ? Color(AppConstants.primaryColorValue)
-                            : Colors.grey.shade400,
-                      ),
-                    ),
-                  ),
-                ),
-                // Miktar
-                Container(
-                  constraints: BoxConstraints(minWidth: 32),
-                  child: Text(
-                    '$quantity',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isInBasket 
-                          ? Color(AppConstants.primaryColorValue)
-                          : Colors.grey.shade400,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                // Artı Butonu
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => basketViewModel.addProduct(product, opID: 0),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                      ),
-                      child: Icon(
-                        Icons.add,
-                        size: 16,
-                        color: Color(AppConstants.primaryColorValue),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
