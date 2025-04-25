@@ -318,11 +318,14 @@ class TableCard extends StatelessWidget {
       );
       
       // Yükleniyor diyaloğunu kapat
-      if (loadingContext != null && context.mounted) {
+      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
         // ignore: use_build_context_synchronously
         Navigator.of(loadingContext!).pop();
         loadingContext = null;
       }
+      
+      // Küçük bir gecikme ekle
+      await Future.delayed(const Duration(milliseconds: 300));
       
       if (success) {
         // Başarılı mesajını göster
@@ -357,11 +360,14 @@ class TableCard extends StatelessWidget {
       debugPrint('Hızlı ödeme hatası: $e');
       
       // Yükleniyor diyaloğunu kapat (hata durumunda da)
-      if (loadingContext != null && context.mounted) {
+      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
         // ignore: use_build_context_synchronously
         Navigator.of(loadingContext!).pop();
         loadingContext = null;
       }
+      
+      // Küçük bir gecikme ekle
+      await Future.delayed(const Duration(milliseconds: 300));
       
       // Hata mesajını göster
       if (context.mounted) {
@@ -448,11 +454,14 @@ class TableCard extends StatelessWidget {
       );
       
       // Yükleniyor diyaloğunu kapat
-      if (loadingContext != null && context.mounted) {
+      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
         // ignore: use_build_context_synchronously
         Navigator.of(loadingContext!).pop();
         loadingContext = null;
       }
+      
+      // Küçük bir gecikme ekle
+      await Future.delayed(const Duration(milliseconds: 300));
       
       if (success) {
         // Başarılı mesajını göster
@@ -489,11 +498,14 @@ class TableCard extends StatelessWidget {
       debugPrint('Masa ayırma hatası: $e');
       
       // Yükleniyor diyaloğunu kapat (hata durumunda da)
-      if (loadingContext != null && context.mounted) {
+      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
         // ignore: use_build_context_synchronously
         Navigator.of(loadingContext!).pop();
         loadingContext = null;
       }
+      
+      // Küçük bir gecikme ekle
+      await Future.delayed(const Duration(milliseconds: 300));
       
       // Hata mesajını göster
       if (context.mounted) {
@@ -527,13 +539,18 @@ class TableCard extends StatelessWidget {
       builder: (dialogContext) => TableSelectionDialog(
         inactiveTables: inactiveTables,
         onTableSelected: (selectedTable) async {
+          // Diyaloğu kapat
+          Navigator.of(dialogContext).pop();
+          
+          // Küçük bir gecikme ekle
+          await Future.delayed(const Duration(milliseconds: 100));
+          
           // Yükleniyor diyaloğu göster
-          if (!dialogContext.mounted) return;
+          if (!context.mounted) return;
           
           BuildContext? loadingContext;
-          // ignore: use_build_context_synchronously
           showDialog(
-            context: dialogContext,
+            context: context,
             barrierDismissible: false,
             builder: (ctx) {
               loadingContext = ctx;
@@ -560,11 +577,14 @@ class TableCard extends StatelessWidget {
             );
             
             // Yükleniyor diyaloğunu kapat
-            if (loadingContext != null && dialogContext.mounted) {
+            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
               // ignore: use_build_context_synchronously
               Navigator.of(loadingContext!).pop();
               loadingContext = null;
             }
+            
+            // Küçük bir gecikme ekle
+            await Future.delayed(const Duration(milliseconds: 300));
             
             if (success) {
               // Başarılı mesajını göster
@@ -594,11 +614,14 @@ class TableCard extends StatelessWidget {
             debugPrint('Masa değiştirme hatası: $e');
             
             // Yükleniyor diyaloğunu kapat (hata durumunda da)
-            if (loadingContext != null && dialogContext.mounted) {
+            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
               // ignore: use_build_context_synchronously
               Navigator.of(loadingContext!).pop();
               loadingContext = null;
             }
+            
+            // Küçük bir gecikme ekle
+            await Future.delayed(const Duration(milliseconds: 300));
             
             // Hata mesajını göster
             if (context.mounted) {
@@ -690,8 +713,12 @@ class TableCard extends StatelessWidget {
                         if (confirmTransfer != true) return;
                         
                         // İlk diyaloğu kapat
-                        if (!dialogContext.mounted) return;
-                        Navigator.of(dialogContext).pop();
+                        if (Navigator.canPop(dialogContext)) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                        
+                        // Küçük bir gecikme ekle
+                        await Future.delayed(const Duration(milliseconds: 100));
                         
                         // Yükleme dialogu göster
                         if (!context.mounted) return;
@@ -726,11 +753,14 @@ class TableCard extends StatelessWidget {
                           );
                           
                           // Yükleme dialogunu kapat
-                          if (loadingContext != null && context.mounted) {
+                          if (loadingContext != null && Navigator.canPop(loadingContext!)) {
                             // ignore: use_build_context_synchronously
                             Navigator.of(loadingContext!).pop();
                             loadingContext = null;
                           }
+                          
+                          // Küçük bir gecikme ekle
+                          await Future.delayed(const Duration(milliseconds: 300));
                           
                           // Sonucu göster
                           if (!context.mounted) return;
@@ -759,11 +789,14 @@ class TableCard extends StatelessWidget {
                           debugPrint('Adisyon aktarma hatası: $e');
                           
                           // Yükleme dialogunu kapat (hata durumunda da)
-                          if (loadingContext != null && context.mounted) {
+                          if (loadingContext != null && Navigator.canPop(loadingContext!)) {
                             // ignore: use_build_context_synchronously
                             Navigator.of(loadingContext!).pop();
                             loadingContext = null;
                           }
+                          
+                          // Küçük bir gecikme ekle
+                          await Future.delayed(const Duration(milliseconds: 300));
                           
                           // Hata mesajını göster
                           if (context.mounted) {
@@ -818,14 +851,20 @@ class TableCard extends StatelessWidget {
           // Seçilen masa ID'lerini al
           final selectedTableIds = selectedTables.map((t) => t.tableID).toList();
           
-          // Yükleniyor diyaloğu göster
-          if (!dialogContext.mounted) return;
+          // Diyaloğu kapat
+          if (Navigator.canPop(dialogContext)) {
+            Navigator.of(dialogContext).pop();
+          }
+          
+          // Küçük bir gecikme ekle
+          await Future.delayed(const Duration(milliseconds: 100));
           
           // Yükleniyor diyaloğunu göster
+          if (!context.mounted) return;
+          
           BuildContext? loadingContext;
-          // ignore: use_build_context_synchronously
           showDialog(
-            context: dialogContext,
+            context: context,
             barrierDismissible: false,
             builder: (ctx) {
               loadingContext = ctx;
@@ -853,11 +892,14 @@ class TableCard extends StatelessWidget {
             );
             
             // Yükleniyor diyaloğunu kapat
-            if (loadingContext != null && dialogContext.mounted) {
+            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
               // ignore: use_build_context_synchronously
               Navigator.of(loadingContext!).pop();
               loadingContext = null;
             }
+            
+            // Küçük bir gecikme ekle
+            await Future.delayed(const Duration(milliseconds: 300));
             
             if (success) {
               // Başarılı mesajını göster
@@ -933,11 +975,14 @@ class TableCard extends StatelessWidget {
             debugPrint('Masa birleştirme hatası: $e');
             
             // Yükleniyor diyaloğunu kapat (hata durumunda da)
-            if (loadingContext != null && dialogContext.mounted) {
+            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
               // ignore: use_build_context_synchronously
               Navigator.of(loadingContext!).pop();
               loadingContext = null;
             }
+            
+            // Küçük bir gecikme ekle
+            await Future.delayed(const Duration(milliseconds: 300));
             
             // Hata mesajını göster
             if (context.mounted) {

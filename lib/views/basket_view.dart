@@ -184,30 +184,71 @@ class _BasketViewState extends State<BasketView> {
       _isProcessing = true; // İşlem başladı
     });
     
-    final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
-    
-    // Mevcut sipariş mi yoksa yeni sipariş mi olduğunu kontrol et
-    final bool success = widget.orderID != null 
-        ? await _siparisGuncelle(orderViewModel, basketViewModel)
-        : await _yeniSiparisOlustur(orderViewModel, basketViewModel);
-    
-    setState(() => _isLoading = false);
-    
-    if (success) {
-      basketViewModel.clearBasket();
+           try {
+      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+      
+      // Mevcut sipariş mi yoksa yeni sipariş mi olduğunu kontrol et
+      final bool success = widget.orderID != null 
+          ? await _siparisGuncelle(orderViewModel, basketViewModel)
+          : await _yeniSiparisOlustur(orderViewModel, basketViewModel);
+      
+      if (success) {
+        // Sipariş başarıyla oluşturuldu/güncellendi
+        
+        // Yeni oluşturulan sipariş için orderResponse'dan ID alınır
+        int? guncellenmisSiparisID = widget.orderID;
+        if (widget.orderID == null && orderViewModel.orderResponse?.orderID != null) {
+          guncellenmisSiparisID = orderViewModel.orderResponse!.orderID;
+          debugPrint('✅ Yeni sipariş oluşturuldu. Sipariş ID: $guncellenmisSiparisID');
+        }
+        
+        // Sepeti temizlemek yerine, sipariş detaylarını getirerek güncelleme yapalım
+        if (guncellenmisSiparisID != null) {
+          await _yeniSiparisDetayiGetir(guncellenmisSiparisID);
+        } else {
+          debugPrint('⚠️ Sipariş ID bulunamadı, sepet güncellenmeyecek');
+          setState(() => _isLoading = false);
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.orderID != null ? 'Sipariş başarıyla güncellendi.' : 'Sipariş başarıyla oluşturuldu.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Yeni sipariş oluşturulduysa geri dönüş
+        if (widget.orderID == null && guncellenmisSiparisID != null) {
+          debugPrint('🔙 Sipariş sayfasından çıkılıyor');
+          if (mounted) {
+            Navigator.of(context).pop({'siparisOlusturuldu': true, 'siparisID': guncellenmisSiparisID});
+          }
+        } else {
+          // Sipariş güncellemesinde veya ID bulunamadığında sayfada kalıyoruz
+          debugPrint('🔄 Sipariş sayfasında kalınıyor - ${widget.orderID != null ? "Güncelleme" : "ID bulunamadı"}');
+        }
+      } else {
+        // Sipariş oluşturma/güncelleme başarısız
+        debugPrint('❌ Sipariş işlemi başarısız: ${orderViewModel.errorMessage}');
+        setState(() => _isLoading = false);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.orderID != null 
+                ? 'Sipariş güncellenemedi: ${orderViewModel.errorMessage ?? "Bilinmeyen hata"}'
+                : 'Sipariş oluşturulamadı: ${orderViewModel.errorMessage ?? "Bilinmeyen hata"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Beklenmeyen hata durumunda
+      debugPrint('🔴 Sipariş işleminde beklenmeyen hata: $e');
+      setState(() => _isLoading = false);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.orderID != null ? 'Sipariş başarıyla güncellendi.' : 'Sipariş başarıyla oluşturuldu.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.of(context).pop();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.orderID != null 
-              ? 'Sipariş güncellenemedi: ${orderViewModel.errorMessage ?? "Bilinmeyen hata"}'
-              : 'Sipariş oluşturulamadı: ${orderViewModel.errorMessage ?? "Bilinmeyen hata"}'),
+          content: Text('Sipariş işlemi sırasında hata oluştu: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -239,6 +280,71 @@ class _BasketViewState extends State<BasketView> {
       orderGuest: 1,
       kuverQty: 1,
     );
+  }
+
+  /// Yeni sipariş oluşturulduktan sonra sepeti güncellemek için sipariş detaylarını getir
+  Future<void> _yeniSiparisDetayiGetir(int siparisID) async {
+    if (_userToken == null || _compID == null) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Kullanıcı bilgileri alınamadı.';
+      });
+      debugPrint('⛔️ Kullanıcı bilgileri eksik, sipariş detayları getirilemedi');
+      return;
+    }
+    
+    try {
+      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+      
+      debugPrint('🔄 Sipariş detayları getiriliyor. OrderID: $siparisID');
+      
+      // Sepeti temizlemiyoruz, sadece güncelliyoruz
+      final success = await orderViewModel.getSiparisDetayi(
+        userToken: _userToken!,
+        compID: _compID!,
+        orderID: siparisID,
+      );
+      
+      if (success && orderViewModel.orderDetail != null) {
+        // Sipariş detayları başarıyla alındı
+        debugPrint('✅ Sipariş detayları alındı. Ürün sayısı: ${orderViewModel.orderDetail!.products.length}');
+        
+        // Mevcut sepeti temizle
+        basketViewModel.clearBasket();
+        
+        // Sipariş ürünlerini sepete ekle (bu kez opID'ler ile beraber)
+        final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
+        
+        for (var item in sepetItems) {
+          basketViewModel.addProductWithOpID(
+            item.product, 
+            item.quantity,
+            item.opID
+          );
+        }
+        
+        debugPrint('✅ Sepete ${basketViewModel.totalQuantity} adet ürün eklendi.');
+      } else {
+        // Hata mesajını göster
+        setState(() {
+          _errorMessage = orderViewModel.errorMessage ?? 'Sipariş detayları alınamadı.';
+        });
+        
+        debugPrint('⛔️ Sipariş detayları alınamadı: $_errorMessage');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Sipariş detayları alınırken hata oluştu: $e';
+      });
+      
+      debugPrint('🔴 Sipariş detayları alınırken hata: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        debugPrint('⏬ Loading durumu kapatıldı (_isLoading = false)');
+      }
+    }
   }
 
   // Aktif olmayan masa kontrolü
