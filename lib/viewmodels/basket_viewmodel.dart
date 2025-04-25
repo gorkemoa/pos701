@@ -9,9 +9,9 @@ class BasketViewModel extends ChangeNotifier {
   List<BasketItem> get items => _basket.items;
   double get totalAmount => _basket.totalAmount;
   double get discount => _basket.discount;
-  double get collectedAmount => _basket.collectedAmount;
+  double get orderPayAmount => _basket.orderPayAmount;
   double get orderAmount => _orderAmount; // API'den gelen değeri döndür
-  double get remainingAmount => orderAmount - discount - collectedAmount;
+  double get remainingAmount => orderAmount - discount - orderPayAmount;
   bool get isEmpty => _basket.items.isEmpty;
   int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.proQty);
   
@@ -109,8 +109,8 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Tahsil edilen tutarı güncelleme
-  void updateCollectedAmount(double amount) {
-    _basket.collectedAmount = amount;
+  void updateOrderPayAmount(double amount) {
+    _basket.orderPayAmount = amount;
     notifyListeners();
   }
 

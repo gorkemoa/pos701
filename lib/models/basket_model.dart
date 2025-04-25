@@ -76,7 +76,7 @@ class BasketItem {
 class Basket {
   List<BasketItem> items = [];
   double discount = 0.0;
-  double collectedAmount = 0.0;
+  double orderPayAmount = 0.0;
   
   // Cache için
   double? _cachedTotalAmount;
@@ -134,7 +134,7 @@ class Basket {
     return true;
   }
 
-  double get remainingAmount => totalAmount - discount - collectedAmount;
+  double get remainingAmount => totalAmount - discount - orderPayAmount;
 
   void addProduct(Product product, {int opID = 0}) {
     developer.log("Sepete ürün ekleniyor: ${product.proName}, ID: ${product.proID}, Fiyat: ${product.proPrice}, OpID: $opID");
@@ -223,12 +223,12 @@ class Basket {
     developer.log("Sepet temizleniyor. Önceki ürün sayısı: ${items.length}");
     items.clear();
     discount = 0.0;
-    collectedAmount = 0.0;
+    orderPayAmount = 0.0;
     developer.log("Sepet temizlendi.");
   }
   
   @override
   String toString() {
-    return 'Basket(items: ${items.length}, totalAmount: $totalAmount, discount: $discount, collectedAmount: $collectedAmount, remainingAmount: $remainingAmount)';
+    return 'Basket(items: ${items.length}, totalAmount: $totalAmount, discount: $discount, orderPayAmount: $orderPayAmount, remainingAmount: $remainingAmount)';
   }
 } 

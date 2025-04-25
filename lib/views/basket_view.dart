@@ -68,11 +68,23 @@ class _BasketViewState extends State<BasketView> {
         } else if (widget.orderID != null) {
           _getSiparisDetayi(widget.orderID!);
         } else {
+          // İnaktif masa için sepeti temizle
+          if (_isInactiveTable()) {
+            final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+            basketViewModel.clearBasket();
+            debugPrint('🧹 İnaktif masa için sepet temizlendi');
+          }
           setState(() => _isLoading = false);
         }
       } else if (widget.orderID != null) {
         _getSiparisDetayi(widget.orderID!);
       } else {
+        // İnaktif masa için sepeti temizle
+        if (_isInactiveTable()) {
+          final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+          basketViewModel.clearBasket();
+          debugPrint('🧹 İnaktif masa için sepet temizlendi');
+        }
         setState(() => _isLoading = false);
       }
     });
@@ -114,7 +126,7 @@ class _BasketViewState extends State<BasketView> {
         
         // Tahsil edilen tutar bilgilerini güncelle
         debugPrint('💰 Tahsil edilen tutar güncelleniyor: ${orderDetail.orderPayAmount}');
-        basketViewModel.updateCollectedAmount(orderDetail.orderPayAmount);
+        basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
         
         // Kalan tutar hesaplaması
         final double kalanTutar = orderDetail.orderAmount - orderDetail.orderPayAmount - orderDetail.orderDiscount;
@@ -264,21 +276,35 @@ class _BasketViewState extends State<BasketView> {
 
   // Aktif olmayan masa kontrolü
   bool _isInactiveTable() {
-    // orderID null ise ve geri dönülüyorsa, bu aktif olmayan bir masa demektir
+    // orderID null ise, bu aktif olmayan bir masa demektir
     return widget.orderID == null;
   }
 
-  // Geri dönüş kontrolü
+  // Geri dönüş kontrolü - Kullanıcı geri tuşuna bastığında çalışır
   Future<bool> _onWillPop() async {
-    // Aktif olmayan masa ve işlem yapılmamışsa sepeti temizle
-    if (_isInactiveTable() && !_isProcessing) {
+    // İnaktif masa ise sepeti temizle
+    if (_isInactiveTable()) {
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
       if (!basketViewModel.isEmpty) {
-        debugPrint('🧹 Aktif olmayan masadan çıkıldı, sepet temizleniyor');
+        debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (WillPopScope)');
         basketViewModel.clearBasket();
       }
     }
     return true; // Geri dönüşe izin ver
+  }
+
+  // Sayfadan çıkış durumunda sepeti temizleme kontrolü
+  @override
+  void dispose() {
+    // İnaktif masa ise sepeti temizle
+    if (_isInactiveTable()) {
+      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+      if (!basketViewModel.isEmpty) {
+        debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (dispose)');
+        basketViewModel.clearBasket();
+      }
+    }
+    super.dispose();
   }
 
   @override
@@ -302,10 +328,11 @@ class _BasketViewState extends State<BasketView> {
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () async {
-              if (_isInactiveTable() && !_isProcessing) {
+              // İnaktif masa ise sepeti temizle
+              if (_isInactiveTable()) {
                 final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
                 if (!basketViewModel.isEmpty) {
-                  debugPrint('🧹 Aktif olmayan masadan çıkıldı, sepet temizleniyor');
+                  debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (IconButton)');
                   basketViewModel.clearBasket();
                 }
               }
@@ -390,6 +417,29 @@ class _BasketViewState extends State<BasketView> {
                       ),
                     ),
                   
+                  // İnaktif masa uyarısı
+                  if (_isInactiveTable())
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: Colors.blue.withOpacity(0.1),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue.shade800, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Aktif olmayan bir masa için sipariş oluşturuyorsunuz. Sayfadan çıktığınızda sepet temizlenecektir.",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
                   // Sepet Öğeleri Listesi
                   Expanded(
                     child: Consumer<BasketViewModel>(
@@ -432,11 +482,11 @@ class _BasketViewState extends State<BasketView> {
                         debugPrint('💲 [BASKET_VIEW] Manuel hesaplanan toplam: $manuelToplam');
                         debugPrint('💲 [BASKET_VIEW] ViewModel toplam: ${basketViewModel.totalAmount}');
                         debugPrint('💲 [BASKET_VIEW] API sipariş tutarı: ${basketViewModel.orderAmount}');
-                        debugPrint('💰 [BASKET_VIEW] Tahsil edilen tutar: ${basketViewModel.collectedAmount}');
+                        debugPrint('💰 [BASKET_VIEW] Tahsil edilen tutar: ${basketViewModel.orderPayAmount}');
                         debugPrint('💳 [BASKET_VIEW] İndirim tutarı: ${basketViewModel.discount}');
                         
                         // Manuel kalan hesapla
-                        final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.collectedAmount;
+                        final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.orderPayAmount;
                         debugPrint('💸 [BASKET_VIEW] Manuel kalan: $manuelKalan');
                         
                         return Column(
@@ -451,7 +501,7 @@ class _BasketViewState extends State<BasketView> {
                             ),
                             _buildInfoRow(
                               "Tahsil Edilen",
-                              "₺${basketViewModel.collectedAmount.toStringAsFixed(2)}",
+                              "₺${basketViewModel.orderPayAmount.toStringAsFixed(2)}",
                             ),
                             _buildInfoRow(
                               "Kalan",

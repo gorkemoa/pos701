@@ -83,36 +83,42 @@ class _HomeViewState extends State<HomeView> {
                           value: statisticsViewModel.statistics?.totalAmount ?? '',
                           title: statisticsViewModel.statistics?.totalAmountText ?? '',
                         ),
+                        const SizedBox(height: 14),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.expenseCardColor),
                           icon: Icons.currency_exchange,
                           value: statisticsViewModel.statistics?.totalExpenseAmount ?? '',
                           title: statisticsViewModel.statistics?.totalExpenseAmountText ?? '',
                         ),
+                        const SizedBox(height: 14),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.orderCardColor),
                           icon: Icons.coffee,
                           value: statisticsViewModel.statistics?.totalOpenAmount ?? '',
                           title: statisticsViewModel.statistics?.totalOpenAmountText ?? '',
                         ),
+                        const SizedBox(height: 14),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.customerCardColor),
                           icon: Icons.people,
                           value: '${statisticsViewModel.statistics?.totalGuest}',
                           title: statisticsViewModel.statistics?.totalGuestText ?? '',
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 24),
+                        
                         Container(
-                          height: 300,
-                          padding: const EdgeInsets.all(16),
+                          height: 350,
+                          padding: const EdgeInsets.all(24),
+                          margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
                             color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withOpacity(0.05),
                                 spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -122,50 +128,63 @@ class _HomeViewState extends State<HomeView> {
                               Row(
                                 children: [
                                   Container(
-                                    width: 16,
-                                    height: 16,
-                                    color: Color(AppConstants.chartLineColor),
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      color: Color(AppConstants.chartLineColor),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  const Text('Bugün'),
+                                  const SizedBox(width: 10),
+                                  const Text(
+                                    'Bugün',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 20),
                               Expanded(
                                 child: _buildSalesChart(statisticsViewModel),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        
                         Container(
-                          height: 300,
-                          padding: const EdgeInsets.all(16),
+                          height: 350,
+                          padding: const EdgeInsets.all(24),
+                          margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
                             color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withOpacity(0.05),
                                 spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: _buildPaymentTypesChart(statisticsViewModel),
                         ),
-                        const SizedBox(height: 16),
+                        
                         Container(
-                          height: 350,
-                          padding: const EdgeInsets.all(16),
+                          height: 380,
+                          padding: const EdgeInsets.all(24),
+                          margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withOpacity(0.05),
                                 spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
@@ -233,6 +252,18 @@ class _HomeViewState extends State<HomeView> {
           drawVerticalLine: true,
           horizontalInterval: maxY > 5 ? maxY / 5 : 1,
           verticalInterval: 2,
+          getDrawingHorizontalLine: (value) {
+            return FlLine(
+              color: Colors.grey.shade200,
+              strokeWidth: 1,
+            );
+          },
+          getDrawingVerticalLine: (value) {
+            return FlLine(
+              color: Colors.grey.shade200,
+              strokeWidth: 1,
+            );
+          },
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -245,7 +276,7 @@ class _HomeViewState extends State<HomeView> {
                 const style = TextStyle(
                   color: Color(0xff72719b),
                   fontWeight: FontWeight.normal,
-                  fontSize: 10,
+                  fontSize: 12,
                 );
                 String text;
                 if (value % 2 == 0) {
@@ -264,14 +295,16 @@ class _HomeViewState extends State<HomeView> {
             sideTitles: SideTitles(
               showTitles: true,
               interval: maxY > 5 ? maxY / 5 : 1,
-              reservedSize: 40,
+              reservedSize: 50,
               getTitlesWidget: (value, meta) {
-                const style = TextStyle(
-                  color: Color(0xff72719b),
-                  fontWeight: FontWeight.normal,
-                  fontSize: 10,
+                return Text(
+                  '${value.toStringAsFixed(0)}', 
+                  style: const TextStyle(
+                    color: Color(0xff72719b),
+                    fontWeight: FontWeight.normal,
+                    fontSize: 12,
+                  ),
                 );
-                return Text('${value.toStringAsFixed(1)}', style: style);
               },
             ),
           ),
@@ -295,12 +328,22 @@ class _HomeViewState extends State<HomeView> {
             spots: spots,
             isCurved: true,
             color: Color(AppConstants.chartLineColor),
-            barWidth: 3,
+            barWidth: 4,
             isStrokeCapRound: true,
-            dotData: FlDotData(show: false),
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                return FlDotCirclePainter(
+                  radius: 4,
+                  color: Color(AppConstants.chartLineColor),
+                  strokeWidth: 2,
+                  strokeColor: Colors.white,
+                );
+              },
+            ),
             belowBarData: BarAreaData(
               show: true,
-              color: Color(AppConstants.chartLineColor).withOpacity(0.2),
+              color: Color(AppConstants.chartLineColor).withOpacity(0.15),
             ),
           ),
         ],
@@ -343,11 +386,11 @@ class _HomeViewState extends State<HomeView> {
         const Text(
           'Ödeme Tipleri',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.bold
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         
         // Grafik
         Expanded(
@@ -360,7 +403,7 @@ class _HomeViewState extends State<HomeView> {
                 touchTooltipData: BarTouchTooltipData(
                   tooltipBgColor: Colors.blueGrey.shade800,
                   tooltipRoundedRadius: 8,
-                  tooltipPadding: const EdgeInsets.all(8),
+                  tooltipPadding: const EdgeInsets.all(10),
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final payment = payments[groupIndex];
                     final percentage = totalAmount > 0 
@@ -371,7 +414,7 @@ class _HomeViewState extends State<HomeView> {
                       const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                     );
                   },
@@ -385,11 +428,11 @@ class _HomeViewState extends State<HomeView> {
                     getTitlesWidget: (value, meta) {
                       if (value.toInt() >= 0 && value.toInt() < payments.length) {
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.only(top: 10),
                           child: Text(
                             payments[value.toInt()].type ?? '',
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF444444),
                             ),
@@ -401,13 +444,13 @@ class _HomeViewState extends State<HomeView> {
                       }
                       return const SizedBox.shrink();
                     },
-                    reservedSize: 36,
+                    reservedSize: 40,
                   ),
                 ),
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 50,
+                    reservedSize: 60,
                     interval: maxY > 2000 ? maxY / 4 : maxY / 3,
                     getTitlesWidget: (value, meta) {
                       String formattedValue;
@@ -420,7 +463,7 @@ class _HomeViewState extends State<HomeView> {
                       return Text(
                         formattedValue,
                         style: const TextStyle(
-                          fontSize: 10, 
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF666666),
                         ),
@@ -460,9 +503,9 @@ class _HomeViewState extends State<HomeView> {
                 
                 final Color color = payment.color != null && payment.color!.startsWith('#')
                     ? _hexToColor(payment.color!)
-                    : Colors.blue;
+                    : Colors.pink.shade300;
                 
-                final double barWidth = payments.length > 3 ? 16 : 25;
+                final double barWidth = payments.length > 3 ? 22 : 35;
 
                 return BarChartGroupData(
                   x: index,
@@ -477,8 +520,8 @@ class _HomeViewState extends State<HomeView> {
                         color: Colors.grey.shade100,
                       ),
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(6),
-                        topRight: Radius.circular(6),
+                        topLeft: Radius.circular(8),
+                        topRight: Radius.circular(8),
                       ),
                     ),
                   ],
@@ -490,11 +533,11 @@ class _HomeViewState extends State<HomeView> {
         
         // Tutarlar ve yüzdeler
         Container(
-          margin: const EdgeInsets.only(top: 16),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(top: 20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: Colors.grey.shade200),
           ),
           child: Row(
@@ -502,7 +545,7 @@ class _HomeViewState extends State<HomeView> {
             children: payments.map((payment) {
               final Color color = payment.color != null && payment.color!.startsWith('#')
                   ? _hexToColor(payment.color!)
-                  : Colors.blue;
+                  : Colors.pink.shade300;
               
               final double percentage = totalAmount > 0 
                   ? ((payment.amount ?? 0.0) / totalAmount * 100)
@@ -510,18 +553,18 @@ class _HomeViewState extends State<HomeView> {
               
               return Flexible(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Row(
                     children: [
                       Container(
-                        width: 12,
-                        height: 12,
+                        width: 16,
+                        height: 16,
                         decoration: BoxDecoration(
                           color: color,
-                          borderRadius: BorderRadius.circular(3),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +572,7 @@ class _HomeViewState extends State<HomeView> {
                             Text(
                               payment.type ?? 'Bilinmeyen',
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF333333),
                               ),
@@ -538,7 +581,7 @@ class _HomeViewState extends State<HomeView> {
                             Text(
                               '${payment.amount?.toStringAsFixed(2)} TL (%${percentage.toStringAsFixed(1)})',
                               style: const TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 color: Color(0xFF666666),
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -589,11 +632,11 @@ class _HomeViewState extends State<HomeView> {
         const Text(
           'Masa Doluluk Oranı',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.bold
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         Expanded(
           child: Column(
             children: [
@@ -605,8 +648,8 @@ class _HomeViewState extends State<HomeView> {
                     Expanded(
                       child: PieChart(
                         PieChartData(
-                          sectionsSpace: 0,
-                          centerSpaceRadius: 60,
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 70,
                           startDegreeOffset: -90,
                           sections: [
                             // Dolu masalar
@@ -614,7 +657,7 @@ class _HomeViewState extends State<HomeView> {
                               color: occupiedColor,
                               value: orderTables.toDouble(),
                               title: '',
-                              radius: 50,
+                              radius: 60,
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                             // Boş masalar
@@ -622,7 +665,7 @@ class _HomeViewState extends State<HomeView> {
                               color: emptyColor,
                               value: emptyTables.toDouble(),
                               title: '',
-                              radius: 50,
+                              radius: 60,
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                           ],
@@ -639,14 +682,14 @@ class _HomeViewState extends State<HomeView> {
                           children: [
                             // Merkezdeki doluluk oranı
                             Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: Colors.grey.shade200),
                                 boxShadow: [
                                   BoxShadow(
-                                    blurRadius: 6,
+                                    blurRadius: 8,
                                     color: Colors.black.withOpacity(0.05),
                                     spreadRadius: 2,
                                   )
@@ -657,15 +700,16 @@ class _HomeViewState extends State<HomeView> {
                                   Text(
                                     '${occupancyPercentage.toStringAsFixed(1)}%',
                                     style: const TextStyle(
-                                      fontSize: 24,
+                                      fontSize: 28,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF333333),
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
                                   const Text(
                                     'Doluluk',
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 16,
                                       color: Color(0xFF666666),
                                     ),
                                   ),
@@ -684,11 +728,11 @@ class _HomeViewState extends State<HomeView> {
               Expanded(
                 flex: 1,
                 child: Container(
-                  margin: const EdgeInsets.only(top: 16),
-                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(top: 20),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Row(
@@ -703,7 +747,7 @@ class _HomeViewState extends State<HomeView> {
                         ),
                       ),
                       
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 20),
                       
                       // Boş masalar
                       Expanded(
@@ -715,7 +759,7 @@ class _HomeViewState extends State<HomeView> {
                         ),
                       ),
                       
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 20),
                       
                       // Toplam masalar
                       Expanded(
@@ -723,26 +767,28 @@ class _HomeViewState extends State<HomeView> {
                           children: [
                             const Icon(
                               Icons.table_restaurant,
-                              size: 16,
+                              size: 20,
                               color: Color(0xFF666666),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   const Text(
                                     'Toplam Masalar',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 14,
                                       color: Color(0xFF666666),
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     '$totalTables masa',
                                     style: const TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF333333),
                                     ),
@@ -775,30 +821,32 @@ class _HomeViewState extends State<HomeView> {
     return Row(
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 16,
+          height: 16,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(4),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 14,
                   color: Color(0xFF666666),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
+              const SizedBox(height: 4),
               Text(
                 '$count masa (${percentage.toStringAsFixed(1)}%)',
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF333333),
                 ),
