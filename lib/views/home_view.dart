@@ -623,8 +623,8 @@ class _HomeViewState extends State<HomeView> {
         : 0.0;
     
     // Dolu ve boş masalar için renkler
-    const Color occupiedColor = Color(0xFFFF4560);
-    const Color emptyColor = Color(0xFF13D8AA);
+    const Color occupiedColor = Color(0xFFFF4560); // Kırmızı tonu
+    const Color emptyColor = Color(0xFF13D8AA); // Yeşil/Turkuaz tonu
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -636,20 +636,20 @@ class _HomeViewState extends State<HomeView> {
             fontWeight: FontWeight.bold
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 15), // Boşluk azaltıldı
         Expanded(
           child: Column(
             children: [
-              // Pasta grafiği
+              // Pasta grafiği ve merkezdeki yüzde
               Expanded(
-                flex: 2,
+                flex: 3, // Grafik alanına daha fazla yer ver
                 child: Row(
                   children: [
                     Expanded(
                       child: PieChart(
                         PieChartData(
                           sectionsSpace: 2,
-                          centerSpaceRadius: 70,
+                          centerSpaceRadius: 55, // Ortadaki boşluk azaltıldı
                           startDegreeOffset: -90,
                           sections: [
                             // Dolu masalar
@@ -657,7 +657,7 @@ class _HomeViewState extends State<HomeView> {
                               color: occupiedColor,
                               value: orderTables.toDouble(),
                               title: '',
-                              radius: 60,
+                              radius: 50, // Yarıçap azaltıldı
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                             // Boş masalar
@@ -665,7 +665,7 @@ class _HomeViewState extends State<HomeView> {
                               color: emptyColor,
                               value: emptyTables.toDouble(),
                               title: '',
-                              radius: 60,
+                              radius: 50, // Yarıçap azaltıldı
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                           ],
@@ -673,66 +673,43 @@ class _HomeViewState extends State<HomeView> {
                       ),
                     ),
                     
+                    // Merkezdeki doluluk oranı (daha sade)
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Merkezdeki doluluk oranı
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
-                                boxShadow: [
-                                  BoxShadow(
-                                    blurRadius: 8,
-                                    color: Colors.black.withOpacity(0.05),
-                                    spreadRadius: 2,
-                                  )
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '${occupancyPercentage.toStringAsFixed(1)}%',
-                                    style: const TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF333333),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'Doluluk',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Color(0xFF666666),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${occupancyPercentage.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontSize: 24, // Font boyutu küçültüldü
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF333333),
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 2), // Boşluk azaltıldı
+                          const Text(
+                            'Doluluk',
+                            style: TextStyle(
+                              fontSize: 14, // Font boyutu küçültüldü
+                              color: Color(0xFF666666),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
               
-              // Açıklamalar
+              // Açıklamalar (daha az yer kaplayacak şekilde)
               Expanded(
-                flex: 1,
+                flex: 2, // Açıklama alanına daha az yer ver
                 child: Container(
-                  margin: const EdgeInsets.only(top: 20),
-                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.only(top: 15), // Boşluk azaltıldı
+                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10), // Padding ayarlandı
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
                   child: Row(
@@ -784,11 +761,11 @@ class _HomeViewState extends State<HomeView> {
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   Text(
                                     '$totalTables masa',
                                     style: const TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF333333),
                                     ),
@@ -842,11 +819,11 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 '$count masa (${percentage.toStringAsFixed(1)}%)',
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF333333),
                 ),

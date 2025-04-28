@@ -772,6 +772,9 @@ class _CategoryViewState extends State<CategoryView> {
   }
 
   void _showMenuDialog() {
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final bool showKuverGarsoniye = userViewModel.userInfo?.company?.compKuverWaiter ?? false;
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -842,27 +845,29 @@ class _CategoryViewState extends State<CategoryView> {
                       },
                     ),
                     
-                    const Divider(height: 1),
+                    if (showKuverGarsoniye) const Divider(height: 1),
                     
-                    _buildMenuItem(
-                      icon: Icons.attach_money,
-                      title: 'Kuver Ücreti Ekle',
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        // Kuver ücreti işlemi
-                      },
-                    ),
+                    if (showKuverGarsoniye)
+                      _buildMenuItem(
+                        icon: Icons.attach_money,
+                        title: 'Kuver Ücreti Ekle',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          // Kuver ücreti işlemi
+                        },
+                      ),
                     
-                    const Divider(height: 1),
+                    if (showKuverGarsoniye) const Divider(height: 1),
                     
-                    _buildMenuItem(
-                      icon: Icons.monetization_on,
-                      title: 'Garsoniye Ücreti Ekle',
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        // Garsoniye ücreti işlemi
-                      },
-                    ),
+                    if (showKuverGarsoniye)
+                      _buildMenuItem(
+                        icon: Icons.monetization_on,
+                        title: 'Garsoniye Ücreti Ekle',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          // Garsoniye ücreti işlemi
+                        },
+                      ),
                     
                     const Divider(height: 1),
                     

@@ -98,7 +98,16 @@ class BasketViewModel extends ChangeNotifier {
   
   // Sepeti temizleme
   void clearBasket() {
+    debugPrint('🧹 [BASKET_VM] Sepet temizleme başlatıldı. Ürün sayısı: ${_basket.items.length}');
+    
+    // Basket modeli içindeki clear metodunu çağır
     _basket.clear();
+    
+    // API'den gelen sipariş tutarını da sıfırla
+    _orderAmount = 0.0;
+    
+    debugPrint('🧹 [BASKET_VM] Sepet temizlendi. Tüm tutarlar sıfırlandı.');
+    
     notifyListeners();
   }
   
