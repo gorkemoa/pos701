@@ -16,6 +16,8 @@ class UserModel {
   final String? userRank;
   final String? userStatus;
   final String? userGender;
+  final String? serverDate;
+  final String? serverTime;
   final String? userToken;
   final String? platform;
   final String? version;
@@ -36,6 +38,8 @@ class UserModel {
     this.userRank,
     this.userStatus,
     this.userGender,
+    this.serverDate,
+    this.serverTime,
     this.userToken,
     this.platform,
     this.version,
@@ -156,6 +160,8 @@ class UserModel {
       userRank: userData['userRank']?.toString(),
       userStatus: userData['userStatus']?.toString(),
       userGender: userData['userGender']?.toString(),
+      serverDate: userData['serverDate']?.toString(),
+      serverTime: userData['serverTime']?.toString(),
       userToken: userData['userToken']?.toString(),
       platform: userData['platform']?.toString(),
       version: userData['version']?.toString(),
@@ -180,6 +186,8 @@ class UserModel {
       'userStatus': userStatus,
       'userGender': userGender,
       'userToken': userToken,
+      'serverDate': serverDate,
+      'serverTime': serverTime,
       'platform': platform,
       'version': version,
       'company': company?.toJson(),

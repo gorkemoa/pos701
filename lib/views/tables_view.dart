@@ -335,23 +335,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                                   );
                                 },
                               ),
-                              ListTile(
-                                leading: const Icon(Icons.history),
-                                title: const Text('Sipariş Geçmişi'),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  // Sipariş geçmişini göster
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.settings),
-                                title: const Text('Masa Ayarları'),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  // Masa ayarları sayfasına yönlendir
-                                },
-                              ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 28),
                             ],
                           ),
                         );
@@ -375,12 +359,13 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
               controller: _tabController,
               children: regions.map((region) => _buildTablesGrid(region)).toList(),
             ),
-            floatingActionButton: FloatingActionButton(
+            floatingActionButton: FloatingActionButton.extended(
               onPressed: () {
-                // Yeni masa veya sipariş ekle
+                _handleFloatingActionButton(context);
               },
               backgroundColor: Color(AppConstants.primaryColorValue),
-              child: const Icon(Icons.add),
+              icon: const Icon(Icons.add),
+              label: const Text('Yeni Sipariş'),
             ),
           );
         },
@@ -427,6 +412,82 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           tableName: table.tableName,
         ),
       ),
+    );
+  }
+
+  void _handleFloatingActionButton(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20.0),
+              topRight: Radius.circular(20.0),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.delivery_dining, color: Colors.orange),
+                title: const Text('Paket Sipariş'),
+                subtitle: const Text('Müşteriye teslim edilecek paket siparişleri oluşturun'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CategoryView(
+                        compID: widget.compID,
+                        userToken: widget.userToken,
+                        tableID: 0, // Masa ID'si 0 olmalı
+                        orderID: null,
+                        tableName: "Paket Sipariş", // Sipariş türü adı
+                        orderType: 2, // 2: Paket Sipariş
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.takeout_dining, color: Colors.green),
+                title: const Text('Gel-Al Sipariş'),
+                subtitle: const Text('Müşterinin gelip alacağı siparişleri oluşturun'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CategoryView(
+                        compID: widget.compID,
+                        userToken: widget.userToken,
+                        tableID: 0, // Masa ID'si 0 olmalı
+                        orderID: null,
+                        tableName: "Gel-Al Sipariş", // Sipariş türü adı
+                        orderType: 3, // 3: Gel-Al Sipariş
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+            ],
+          ),
+        );
+      },
     );
   }
 } 

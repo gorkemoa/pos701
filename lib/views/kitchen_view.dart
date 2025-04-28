@@ -5,6 +5,7 @@ import 'package:pos701/models/kitchen_order_model.dart';
 import 'package:pos701/viewmodels/kitchen_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/widgets/app_drawer.dart';
+import 'dart:async';
 
 class KitchenView extends StatefulWidget {
   final String userToken;
@@ -23,19 +24,31 @@ class KitchenView extends StatefulWidget {
 }
 
 class _KitchenViewState extends State<KitchenView> {
+  Timer? _uiUpdateTimer;
+
   @override
   void initState() {
     super.initState();
     // Sayfada ilk kez olduğumuzda, ViewModel'i oluştur ve otomatik yenilemeyi başlat
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
+      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+      
+      // Sunucu saatini UserViewModel'den al ve KitchenViewModel'e aktar
+      final serverDate = userViewModel.userInfo?.serverDate ?? '';
+      final serverTime = userViewModel.userInfo?.serverTime ?? '';
+      
+      if (serverDate.isNotEmpty && serverTime.isNotEmpty) {
+        debugPrint('🔵 [Mutfak] Sunucu saati alındı: serverDate=$serverDate, serverTime=$serverTime');
+        kitchenViewModel.updateServerTime(serverTime, serverDate);
+      }
+      
       // Token boş değilse ve compID 0 değilse devam et
       if (widget.userToken.isNotEmpty && widget.compID > 0) {
         debugPrint('🔵 [Mutfak] Parametre kontrolü: userToken=${widget.userToken}, compID=${widget.compID}');
         kitchenViewModel.startAutoRefresh(widget.userToken, widget.compID);
       } else {
         // Kullanıcı bilgileri yeterli değilse, UserViewModel'den alabiliriz
-        final userViewModel = Provider.of<UserViewModel>(context, listen: false);
         final token = userViewModel.userInfo?.userToken ?? '';
         final companyId = userViewModel.userInfo?.compID ?? 0;
         
@@ -50,6 +63,11 @@ class _KitchenViewState extends State<KitchenView> {
           );
         }
       }
+      
+      // UI güncellemesi için timer başlat (her saniye)
+      _uiUpdateTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        setState(() {}); // UI'ı yenile
+      });
     });
   }
 
@@ -58,6 +76,7 @@ class _KitchenViewState extends State<KitchenView> {
     // Sayfadan çıkıldığında otomatik yenilemeyi durdur
     final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
     kitchenViewModel.stopAutoRefresh();
+    _uiUpdateTimer?.cancel();
     super.dispose();
   }
 
@@ -74,6 +93,29 @@ class _KitchenViewState extends State<KitchenView> {
       return '$hour:$minute';
     } catch (e) {
       return '';
+    }
+  }
+  
+  // Geçen süreyi formatlı olarak döndür
+  String formatElapsedTime(String timestamp) {
+    if (timestamp.isEmpty) return '00:00';
+    
+    try {
+      final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
+      final int elapsedSeconds = kitchenViewModel.getElapsedTime(timestamp);
+      
+      // Saniyeyi dakika:saniye formatına dönüştür
+      final int minutes = (elapsedSeconds ~/ 60);
+      final int seconds = elapsedSeconds % 60;
+      
+      // İki basamaklı olarak göster
+      final String minutesStr = minutes.toString().padLeft(2, '0');
+      final String secondsStr = seconds.toString().padLeft(2, '0');
+      
+      return '$minutesStr:$secondsStr';
+    } catch (e) {
+      debugPrint('🔴 [Mutfak] Süre formatı hatası: $e');
+      return '00:00';
     }
   }
 
@@ -326,7 +368,25 @@ class _KitchenViewState extends State<KitchenView> {
   }
 
   Widget _buildProductItem(BuildContext context, KitchenProduct product, KitchenOrder order) {
-    String timeString = formatTime(product.proTime);
+    // Ürün hazırlanma süresini al
+    String elapsedTimeStr = formatElapsedTime(product.proTime);
+    
+    // Süreye göre renk belirle
+    Color timeColor = Colors.green;
+    try {
+      final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
+      final int elapsedSeconds = kitchenViewModel.getElapsedTime(product.proTime);
+      
+      if (elapsedSeconds >= 300) { // 5 dakika ve üzeri
+        timeColor = Colors.red;
+      } else if (elapsedSeconds >= 180) { // 3 dakika ve üzeri
+        timeColor = Colors.orange;
+      } else if (elapsedSeconds >= 60) { // 1 dakika ve üzeri
+        timeColor = Colors.yellow.shade700;
+      }
+    } catch (e) {
+      // Hata durumunda varsayılan renk
+    }
     
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -334,15 +394,16 @@ class _KitchenViewState extends State<KitchenView> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.grey[200],
+              color: timeColor,
               borderRadius: BorderRadius.circular(4),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
-              timeString.isNotEmpty ? timeString : '00:13',
+              elapsedTimeStr,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
           ),

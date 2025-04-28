@@ -22,6 +22,8 @@ class BasketView extends StatefulWidget {
   final int orderGuest;
   final Customer? selectedCustomer;
   final List<order_model.CustomerAddress>? customerAddresses;
+  final int? tableID; // Masa ID
+  final int orderType; // Sipariş türü: 1-Masa, 2-Paket, 3-Gel-Al
   
   const BasketView({
     Key? key,
@@ -31,6 +33,8 @@ class BasketView extends StatefulWidget {
     this.orderGuest = 1,
     this.selectedCustomer,
     this.customerAddresses,
+    this.tableID,
+    this.orderType = 1, // Varsayılan değer: Masa siparişi
   }) : super(key: key);
 
   @override
@@ -216,124 +220,123 @@ class _BasketViewState extends State<BasketView> {
     }
   }
 
-  Future<void> _siparisGonder() async {
-    if (_userToken == null || _compID == null || _tableID == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kullanıcı veya masa bilgileri alınamadı.'), backgroundColor: Colors.red),
-      );
+  Future<void> _createOrder(BasketViewModel basketViewModel) async {
+    if (_userToken == null || _compID == null) {
+      setState(() {
+        _isProcessing = false;
+        _errorMessage = 'Kullanıcı bilgileri alınamadı';
+      });
       return;
     }
-    
-    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
     
     if (basketViewModel.isEmpty) {
+      setState(() {
+        _isProcessing = false;
+        _errorMessage = 'Sepet boş';
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sepette ürün bulunmamaktadır.'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('Sipariş oluşturmak için sepete ürün ekleyin'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
     
-    setState(() {
-      _isLoading = true;
-      _isProcessing = true; // İşlem başladı
-    });
+    debugPrint('🛒 Sipariş oluşturuluyor...');
+    debugPrint('🛒 Sipariş tipi: ${widget.orderType}, Masa ID: ${widget.tableID}');
     
-    final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
-    
-    // Mevcut sipariş mi yoksa yeni sipariş mi olduğunu kontrol et
-    final bool success = widget.orderID != null 
-        ? await _siparisGuncelle(orderViewModel, basketViewModel)
-        : await _yeniSiparisOlustur(orderViewModel, basketViewModel);
-    
-    setState(() {
-      _isLoading = false;
-      _isSiparisOlusturuldu = success; // Sipariş oluşturuldu mu durumunu kaydet
-    });
-    
-    if (success) {
-      basketViewModel.clearBasket();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(widget.orderID != null ? 'Sipariş başarıyla güncellendi.' : 'Sipariş başarıyla oluşturuldu.'),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+      
+      // OrderViewModel oluştur
+      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+      
+      // Müşteri bilgilerini kontrol et
+      int custID = 0;
+      String custName = '';
+      String custPhone = '';
+      List<dynamic> custAdrs = [];
+      
+      // Siparişte zaten müşteri bilgisi varsa veya eklenmişse
+      if (widget.selectedCustomer != null) {
+        custID = widget.selectedCustomer!.custID;
+        custName = widget.selectedCustomer!.custName;
+        custPhone = widget.selectedCustomer!.custPhone;
+        
+        if (widget.customerAddresses != null && widget.customerAddresses!.isNotEmpty) {
+          custAdrs = widget.customerAddresses!;
+        }
+        
+        debugPrint('👤 Müşteri bilgisi: ID: $custID, Ad: $custName, Tel: $custPhone, Adres sayısı: ${custAdrs.length}');
+      } else {
+        debugPrint('👤 Müşteri bilgisi yok');
+      }
+      
+      // Sipariş oluştur
+      final bool success = await orderViewModel.siparisSunucuyaGonder(
+        userToken: _userToken!,
+        compID: _compID!,
+        tableID: widget.tableID ?? 0, // tableID null ise 0 gönder
+        tableName: widget.tableName,
+        sepetUrunleri: basketViewModel.items,
+        orderType: widget.orderType, // Sipariş tipini ekle
+        orderGuest: _orderGuest,
+        orderDesc: _orderDesc,
+        custID: custID,
+        custName: custName,
+        custPhone: custPhone,
+        custAdrs: custAdrs,
       );
-      Navigator.of(context).pop();
-    } else {
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoading = false;
+        _isSiparisOlusturuldu = success;
+      });
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sipariş başarıyla oluşturuldu'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Sepeti temizle
+        basketViewModel.clearBasket();
+        
+        // Ana sayfaya dön
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      } else {
+        setState(() {
+          _errorMessage = orderViewModel.errorMessage ?? 'Sipariş oluşturulamadı';
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Hata: ${e.toString()}';
+      });
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.orderID != null 
-              ? 'Sipariş güncellenemedi: ${orderViewModel.errorMessage ?? "Bilinmeyen hata"}'
-              : 'Sipariş oluşturulamadı: ${orderViewModel.errorMessage ?? "Bilinmeyen hata"}'),
+          content: Text(_errorMessage),
           backgroundColor: Colors.red,
         ),
       );
     }
-  }
-  
-  /// Yeni sipariş oluşturma işlemi
-  Future<bool> _yeniSiparisOlustur(OrderViewModel orderViewModel, BasketViewModel basketViewModel) async {
-    // Seçilen müşteri ID'sini al (eğer varsa)
-    final int custID = widget.selectedCustomer?.custID ?? 0;
-    final String custName = widget.selectedCustomer?.custName ?? '';
-    final String custPhone = widget.selectedCustomer?.custPhone ?? '';
-    
-    debugPrint('🚗 [BASKET_VIEW] Müşteri bilgileri: ID: $custID, Adı: $custName, Tel: $custPhone');
-    
-    // Adresleri kontrol et ve formatla
-    List<order_model.CustomerAddress> customerAddresses = [];
-    if (widget.customerAddresses != null && widget.customerAddresses!.isNotEmpty) {
-      customerAddresses = widget.customerAddresses!;
-      debugPrint('🏠 [BASKET_VIEW] ${customerAddresses.length} adet müşteri adresi bulundu');
-    }
-    
-    return await orderViewModel.siparisSunucuyaGonder(
-      userToken: _userToken!,
-      compID: _compID!,
-      tableID: _tableID!,
-      tableName: widget.tableName,
-      sepetUrunleri: basketViewModel.items,
-      orderGuest: _orderGuest,
-      kuverQty: 1,
-      orderDesc: _orderDesc, // Sipariş açıklamasını gönder
-      custID: custID, // Müşteri ID'sini gönder
-      custName: custName, // Müşteri adını gönder
-      custPhone: custPhone, // Müşteri telefonunu gönder
-      custAdrs: customerAddresses, // Müşteri adreslerini gönder
-    );
-  }
-  
-  /// Mevcut siparişi güncelleme işlemi
-  Future<bool> _siparisGuncelle(OrderViewModel orderViewModel, BasketViewModel basketViewModel) async {
-    debugPrint('🔄 Sipariş güncelleniyor. OrderID: ${widget.orderID}');
-    
-    // Seçilen müşteri ID'sini al (eğer varsa)
-    final int custID = widget.selectedCustomer?.custID ?? 0;
-    final String custName = widget.selectedCustomer?.custName ?? '';
-    final String custPhone = widget.selectedCustomer?.custPhone ?? '';
-    
-    debugPrint('🚗 [BASKET_VIEW] Müşteri bilgileri: ID: $custID, Adı: $custName, Tel: $custPhone');
-    
-    // Adresleri kontrol et ve formatla
-    List<order_model.CustomerAddress> customerAddresses = [];
-    if (widget.customerAddresses != null && widget.customerAddresses!.isNotEmpty) {
-      customerAddresses = widget.customerAddresses!;
-      debugPrint('🏠 [BASKET_VIEW] ${customerAddresses.length} adet müşteri adresi bulundu');
-    }
-    
-    return await orderViewModel.siparisGuncelle(
-      userToken: _userToken!,
-      compID: _compID!,
-      orderID: widget.orderID!,
-      sepetUrunleri: basketViewModel.items,
-      orderGuest: _orderGuest,
-      kuverQty: 1,
-      orderDesc: _orderDesc, // Sipariş açıklamasını gönder
-      custID: custID, // Müşteri ID'sini gönder
-      custName: custName, // Müşteri adını gönder
-      custPhone: custPhone, // Müşteri telefonunu gönder
-      custAdrs: customerAddresses, // Müşteri adreslerini gönder
-    );
   }
 
   // Aktif olmayan masa kontrolü
@@ -662,7 +665,7 @@ class _BasketViewState extends State<BasketView> {
                         // Kaydet Butonu
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _siparisGonder,
+                            onPressed: () => _createOrder(_basketViewModel!),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Color(AppConstants.primaryColorValue),
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
