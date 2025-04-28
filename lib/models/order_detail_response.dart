@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 // Sipariş detayı yanıt modeli
 class OrderDetailResponse {
   final int orderID;
@@ -35,26 +37,44 @@ class OrderDetailResponse {
   });
 
   factory OrderDetailResponse.fromJson(Map<String, dynamic> json) {
-    return OrderDetailResponse(
-      orderID: json['orderID'],
-      tableID: json['tableID'],
-      custID: json['custID'],
-      orderCode: json['orderCode'],
-      orderName: json['orderName'],
-      orderAmount: (json['orderAmount'] ?? 0).toDouble(),
-      orderDiscount: (json['orderDiscount'] ?? 0).toDouble(),
-      orderDesc: json['orderDesc'],
-      orderGuest: json['orderGuest'],
-      orderStatus: json['orderStatus'],
-      orderDate: json['orderDate'],
-      isActive: json['isActive'],
-      isCanceled: json['isCanceled'],
-      customer: json['customer'],
-      products: (json['products'] as List<dynamic>?)
-              ?.map((product) => OrderProductDetail.fromJson(product))
-              .toList() ??
-          [],
-    );
+    try {
+      // products alanı kontrol edilir - eğer null veya liste değilse boş liste olarak işlenir
+      final productsData = json['products'];
+      List<OrderProductDetail> productsList = [];
+      
+      if (productsData != null) {
+        if (productsData is List) {
+          productsList = List<OrderProductDetail>.from(
+            productsData.map((item) => OrderProductDetail.fromJson(item))
+          );
+        } else {
+          debugPrint('⚠️ [OrderDetail] products alanı liste formatında değil, boş liste kullanılıyor');
+        }
+      } else {
+        debugPrint('⚠️ [OrderDetail] products alanı null, boş liste kullanılıyor');
+      }
+      
+      return OrderDetailResponse(
+        orderID: json['orderID'],
+        tableID: json['tableID'],
+        custID: json['custID'],
+        orderCode: json['orderCode'],
+        orderName: json['orderName'],
+        orderAmount: (json['orderAmount'] ?? 0).toDouble(),
+        orderDiscount: (json['orderDiscount'] ?? 0).toDouble(),
+        orderDesc: json['orderDesc'],
+        orderGuest: json['orderGuest'],
+        orderStatus: json['orderStatus'],
+        orderDate: json['orderDate'],
+        isActive: json['isActive'],
+        isCanceled: json['isCanceled'],
+        customer: json['customer'],
+        products: productsList,
+      );
+    } catch (e) {
+      debugPrint('🔴 [OrderDetail] JSON ayrıştırma hatası: $e');
+      rethrow; // Hata ayıklama için hatayı yeniden fırlat
+    }
   }
 }
 

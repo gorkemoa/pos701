@@ -11,6 +11,10 @@ import 'package:pos701/services/product_service.dart';
 import 'package:pos701/views/basket_view.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
+import 'package:pos701/viewmodels/customer_viewmodel.dart';
+import 'package:pos701/models/customer_model.dart';
+import 'package:pos701/services/customer_service.dart';
+import 'package:pos701/models/order_model.dart' as order_model;  // Sipariş için CustomerAddress sınıfı
 
 class CategoryView extends StatefulWidget {
   final int compID;
@@ -38,10 +42,13 @@ class _CategoryViewState extends State<CategoryView> {
   bool _isInitialized = false;
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _orderDescController = TextEditingController();
+  final TextEditingController _customerSearchController = TextEditingController();
   Category? _selectedCategory;
   int _cartCount = 0;
   String _orderDesc = '';
   int _orderGuest = 1; // Misafir sayısı için değişken
+  Customer? _selectedCustomer; // Seçili müşteri
+  List<order_model.CustomerAddress> _selectedCustomerAddresses = [];
 
   @override
   void initState() {
@@ -55,6 +62,7 @@ class _CategoryViewState extends State<CategoryView> {
   void dispose() {
     _searchController.dispose();
     _orderDescController.dispose();
+    _customerSearchController.dispose();
     super.dispose();
   }
 
@@ -90,6 +98,7 @@ class _CategoryViewState extends State<CategoryView> {
   @override
   Widget build(BuildContext context) {
     final basketViewModel = Provider.of<BasketViewModel>(context);
+    final customerViewModel = Provider.of<CustomerViewModel>(context, listen: false);
     
     return MultiProvider(
       providers: [
@@ -617,6 +626,21 @@ class _CategoryViewState extends State<CategoryView> {
       'orderGuest': _orderGuest,
     };
     
+    // Eğer müşteri seçilmişse müşteri bilgilerini ekleyelim
+    if (_selectedCustomer != null) {
+      arguments['custID'] = _selectedCustomer!.custID;
+      arguments['custName'] = _selectedCustomer!.custName;
+      arguments['custPhone'] = _selectedCustomer!.custPhone;
+      
+      // Müşteri adres bilgilerini de ekleyelim
+      arguments['custAdrs'] = _selectedCustomerAddresses;
+      
+      debugPrint('🛒 Müşteri seçildi: ${_selectedCustomer!.custName}');
+      if (_selectedCustomerAddresses.isNotEmpty) {
+        debugPrint('🛒 Müşteri için adres eklendi: ${_selectedCustomerAddresses.length} adet');
+      }
+    }
+    
     // Eğer sipariş varsa orderID ekleyelim
     if (widget.orderID != null) {
       arguments['orderID'] = widget.orderID;
@@ -635,6 +659,8 @@ class _CategoryViewState extends State<CategoryView> {
           orderID: widget.orderID,
           orderDesc: _orderDesc,
           orderGuest: _orderGuest,
+          selectedCustomer: _selectedCustomer,
+          customerAddresses: _selectedCustomerAddresses,  // Müşteri adres bilgilerini ekle
         ),
         settings: RouteSettings(
           arguments: arguments,
@@ -852,7 +878,7 @@ class _CategoryViewState extends State<CategoryView> {
                       title: 'Müşteri',
                       onTap: () {
                         Navigator.of(context).pop();
-                        // Müşteri işlemi
+                        _showCustomerDialog();
                       },
                     ),
                     
@@ -909,7 +935,7 @@ class _CategoryViewState extends State<CategoryView> {
                       title: 'Masayı Kapat',
                       onTap: () {
                         Navigator.of(context).pop();
-                        // Masayı kapat işlemi
+                        _showCancelOrderDialog();
                       },
                     ),
                   ],
@@ -1064,7 +1090,7 @@ class _CategoryViewState extends State<CategoryView> {
             ),
             ElevatedButton(
               onPressed: () {
-                this.setState(() {
+                setState(() {
                   _orderGuest = tempGuestCount;
                 });
                 Navigator.of(context).pop();
@@ -1087,4 +1113,663 @@ class _CategoryViewState extends State<CategoryView> {
       ),
     );
   }
-} 
+
+  // Müşteri seçme diyaloğu
+  void _showCustomerDialog() async {
+    final customerViewModel = Provider.of<CustomerViewModel>(context, listen: false);
+    
+    // Müşteri listesini getir
+    await customerViewModel.getCustomers(
+      userToken: widget.userToken,
+      compID: widget.compID,
+    );
+
+    if (!mounted) return;
+    
+    // Yeni müşteri ekleme için değişkenler
+    String newCustomerName = '';
+    String newCustomerPhone = '';
+    String newCustomerEmail = '';
+    bool isPhoneValid = true;
+    final formKey = GlobalKey<FormState>();
+    
+    // Adres bilgileri için değişkenler
+    bool showAddressForm = false;
+    String addrTitle = '';
+    String addrAddress = '';
+    String addrNote = '';
+    bool isDefaultAddress = true;
+    
+    // _CategoryViewState'in setState'ini çağırmak için referans
+    final outerSetState = setState;
+    
+    // Sipariş oluşturmak için kullanılacak adres listesi
+    List<order_model.CustomerAddress> orderAddresses = [];
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          // Tab indeksini takip etmek için değişken
+          int activeTabIndex = 0;
+          
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DefaultTabController(
+              length: 2,
+              initialIndex: 0,
+              child: Builder(
+                builder: (builderContext) {
+                  // DefaultTabController değişikliklerini dinle
+                  final tabController = DefaultTabController.of(builderContext);
+                  tabController.addListener(() {
+                    if (!tabController.indexIsChanging) {
+                      setState(() {
+                        activeTabIndex = tabController.index;
+                      });
+                    }
+                  });
+                  
+                  return Container(
+                    width: MediaQuery.of(context).size.width * 0.95,
+                    height: MediaQuery.of(context).size.height * 0.85,
+                    child: Column(
+                      children: [
+                        // Başlık ve kapama butonu
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Color(AppConstants.primaryColorValue),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              topRight: Radius.circular(12),
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Müşteri İşlemleri',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Tab bar
+                        Material(
+                          color: Colors.white,
+                          child: TabBar(
+                            indicatorColor: Color(AppConstants.primaryColorValue),
+                            labelColor: Color(AppConstants.primaryColorValue),
+                            unselectedLabelColor: Colors.grey.shade600,
+                            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                            tabs: const [
+                              Tab(
+                                icon: Icon(Icons.person_search),
+                                text: 'Müşteri Ara',
+                              ),
+                              Tab(
+                                icon: Icon(Icons.person_add),
+                                text: 'Yeni Müşteri',
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Tab içerikleri
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            child: TabBarView(
+                              children: [
+                                // Müşteri arama tab içeriği
+                                Column(
+                                  children: [
+                                    // Arama kutusu
+                                    TextField(
+                                      controller: _customerSearchController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Müşteri adı, telefon veya e-posta ara...',
+                                        prefixIcon: const Icon(Icons.search),
+                                        suffixIcon: IconButton(
+                                          icon: const Icon(Icons.clear),
+                                          onPressed: () {
+                                            _customerSearchController.clear();
+                                            // Arama temizlendiğinde tüm müşterileri getir
+                                            customerViewModel.getCustomers(
+                                              userToken: widget.userToken,
+                                              compID: widget.compID,
+                                            );
+                                          },
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                      ),
+                                      onSubmitted: (value) {
+                                        // Arama yapılınca filtrelenmiş müşterileri getir
+                                        customerViewModel.getCustomers(
+                                          userToken: widget.userToken,
+                                          compID: widget.compID,
+                                          searchText: value,
+                                        );
+                                      },
+                                    ),
+                                    
+                                    const SizedBox(height: 16),
+                                    
+                                    // Seçili müşteri bilgisi
+                                    if (_selectedCustomer != null)
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: Color(AppConstants.primaryColorValue),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  'Seçili Müşteri:',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color: Color(AppConstants.primaryColorValue),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(Icons.clear),
+                                                  color: Color(AppConstants.primaryColorValue),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _selectedCustomer = null;
+                                                    });
+                                                    outerSetState(() {
+                                                      _selectedCustomer = null;
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                CircleAvatar(
+                                                  backgroundColor: Color(AppConstants.primaryColorValue).withOpacity(0.2),
+                                                  radius: 28,
+                                                  child: Icon(
+                                                    Icons.person,
+                                                    size: 32,
+                                                    color: Color(AppConstants.primaryColorValue),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 16),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        _selectedCustomer!.custName,
+                                                        style: const TextStyle(
+                                                          fontSize: 18,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 6),
+                                                      Row(
+                                                        children: [
+                                                          const Icon(Icons.phone, size: 16, color: Colors.grey),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            _selectedCustomer!.custPhone,
+                                                            style: const TextStyle(fontSize: 14),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      if (_selectedCustomer!.custEmail.isNotEmpty) ...[
+                                                        const SizedBox(height: 4),
+                                                        Row(
+                                                          children: [
+                                                            const Icon(Icons.email, size: 16, color: Colors.grey),
+                                                            const SizedBox(width: 4),
+                                                            Text(
+                                                              _selectedCustomer!.custEmail,
+                                                              style: const TextStyle(fontSize: 14),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    
+                                    const SizedBox(height: 16),
+                                    
+                                    // Müşteri listesi
+                                    Expanded(
+                                      child: Consumer<CustomerViewModel>(
+                                        builder: (context, customerViewModel, child) {
+                                          if (customerViewModel.isLoading) {
+                                            return const Center(
+                                              child: CircularProgressIndicator(),
+                                            );
+                                          }
+                                          
+                                          if (customerViewModel.errorMessage != null) {
+                                            return Center(
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.error_outline,
+                                                    size: 48,
+                                                    color: Colors.red.shade300,
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  Text(
+                                                    customerViewModel.errorMessage!,
+                                                    style: const TextStyle(fontSize: 16),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  ElevatedButton(
+                                                    onPressed: () => customerViewModel.getCustomers(
+                                                      userToken: widget.userToken,
+                                                      compID: widget.compID,
+                                                    ),
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: Color(AppConstants.primaryColorValue),
+                                                    ),
+                                                    child: const Text('Yeniden Dene'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                          
+                                          if (!customerViewModel.hasCustomers) {
+                                            return Center(
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.person_search,
+                                                    size: 64,
+                                                    color: Colors.grey.shade400,
+                                                  ),
+                                                  const SizedBox(height: 24),
+                                                  const Text(
+                                                    'Müşteri bulunamadı',
+                                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  const Text(
+                                                    'Aradığınız kriterlere uygun müşteri bulunmuyor. Yeni müşteri eklemek için "Yeni Müşteri" sekmesine geçebilirsiniz.',
+                                                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 24),
+                                                  ElevatedButton.icon(
+                                                    icon: const Icon(Icons.person_add, color: Colors.white),
+                                                    label: const Text('Yeni Müşteri Ekle', style: TextStyle(color: Colors.white)),
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: Color(AppConstants.primaryColorValue),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                                    ),
+                                                    onPressed: () {
+                                                      final tabController = DefaultTabController.of(builderContext);
+                                                      tabController.animateTo(1);
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                          
+                                          return Container(
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: Colors.grey.shade300),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: ListView.separated(
+                                              itemCount: customerViewModel.customers.length,
+                                              separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade300),
+                                              itemBuilder: (context, index) {
+                                                final customer = customerViewModel.customers[index];
+                                                final bool isSelected = _selectedCustomer != null && _selectedCustomer!.custID == customer.custID;
+                                                
+                                                return Material(
+                                                  color: isSelected ? Color(AppConstants.primaryColorValue).withOpacity(0.1) : Colors.white,
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        _selectedCustomer = customer;
+                                                      });
+                                                      outerSetState(() {
+                                                        _selectedCustomer = customer;
+                                                      });
+                                                    },
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(12),
+                                                      child: Row(
+                                                        children: [
+                                                          CircleAvatar(
+                                                            backgroundColor: isSelected 
+                                                                ? Color(AppConstants.primaryColorValue) 
+                                                                : Color(AppConstants.customerCardColor).withOpacity(0.2),
+                                                            child: Icon(
+                                                              Icons.person,
+                                                              color: isSelected 
+                                                                  ? Colors.white 
+                                                                  : Color(AppConstants.customerCardColor),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 16),
+                                                          Expanded(
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text(
+                                                                  customer.custName,
+                                                                  style: TextStyle(
+                                                                    fontWeight: FontWeight.bold, 
+                                                                    fontSize: 16,
+                                                                    color: isSelected ? Color(AppConstants.primaryColorValue) : Colors.black,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(height: 4),
+                                                                Row(
+                                                                  children: [
+                                                                    Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
+                                                                    const SizedBox(width: 4),
+                                                                    Text(
+                                                                      customer.custPhone,
+                                                                      style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                if (customer.custEmail.isNotEmpty) ...[
+                                                                  const SizedBox(height: 4),
+                                                                  Row(
+                                                                    children: [
+                                                                      Icon(Icons.email, size: 14, color: Colors.grey.shade600),
+                                                                      const SizedBox(width: 4),
+                                                                      Text(
+                                                                        customer.custEmail,
+                                                                        style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ],
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          Icon(
+                                                            isSelected ? Icons.check_circle : Icons.arrow_forward_ios,
+                                                            color: isSelected ? Color(AppConstants.primaryColorValue) : Colors.grey,
+                                                            size: isSelected ? 24 : 16,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                
+                           ],
+                            ),
+                          ),
+                        ),
+                        
+                        // Alt butonlar
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('İptal'),
+                              ),
+                              const SizedBox(width: 16),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Aktif tab'ı kontrol et, DefaultTabController yerine takip ettiğimiz değişkeni kullan
+                                  if (activeTabIndex == 0) {
+                                    // Müşteri seçme tab'ı
+                                    Navigator.of(context).pop();
+                                    if (_selectedCustomer != null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('${_selectedCustomer!.custName} müşterisi seçildi'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    // Yeni müşteri ekleme tab'ı
+                                    if (formKey.currentState!.validate()) {
+                                      // Adres bilgilerini oluştur (eğer eklenecekse)
+                                      if (showAddressForm && addrTitle.isNotEmpty && addrAddress.isNotEmpty) {
+                                        orderAddresses = [
+                                          order_model.CustomerAddress(
+                                            adrTitle: addrTitle,
+                                            adrAdress: addrAddress,
+                                            adrNote: addrNote,
+                                            isDefault: isDefaultAddress,
+                                          )
+                                        ];
+                                      } else {
+                                        orderAddresses = [];
+                                      }
+                                      
+                                      // Yeni müşteri oluştur (müşteri listesi için)
+                                      final newCustomer = Customer(
+                                        custID: 0, // ID 0 olarak gönderilecek
+                                        custCode: '',
+                                        custName: newCustomerName,
+                                        custEmail: newCustomerEmail,
+                                        custPhone: newCustomerPhone,
+                                        custPhone2: '',
+                                        addresses: [], // Customer sınıfında istenen boş adres listesi
+                                      );
+                                      
+                                      // Müşteri seçili olarak ayarla
+                                      setState(() {
+                                        _selectedCustomer = newCustomer;
+                                      });
+                                      outerSetState(() {
+                                        _selectedCustomer = newCustomer;
+                                        
+                                        // Ayrıca adres bilgilerini de kaydet (sipariş oluşturma sırasında kullanılacak)
+                                        _selectedCustomerAddresses = orderAddresses;
+                                      });
+                                      
+                                      Navigator.of(context).pop();
+                                      
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('$newCustomerName müşteri bilgileri siparişe eklenecek'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(AppConstants.primaryColorValue),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                ),
+                                child: const Text(
+                                  'Kaydet',
+                                  style: TextStyle(color: Colors.white, fontSize: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  // Sipariş iptali için onay diyaloğu
+  void _showCancelOrderDialog() {
+    final TextEditingController cancelDescController = TextEditingController();
+    
+    // Sipariş ID kontrolü
+    if (widget.orderID == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İptal edilecek aktif bir sipariş bulunmuyor.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Masayı Kapat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Bu işlem mevcut siparişi iptal edecek ve masayı kapatacaktır. Devam etmek istiyor musunuz?',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: cancelDescController,
+              decoration: const InputDecoration(
+                hintText: 'İptal nedeni (opsiyonel)',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(16),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _cancelOrder(cancelDescController.text);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Masayı Kapat', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _cancelOrder(String cancelDesc) async {
+    if (widget.orderID == null) {
+      return;
+    }
+    
+    if (mounted) {
+      setState(() => _isInitialized = false); // Yükleniyor durumunu göster
+    }
+    
+    try {
+      final tablesViewModel = Provider.of<TablesViewModel>(context, listen: false);
+      
+      // Sipariş iptal işlemini gerçekleştir
+      final bool success = await tablesViewModel.cancelOrder(
+        userToken: widget.userToken,
+        compID: widget.compID,
+        orderID: widget.orderID!,
+        cancelDesc: cancelDesc,
+      );
+      
+      if (mounted) {
+        setState(() => _isInitialized = true);
+      
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sipariş başarıyla iptal edildi ve masa kapatıldı.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Ana sayfaya geri dön
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Sipariş iptal edilemedi: ${tablesViewModel.errorMessage ?? "Bilinmeyen hata"}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isInitialized = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sipariş iptal edilirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+}

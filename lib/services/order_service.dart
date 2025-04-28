@@ -197,22 +197,73 @@ class OrderService {
       debugPrint('🔵 [SİPARİŞ DETAYI] HTTP yanıt gövdesi: $responseBody');
       
       final responseData = jsonDecode(responseBody);
-      if (responseData == null) {
-        debugPrint('🔴 [SİPARİŞ DETAYI] Sunucudan veri alınamadı');
-        return ApiResponseModel<OrderDetail>(
-          error: true,
-          success: false,
-          errorCode: "Sunucudan veri alınamadı",
-        );
+      
+      // "410": "Gone" alanını temizle - bu alan Map'in List olarak yorumlanmasına neden oluyor
+      if (responseData.containsKey('410')) {
+        responseData.remove('410');
+        debugPrint('🔵 [SİPARİŞ DETAYI] "410" anahtarı yanıttan temizlendi');
       }
       
-      // HTTP durum kodunu kontrol et
+      // 200 veya 410 durum kodlarını başarılı olarak kabul et
       if (httpResponse.statusCode == 200 || httpResponse.statusCode == 410) {
-        debugPrint('🟢 [SİPARİŞ DETAYI] Başarılı (${httpResponse.statusCode}): ${jsonEncode(responseData)}');
-        return ApiResponseModel<OrderDetail>.fromJson(
-          responseData, 
-          (data) => OrderDetail.fromJson(data),
-        );
+        if (responseData['success'] == true) {
+          debugPrint('🟢 [SİPARİŞ DETAYI] Başarılı (${httpResponse.statusCode}): ${jsonEncode(responseData)}');
+          
+          // Data null kontrolü yap
+          if (responseData['data'] == null) {
+            debugPrint('🟡 [SİPARİŞ DETAYI] Data alanı null, boş yanıt döndürülüyor');
+            return ApiResponseModel<OrderDetail>(
+              error: false,
+              success: true,
+              errorCode: null,
+            );
+          }
+          
+          try {
+            final dynamic dataField = responseData['data'];
+            
+            // Data alanı List tipinde olabilir, bu durumda boş veri döndürülecek
+            if (dataField is List) {
+              debugPrint('🟡 [SİPARİŞ DETAYI] Data alanı bir liste, boş yanıt döndürülüyor');
+              return ApiResponseModel<OrderDetail>(
+                error: false,
+                success: true,
+                errorCode: "Veri yok",
+              );
+            }
+            
+            // Data alanı Map tipinde ise normal işleme devam et
+            if (dataField is Map<String, dynamic>) {
+              // ApiResponseModel.fromJson kullanarak veriyi dönüştür
+              return ApiResponseModel<OrderDetail>.fromJson(
+                responseData,
+                (data) => OrderDetail.fromJson(data),
+              );
+            } else {
+              debugPrint('🟡 [SİPARİŞ DETAYI] Data alanı beklenmeyen tipte: ${dataField.runtimeType}');
+              return ApiResponseModel<OrderDetail>(
+                error: false,
+                success: true,
+                errorCode: "Veri formatı geçersiz",
+              );
+            }
+          } catch (e, stackTrace) {
+            debugPrint('🔴 [SİPARİŞ DETAYI] Veri ayrıştırma hatası: $e');
+            debugPrint('🔴 [SİPARİŞ DETAYI] Hata ayrıntıları: $stackTrace');
+            return ApiResponseModel<OrderDetail>(
+              error: true,
+              success: false,
+              errorCode: "Veri ayrıştırma hatası: $e",
+            );
+          }
+        } else {
+          debugPrint('🔴 [SİPARİŞ DETAYI] API başarısız yanıt döndü: ${jsonEncode(responseData)}');
+          return ApiResponseModel<OrderDetail>(
+            error: true,
+            success: false,
+            errorCode: responseData['message'] ?? "İşlem başarısız",
+          );
+        }
       } else if (httpResponse.statusCode == 417) {
         // 417 (Expectation Failed) durumu için özel işlem
         debugPrint('🔴 [SİPARİŞ DETAYI] 417 hatası alındı: ${jsonEncode(responseData)}');

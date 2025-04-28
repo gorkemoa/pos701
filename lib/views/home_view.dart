@@ -243,6 +243,15 @@ class _HomeViewState extends State<HomeView> {
         minY = minY > 0 ? 0 : minY - 1;
         maxY = maxY + 1;
       }
+    } else {
+      // Veri yoksa varsayılan değerler kullan
+      maxY = 1.0;
+    }
+    
+    // Interval değerinin 0 olmamasını sağla
+    double horizontalInterval = maxY > 5 ? maxY / 5 : 1;
+    if (horizontalInterval <= 0) {
+      horizontalInterval = 1.0; // Minimum interval değeri
     }
     
     return LineChart(
@@ -250,7 +259,7 @@ class _HomeViewState extends State<HomeView> {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: true,
-          horizontalInterval: maxY > 5 ? maxY / 5 : 1,
+          horizontalInterval: horizontalInterval,
           verticalInterval: 2,
           getDrawingHorizontalLine: (value) {
             return FlLine(
@@ -294,7 +303,7 @@ class _HomeViewState extends State<HomeView> {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: maxY > 5 ? maxY / 5 : 1,
+              interval: horizontalInterval,
               reservedSize: 50,
               getTitlesWidget: (value, meta) {
                 return Text(
@@ -377,6 +386,17 @@ class _HomeViewState extends State<HomeView> {
     // Yuvarlama işlemi yap ve ekstra boşluk ekle
     maxY = (maxY * 1.2).ceilToDouble(); 
     
+    // Eğer maxY hala 0 ise, minimum değer ata
+    if (maxY <= 0) {
+      maxY = 1.0;
+    }
+    
+    // Interval değerlerinin 0 olmamasını sağla
+    double leftTitleInterval = maxY > 2000 ? maxY / 4 : maxY / 3;
+    if (leftTitleInterval <= 0) {
+      leftTitleInterval = 1.0; // Minimum interval değeri
+    }
+    
     // Toplam tutarı hesapla (yüzdeler için)
     final double totalAmount = payments.fold(0.0, (sum, payment) => sum + (payment.amount ?? 0.0));
     
@@ -451,7 +471,7 @@ class _HomeViewState extends State<HomeView> {
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 60,
-                    interval: maxY > 2000 ? maxY / 4 : maxY / 3,
+                    interval: leftTitleInterval,
                     getTitlesWidget: (value, meta) {
                       String formattedValue;
                       if (value >= 1000) {
@@ -481,7 +501,7 @@ class _HomeViewState extends State<HomeView> {
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
-                horizontalInterval: maxY > 2000 ? maxY / 4 : maxY / 3,
+                horizontalInterval: leftTitleInterval,
                 getDrawingHorizontalLine: (value) {
                   return FlLine(
                     color: Colors.grey.shade200,

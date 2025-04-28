@@ -232,15 +232,53 @@ class BasketViewModel extends ChangeNotifier {
   }
 
   // Ürün notunu güncelle
-  void updateProductNote(int productId, String note, {int? opID}) {
-    final existingIndex = opID != null 
-        ? _basket.items.indexWhere((item) => item.product.proID == productId && item.opID == opID)
-        : _basket.items.indexWhere((item) => item.product.proID == productId);
-    
-    if (existingIndex != -1) {
-      _basket.items[existingIndex].proNote = note;
-      debugPrint('📝 [BASKET_VM] Ürün notu güncellendi: ${_basket.items[existingIndex].product.proName}, Not: $note');
+  void updateProductNote(int productId, String note) {
+    try {
+      final item = items.firstWhere((item) => item.product.proID == productId);
+      item.proNote = note;
       notifyListeners();
+      debugPrint("Ürün notu güncellendi. Ürün: ${item.product.proName}, Not: $note");
+    } catch (e) {
+      debugPrint("Ürün notu güncellenirken hata: $e");
+    }
+  }
+  
+  // Ürün fiyatını güncelle
+  void updateProductPrice(int productId, String newPrice) {
+    try {
+      final itemIndex = items.indexWhere((item) => item.product.proID == productId);
+      if (itemIndex != -1) {
+        // Mevcut ürünü al
+        final item = items[itemIndex];
+        
+        // Yeni fiyat ile aynı ürünün bir kopyasını oluştur
+        final updatedProduct = Product(
+          postID: item.product.postID,
+          proID: item.product.proID,
+          proName: item.product.proName,
+          proUnit: item.product.proUnit,
+          proStock: item.product.proStock,
+          proPrice: newPrice,
+          proNote: item.product.proNote,
+        );
+        
+        // Mevcut ürünün miktarını, notunu ve ikram durumunu koru
+        final updatedItem = BasketItem(
+          product: updatedProduct,
+          proQty: item.proQty,
+          opID: item.opID,
+          proNote: item.proNote,
+          isGift: item.isGift,
+        );
+        
+        // Ürünü güncelle
+        items[itemIndex] = updatedItem;
+        
+        notifyListeners();
+        debugPrint("Ürün fiyatı güncellendi. Ürün: ${updatedProduct.proName}, Fiyat: $newPrice");
+      }
+    } catch (e) {
+      debugPrint("Ürün fiyatı güncellenirken hata: $e");
     }
   }
 

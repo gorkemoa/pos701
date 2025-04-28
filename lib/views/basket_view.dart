@@ -12,12 +12,16 @@ import 'package:pos701/viewmodels/order_viewmodel.dart';
 import 'package:pos701/models/user_model.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/views/payment_view.dart';
+import 'package:pos701/models/customer_model.dart';
+import 'package:pos701/models/order_model.dart' as order_model;
 
 class BasketView extends StatefulWidget {
   final String tableName;
   final int? orderID;
   final String orderDesc;
   final int orderGuest;
+  final Customer? selectedCustomer;
+  final List<order_model.CustomerAddress>? customerAddresses;
   
   const BasketView({
     Key? key,
@@ -25,6 +29,8 @@ class BasketView extends StatefulWidget {
     this.orderID,
     this.orderDesc = '',
     this.orderGuest = 1,
+    this.selectedCustomer,
+    this.customerAddresses,
   }) : super(key: key);
 
   @override
@@ -267,6 +273,20 @@ class _BasketViewState extends State<BasketView> {
   
   /// Yeni sipariş oluşturma işlemi
   Future<bool> _yeniSiparisOlustur(OrderViewModel orderViewModel, BasketViewModel basketViewModel) async {
+    // Seçilen müşteri ID'sini al (eğer varsa)
+    final int custID = widget.selectedCustomer?.custID ?? 0;
+    final String custName = widget.selectedCustomer?.custName ?? '';
+    final String custPhone = widget.selectedCustomer?.custPhone ?? '';
+    
+    debugPrint('🚗 [BASKET_VIEW] Müşteri bilgileri: ID: $custID, Adı: $custName, Tel: $custPhone');
+    
+    // Adresleri kontrol et ve formatla
+    List<order_model.CustomerAddress> customerAddresses = [];
+    if (widget.customerAddresses != null && widget.customerAddresses!.isNotEmpty) {
+      customerAddresses = widget.customerAddresses!;
+      debugPrint('🏠 [BASKET_VIEW] ${customerAddresses.length} adet müşteri adresi bulundu');
+    }
+    
     return await orderViewModel.siparisSunucuyaGonder(
       userToken: _userToken!,
       compID: _compID!,
@@ -276,12 +296,30 @@ class _BasketViewState extends State<BasketView> {
       orderGuest: _orderGuest,
       kuverQty: 1,
       orderDesc: _orderDesc, // Sipariş açıklamasını gönder
+      custID: custID, // Müşteri ID'sini gönder
+      custName: custName, // Müşteri adını gönder
+      custPhone: custPhone, // Müşteri telefonunu gönder
+      custAdrs: customerAddresses, // Müşteri adreslerini gönder
     );
   }
   
   /// Mevcut siparişi güncelleme işlemi
   Future<bool> _siparisGuncelle(OrderViewModel orderViewModel, BasketViewModel basketViewModel) async {
     debugPrint('🔄 Sipariş güncelleniyor. OrderID: ${widget.orderID}');
+    
+    // Seçilen müşteri ID'sini al (eğer varsa)
+    final int custID = widget.selectedCustomer?.custID ?? 0;
+    final String custName = widget.selectedCustomer?.custName ?? '';
+    final String custPhone = widget.selectedCustomer?.custPhone ?? '';
+    
+    debugPrint('🚗 [BASKET_VIEW] Müşteri bilgileri: ID: $custID, Adı: $custName, Tel: $custPhone');
+    
+    // Adresleri kontrol et ve formatla
+    List<order_model.CustomerAddress> customerAddresses = [];
+    if (widget.customerAddresses != null && widget.customerAddresses!.isNotEmpty) {
+      customerAddresses = widget.customerAddresses!;
+      debugPrint('🏠 [BASKET_VIEW] ${customerAddresses.length} adet müşteri adresi bulundu');
+    }
     
     return await orderViewModel.siparisGuncelle(
       userToken: _userToken!,
@@ -291,6 +329,10 @@ class _BasketViewState extends State<BasketView> {
       orderGuest: _orderGuest,
       kuverQty: 1,
       orderDesc: _orderDesc, // Sipariş açıklamasını gönder
+      custID: custID, // Müşteri ID'sini gönder
+      custName: custName, // Müşteri adını gönder
+      custPhone: custPhone, // Müşteri telefonunu gönder
+      custAdrs: customerAddresses, // Müşteri adreslerini gönder
     );
   }
 

@@ -356,4 +356,43 @@ class TablesViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  /// Sipariş iptal metodu
+  Future<bool> cancelOrder({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    String? cancelDesc,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    
+    try {
+      final response = await _tableService.cancelOrder(
+        userToken: userToken,
+        compID: compID,
+        orderID: orderID,
+        cancelDesc: cancelDesc,
+      );
+      
+      _isLoading = false;
+      
+      if (response['success'] == true) {
+        _successMessage = response['message'] ?? 'Sipariş başarıyla iptal edildi';
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'Sipariş iptal işlemi başarısız oldu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 } 

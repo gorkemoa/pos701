@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // NumericFormatter için
 import 'package:pos701/models/product_detail_model.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
@@ -7,6 +8,41 @@ import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/utils/app_logger.dart';
+
+// Sayısal değerleri formatlayan helper sınıfı
+class NumericTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+    
+    // Sadece sayı ve nokta/virgül kabul et
+    if (newValue.text.contains(RegExp(r'[^\d.,]'))) {
+      return oldValue;
+    }
+    
+    // Virgülü noktaya çevir (Türkçe klavye uyumluluğu için)
+    String text = newValue.text.replaceAll(',', '.');
+    
+    // Birden fazla nokta varsa, sadece ilkini kabul et
+    if (text.split('.').length > 2) {
+      return oldValue;
+    }
+    
+    // Sayısal değeri double olarak kontrol et
+    try {
+      double.parse(text);
+      return TextEditingValue(
+        text: text,
+        selection: newValue.selection,
+      );
+    } catch (e) {
+      return oldValue;
+    }
+  }
+}
 
 class ProductDetailView extends StatefulWidget {
   final String userToken;
@@ -36,12 +72,14 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   final ProductService _productService = ProductService();
   final AppLogger _logger = AppLogger();
   final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
   
   ProductDetail? _productDetail;
   bool _isLoading = true;
   String? _errorMessage;
   int _selectedPorsiyonIndex = 0;
   bool _isGift = false;
+  bool _isCustomPrice = false; // Özel fiyat kullanılıyor mu
 
   @override
   void initState() {
@@ -54,6 +92,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   @override
   void dispose() {
     _noteController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -91,6 +130,11 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           if (_selectedPorsiyonIndex < 0 && _productDetail!.variants.isNotEmpty) {
             _selectedPorsiyonIndex = 0;
           }
+          
+          // Fiyat kontrolcüsüne başlangıç değeri ata
+          if (_productDetail!.variants.isNotEmpty) {
+            _priceController.text = _productDetail!.variants[_selectedPorsiyonIndex].proPrice.toString();
+          }
         });
       } else {
         setState(() {
@@ -113,13 +157,18 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
       final selectedPorsiyon = _productDetail!.variants[_selectedPorsiyonIndex];
       
+      // Fiyat değeri olarak özel fiyat veya mevcut fiyatı kullan
+      final String priceValue = _isCustomPrice 
+          ? _priceController.text 
+          : selectedPorsiyon.proPrice.toString();
+      
       final product = Product(
         postID: _productDetail!.postID,
         proID: selectedPorsiyon.proID,
         proName: '${_productDetail!.postTitle} ${selectedPorsiyon.proUnit}',
         proUnit: selectedPorsiyon.proUnit,
         proStock: selectedPorsiyon.proStock.toString(),
-        proPrice: selectedPorsiyon.proPrice.toString(),
+        proPrice: priceValue, // Özel fiyat veya orijinal fiyat
         proNote: _noteController.text,
       );
       
@@ -130,10 +179,15 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         // Sepetten gelen ürünün eski proID'si
         int oldProID = widget.selectedProID!;
         
-        // Eğer aynı porsiyon seçildiyse sadece notu ve ikram durumunu güncelle
+        // Eğer aynı porsiyon seçildiyse sadece notu, ikram durumunu ve fiyatı güncelle
         if (oldProID == selectedPorsiyon.proID) {
           basketViewModel.updateProductNote(oldProID, _noteController.text);
           basketViewModel.toggleGiftStatus(oldProID, isGift: _isGift);
+          
+          // Eğer özel fiyat seçilmişse fiyatı güncelle
+          if (_isCustomPrice) {
+            basketViewModel.updateProductPrice(oldProID, _priceController.text);
+          }
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -200,6 +254,14 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       
       // Geri dön
       Navigator.of(context).pop();
+    }
+  }
+
+  // Porsiyon seçildiğinde fiyat kontrolcüsünü günceller
+  void _updatePriceController() {
+    if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
+      _priceController.text = _productDetail!.variants[_selectedPorsiyonIndex].proPrice.toString();
+      _isCustomPrice = false; // Porsiyon değiştiğinde özel fiyat sıfırlansın
     }
   }
 
@@ -272,6 +334,66 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           
           // Porsiyon Listesi
           _buildPorsiyonList(),
+          
+          // Özel Fiyat Alanı
+          const SizedBox(height: 24),
+          const Text(
+            'Ürün Fiyatı',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [NumericTextFormatter()],
+                  decoration: InputDecoration(
+                    labelText: 'Fiyat (₺)',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.monetization_on),
+                    suffixText: '₺',
+                    enabled: _isCustomPrice,
+                    filled: _isCustomPrice,
+                    fillColor: _isCustomPrice ? Colors.yellow.shade50 : null,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isCustomPrice = !_isCustomPrice;
+                    if (!_isCustomPrice) {
+                      // Özel fiyat kaldırılırsa orijinal fiyata geri dön
+                      _updatePriceController();
+                    }
+                  });
+                },
+                icon: Icon(_isCustomPrice ? Icons.lock_open : Icons.lock),
+                label: Text(_isCustomPrice ? 'Kilidi Kaldır' : 'Fiyat Değiştir'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isCustomPrice ? Colors.orange : Color(AppConstants.primaryColorValue),
+                ),
+              ),
+            ],
+          ),
+          if (_isCustomPrice)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Özel fiyat girişi aktif. Farklı bir fiyat girebilirsiniz.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange.shade800,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
           
           // Ürün Notu Alanı
           const SizedBox(height: 24),
@@ -378,6 +500,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             onTap: () {
               setState(() {
                 _selectedPorsiyonIndex = index;
+                _updatePriceController(); // Fiyatı güncelle
               });
             },
             child: Padding(
@@ -432,6 +555,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     }
     
     final selectedPorsiyon = _productDetail!.variants[_selectedPorsiyonIndex];
+    // Gösterilecek fiyat: Özel fiyat veya porsiyon fiyatı
+    final displayPrice = _isCustomPrice
+        ? double.tryParse(_priceController.text) ?? selectedPorsiyon.proPrice
+        : selectedPorsiyon.proPrice;
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -452,18 +579,41 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Fiyat',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                Row(
+                  children: [
+                    const Text(
+                      'Fiyat',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    if (_isCustomPrice)
+                      Container(
+                        margin: const EdgeInsets.only(left: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.orange.shade300),
+                        ),
+                        child: Text(
+                          'Özel',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 Text(
-                  '₺${selectedPorsiyon.proPrice.toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  '₺${displayPrice.toStringAsFixed(2)}',
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: _isCustomPrice ? Colors.orange.shade800 : Colors.black,
                   ),
                 ),
               ],

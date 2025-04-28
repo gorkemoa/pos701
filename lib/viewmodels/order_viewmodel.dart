@@ -84,6 +84,10 @@ class OrderViewModel extends ChangeNotifier {
     bool isKuver = false,
     bool isWaiter = false,
     String orderDesc = '',
+    int custID = 0, // Müşteri ID'si, varsayılan olarak 0
+    String custName = '', // Müşteri adı
+    String custPhone = '', // Müşteri telefonu
+    List<dynamic> custAdrs = const [], // Müşteri adres bilgileri
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -92,6 +96,16 @@ class OrderViewModel extends ChangeNotifier {
     
     try {
       _setStatus(OrderStatus.loading);
+      
+      // CustomerAddress nesnelerini doğrudan kullan veya dönüştür
+      List<CustomerAddress> formattedAddresses = [];
+      if (custAdrs.isNotEmpty) {
+        for (var address in custAdrs) {
+          if (address is CustomerAddress) {
+            formattedAddresses.add(address); // Doğrudan CustomerAddress ekle
+          }
+        }
+      }
       
       final orderRequest = OrderRequest(
         userToken: userToken,
@@ -105,7 +119,14 @@ class OrderViewModel extends ChangeNotifier {
         isKuver: isKuver,
         isWaiter: isWaiter,
         products: sepettenSiparisUrunleriOlustur(sepetUrunleri),
+        custID: custID, // Müşteri ID'sini ekle
+        custName: custName, // Müşteri adını ekle
+        custPhone: custPhone, // Müşteri telefonunu ekle
+        custAdrs: formattedAddresses, // Müşteri adres bilgilerini CustomerAddress listesi olarak ekle
+        isCust: custID > 0 || custName.isNotEmpty || custPhone.isNotEmpty, // Müşteri bilgisi varsa true olarak ayarla
       );
+      
+      debugPrint('📤 [ORDER_VM] Sipariş gönderiliyor. Masa: $tableName, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${formattedAddresses.length}');
       
       final response = await _orderService.createOrder(orderRequest);
       
@@ -272,6 +293,10 @@ class OrderViewModel extends ChangeNotifier {
     bool isKuver = false,
     bool isWaiter = false,
     String orderDesc = '',
+    int custID = 0, // Müşteri ID'si, varsayılan olarak 0
+    String custName = '', // Müşteri adı
+    String custPhone = '', // Müşteri telefonu
+    List<dynamic> custAdrs = const [], // Müşteri adres bilgileri
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -280,34 +305,46 @@ class OrderViewModel extends ChangeNotifier {
     
     try {
       _setStatus(OrderStatus.loading);
+      debugPrint('🔄 [ORDER_VM] Sipariş güncelleniyor. OrderID: $orderID, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${custAdrs.length}');
       
+      // CustomerAddress nesnelerini dönüştür
+      List<dynamic> formattedAddresses = [];
+      if (custAdrs.isNotEmpty) {
+        for (var address in custAdrs) {
+          if (address is CustomerAddress) {
+            formattedAddresses.add(address.toJson()); // CustomerAddress verilerini Map olarak ekle
+          }
+        }
+      }
+      
+      // Sipariş güncelleme isteği oluştur
       final orderUpdateRequest = OrderUpdateRequest(
         userToken: userToken,
         compID: compID,
         orderID: orderID,
         orderGuest: orderGuest,
-        orderDesc: orderDesc,
         kuverQty: kuverQty,
-        isKuver: isKuver ? 1 : 0,
-        isWaiter: isWaiter ? 1 : 0,
+        orderDesc: orderDesc,
         products: sepettenSiparisUrunleriOlustur(sepetUrunleri),
+        custID: custID, // Müşteri ID'si ekle
+        custName: custName, // Müşteri adını ekle
+        custPhone: custPhone, // Müşteri telefonunu ekle
+        custAdrs: formattedAddresses, // Dönüştürülmüş adresleri ekle
+        isCust: custID > 0 || custName.isNotEmpty || custPhone.isNotEmpty ? 1 : 0, // Müşteri bilgisi varsa 1 olarak ayarla
       );
       
-      debugPrint('🔄 [ORDER_VM] Sipariş güncelleniyor. OrderID: $orderID');
+      // Siparişi güncelle
       final response = await _orderService.updateOrder(orderUpdateRequest);
       
       if (response.success && !response.error) {
-        debugPrint('✅ [ORDER_VM] Sipariş başarıyla güncellendi. OrderID: $orderID');
         _orderResponse = response.data;
         _setStatus(OrderStatus.success);
         return true;
       } else {
-        debugPrint('⛔️ [ORDER_VM] Sipariş güncellenemedi: ${response.errorCode}');
         _setError(response.errorCode ?? 'Bilinmeyen bir hata oluştu');
         return false;
       }
     } catch (e) {
-      debugPrint('🔴 [ORDER_VM] Sipariş güncellenirken hata: $e');
       _setError('Sipariş güncellenirken hata oluştu: ${e.toString()}');
       return false;
     }

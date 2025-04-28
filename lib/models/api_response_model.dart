@@ -13,7 +13,7 @@ class ApiResponseModel<T> {
     this.errorCode,
   });
 
-  factory ApiResponseModel.fromJson(Map<String, dynamic> json, T Function(Map<String, dynamic>) fromJsonT) {
+  factory ApiResponseModel.fromJson(Map<String, dynamic> json, T Function(dynamic) fromJsonT) {
     final logger = AppLogger();
     logger.d('API yanıtı işleniyor: $json');
     
@@ -46,14 +46,14 @@ class ApiResponseModel<T> {
     T? parsedData;
     if (json.containsKey('data') && json['data'] != null) {
       try {
-        if (json['data'] is Map<String, dynamic>) {
-          parsedData = fromJsonT(json['data'] as Map<String, dynamic>);
-          logger.d('Data başarıyla ayrıştırıldı');
-        } else {
-          logger.w('Data ayrıştırılamadı: data bir Map değil, tipi: ${json['data'].runtimeType}');
-        }
-      } catch (e) {
-        logger.e('Data ayrıştırma hatası', e);
+        final dynamic dataValue = json['data'];
+        // Data alanı hem Map<String, dynamic> hem de List<dynamic> veya başka tip olabilir
+        logger.d('Data alanının tipi: ${dataValue.runtimeType}, değeri: $dataValue');
+        parsedData = fromJsonT(dataValue);
+        logger.d('Data başarıyla ayrıştırıldı');
+      } catch (e, stackTrace) {
+        logger.e('Data ayrıştırma hatası: $e', e);
+        logger.e('Data ayrıştırma hata yığını: $stackTrace');
       }
     } else {
       logger.d('Yanıtta data bilgisi yok veya null');

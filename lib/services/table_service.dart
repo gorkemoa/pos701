@@ -328,44 +328,55 @@ class TableService {
       
       debugPrint('📥 Parçalı ödeme yanıtı alındı: ${response.statusCode}');
       
-      if (response.statusCode == 410) {
-        try {
-          final responseData = jsonDecode(response.body);
-          
-          if (responseData['error'] == false) {
-            debugPrint('✅ Parçalı ödeme başarılı: ${responseData['data']}');
-            return {
-              'success': true,
-              'data': responseData['data'],
-              'message': responseData['message'] ?? 'Parçalı ödeme başarılı.'
-            };
-          } else {
-            debugPrint('⛔️ Parçalı ödeme hatası: ${responseData['message']}');
-            return {
-              'success': false,
-              'error_message': responseData['message'] ?? 'Parçalı ödeme alınamadı.'
-            };
-          }
-        } catch (e) {
-          debugPrint('🔴 Parçalı ödeme yanıt işleme hatası: $e');
-          return {
-            'success': false,
-            'error_message': 'Yanıt işlenirken hata oluştu: $e'
-          };
-        }
-      } else {
-        debugPrint('🔴 Parçalı ödeme API hatası: ${response.statusCode}');
-        debugPrint('Yanıt içeriği: ${response.body}');
-        return {
-          'success': false,
-          'error_message': 'Sunucu hatası: ${response.statusCode}'
-        };
-      }
+      final responseData = jsonDecode(response.body);
+      return responseData;
     } catch (e) {
-      debugPrint('🔴 Parçalı ödeme exception: $e');
+      debugPrint('Parçalı ödeme işlemi sırasında hata: $e');
       return {
         'success': false,
-        'error_message': 'Ödeme işlemi sırasında hata oluştu: $e'
+        'error_message': 'İstek gönderilirken bir hata oluştu: $e',
+      };
+    }
+  }
+  
+  /// Sipariş iptal etme metodu
+  Future<Map<String, dynamic>> cancelOrder({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    String? cancelDesc,
+  }) async {
+    try {
+      final url = "${AppConstants.baseUrl}service/user/order/cancel";
+      
+      final requestBody = {
+        "userToken": userToken,
+        "compID": compID,
+        "orderID": orderID,
+        if (cancelDesc != null && cancelDesc.isNotEmpty) "cancelDesc": cancelDesc
+      };
+      
+      debugPrint('📤 Sipariş iptali gönderiliyor: $requestBody');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+        },
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('📥 Sipariş iptali yanıtı alındı: ${response.statusCode}');
+      debugPrint('📄 Yanıt içeriği: ${response.body}');
+      
+      final responseData = jsonDecode(response.body);
+      return responseData;
+    } catch (e) {
+      debugPrint('Sipariş iptali sırasında hata: $e');
+      return {
+        'success': false,
+        'error_message': 'İstek gönderilirken bir hata oluştu: $e',
       };
     }
   }

@@ -17,6 +17,8 @@ import 'package:pos701/utils/app_logger.dart';
 import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/views/basket_view.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
+import 'package:pos701/viewmodels/customer_viewmodel.dart';
+import 'package:pos701/services/customer_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +69,9 @@ void main() {
         ),
         ChangeNotifierProvider<TablesViewModel>(
           create: (_) => TablesViewModel(),
+        ),
+        ChangeNotifierProvider<CustomerViewModel>(
+          create: (_) => CustomerViewModel(customerService: CustomerService()),
         ),
       ],
       child: MaterialApp(

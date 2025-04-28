@@ -190,7 +190,7 @@ class OrderDetail {
   final String orderDate;
   final bool isActive;
   final bool isCanceled;
-  final List<dynamic> customer;
+  final Map<String, dynamic> customer;
   final List<OrderDetailProduct> products;
 
   OrderDetail({
@@ -213,25 +213,61 @@ class OrderDetail {
   });
 
   factory OrderDetail.fromJson(Map<String, dynamic> json) {
+    // Products alanı için güvenli dönüşüm ve hata kontrolü
+    List<OrderDetailProduct> productList = [];
+    
+    try {
+      final productsData = json['products'];
+      if (productsData != null) {
+        if (productsData is List) {
+          productList = List<OrderDetailProduct>.from(
+            productsData.map((product) => OrderDetailProduct.fromJson(product))
+          );
+        } else {
+          debugPrint('⚠️ [OrderDetail] products alanı liste tipinde değil: ${productsData.runtimeType}');
+        }
+      } else {
+        debugPrint('⚠️ [OrderDetail] products alanı null');
+      }
+    } catch (e) {
+      debugPrint('🔴 [OrderDetail] Products dönüştürme hatası: $e');
+    }
+    
+    // Customer alanı için güvenli dönüşüm
+    Map<String, dynamic> customerData = {};
+    try {
+      final customerField = json['customer'];
+      if (customerField != null) {
+        if (customerField is Map) {
+          customerData = Map<String, dynamic>.from(customerField);
+        } else if (customerField is List) {
+          debugPrint('⚠️ [OrderDetail] customer alanı bir liste, boş Map kullanılacak');
+          // List yerine boş Map kullan
+        } else {
+          debugPrint('⚠️ [OrderDetail] customer alanı beklenmeyen tipte: ${customerField.runtimeType}');
+        }
+      }
+    } catch (e) {
+      debugPrint('🔴 [OrderDetail] Customer alanı dönüştürme hatası: $e');
+    }
+    
     return OrderDetail(
-      orderID: json['orderID'],
-      tableID: json['tableID'],
-      custID: json['custID'],
-      orderCode: json['orderCode'],
-      orderName: json['orderName'],
+      orderID: json['orderID'] ?? 0,
+      tableID: json['tableID'] ?? 0,
+      custID: json['custID'] ?? 0,
+      orderCode: json['orderCode'] ?? '',
+      orderName: json['orderName'] ?? '',
       orderAmount: (json['orderAmount'] ?? 0).toDouble(),
       orderPayAmount: (json['orderPayAmount'] ?? 0).toDouble(),
       orderDiscount: (json['orderDiscount'] ?? 0).toDouble(),
-      orderDesc: json['orderDesc'],
-      orderGuest: json['orderGuest'],
-      orderStatus: json['orderStatus'],
-      orderDate: json['orderDate'],
-      isActive: json['isActive'],
-      isCanceled: json['isCanceled'],
-      customer: json['customer'],
-      products: List<OrderDetailProduct>.from(
-        (json['products'] ?? []).map((product) => OrderDetailProduct.fromJson(product))
-      ),
+      orderDesc: json['orderDesc'] ?? '',
+      orderGuest: json['orderGuest'] ?? 1,
+      orderStatus: json['orderStatus'] ?? '',
+      orderDate: json['orderDate'] ?? '',
+      isActive: json['isActive'] ?? false,
+      isCanceled: json['isCanceled'] ?? false,
+      customer: customerData,
+      products: productList,
     );
   }
 }
@@ -271,19 +307,19 @@ class OrderDetailProduct {
 
   factory OrderDetailProduct.fromJson(Map<String, dynamic> json) {
     return OrderDetailProduct(
-      opID: json['opID'],
-      postID: json['postID'],
-      proID: json['proID'],
-      proName: json['proName'],
-      proUnit: json['proUnit'],
-      proQty: json['proQty'],
-      paidQty: json['paidQty'],
-      currentQty: json['currentQty'],
+      opID: json['opID'] ?? 0,
+      postID: json['postID'] ?? 0,
+      proID: json['proID'] ?? 0,
+      proName: json['proName'] ?? '',
+      proUnit: json['proUnit'] ?? '',
+      proQty: json['proQty'] ?? 0,
+      paidQty: json['paidQty'] ?? 0,
+      currentQty: json['currentQty'] ?? 0,
       retailPrice: (json['retailPrice'] ?? 0).toDouble(),
       price: (json['price'] ?? 0).toDouble(),
-      isCanceled: json['isCanceled'],
-      isGift: json['isGift'],
-      isPaid: json['isPaid'],
+      isCanceled: json['isCanceled'] ?? false,
+      isGift: json['isGift'] ?? false,
+      isPaid: json['isPaid'] ?? false,
       proNote: json['proNote'],
     );
   }
