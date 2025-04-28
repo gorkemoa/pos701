@@ -22,6 +22,7 @@ class CategoryView extends StatefulWidget {
   final int? tableID;
   final int? orderID;
   final String tableName;
+  final int orderType; // Sipariş türü: 1-Masa, 2-Paket, 3-Gel-Al
 
   const CategoryView({
     Key? key,
@@ -30,6 +31,7 @@ class CategoryView extends StatefulWidget {
     this.tableID,
     this.orderID,
     required this.tableName,
+    this.orderType = 1, // Varsayılan değer: Masa siparişi
   }) : super(key: key);
 
   @override
@@ -617,13 +619,14 @@ class _CategoryViewState extends State<CategoryView> {
   }
 
   Future<void> _goToBasket() async {
-    debugPrint('🛒 Sepete yönlendiriliyor. TableID: ${widget.tableID}, OrderID: ${widget.orderID}, TableName: ${widget.tableName}');
+    debugPrint('🛒 Sepete yönlendiriliyor. TableID: ${widget.tableID}, OrderID: ${widget.orderID}, TableName: ${widget.tableName}, OrderType: ${widget.orderType}');
     
     final Map<String, dynamic> arguments = {
       'tableID': widget.tableID,
       'tableName': widget.tableName,
       'orderDesc': _orderDesc,
       'orderGuest': _orderGuest,
+      'orderType': widget.orderType, // Sipariş türünü ekle
     };
     
     // Eğer müşteri seçilmişse müşteri bilgilerini ekleyelim
@@ -661,6 +664,8 @@ class _CategoryViewState extends State<CategoryView> {
           orderGuest: _orderGuest,
           selectedCustomer: _selectedCustomer,
           customerAddresses: _selectedCustomerAddresses,  // Müşteri adres bilgilerini ekle
+          tableID: widget.tableID, // Masa ID'sini ekle
+          orderType: widget.orderType, // Sipariş türünü ekle
         ),
         settings: RouteSettings(
           arguments: arguments,

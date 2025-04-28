@@ -17,6 +17,10 @@ class KitchenViewModel extends ChangeNotifier {
   List<KitchenOrder> _orders = [];
   String _errorMessage = '';
   Timer? _refreshTimer;
+  
+  // Sunucu saati
+  int _serverTime = 0;
+  DateTime? _serverDateTime;
 
   KitchenViewModel({required KitchenService kitchenService}) 
       : _kitchenService = kitchenService;
@@ -26,6 +30,50 @@ class KitchenViewModel extends ChangeNotifier {
   List<KitchenOrder> get orders => _orders;
   String get errorMessage => _errorMessage;
   bool get isLoading => _state == KitchenViewState.loading;
+  int get serverTime => _serverTime;
+  DateTime? get serverDateTime => _serverDateTime;
+
+  // Sunucu saatini güncelle
+  void updateServerTime(String serverTimeString, String serverDateString) {
+    if (serverTimeString.isNotEmpty) {
+      try {
+        _serverTime = int.parse(serverTimeString);
+        
+        // Sunucu tarih/saat bilgisini DateTime'a dönüştür
+        if (serverDateString.isNotEmpty) {
+          _serverDateTime = DateTime.parse(serverDateString);
+        }
+        
+        notifyListeners();
+      } catch (e) {
+        debugPrint('🔴 [Mutfak VM] Sunucu saati dönüştürme hatası: $e');
+      }
+    }
+  }
+  
+  // Şu anki sunucu saatini hesapla (sürekli güncellenir)
+  int getCurrentServerTime() {
+    if (_serverTime > 0) {
+      // İlk aldığımız sunucu saati ile şu anki zaman arasındaki farkı hesapla
+      final timeElapsed = DateTime.now().difference(_serverDateTime ?? DateTime.now()).inSeconds;
+      return _serverTime + timeElapsed;
+    }
+    return DateTime.now().millisecondsSinceEpoch ~/ 1000; // Fallback
+  }
+  
+  // Bir ürünün sipariş edildiği zamandan bu yana geçen süre (saniye)
+  int getElapsedTime(String productTime) {
+    if (productTime.isEmpty) return 0;
+    
+    try {
+      final int productTimeInt = int.parse(productTime);
+      final int currentServerTime = getCurrentServerTime();
+      return currentServerTime - productTimeInt;
+    } catch (e) {
+      debugPrint('🔴 [Mutfak VM] Geçen süre hesaplama hatası: $e');
+      return 0;
+    }
+  }
 
   @override
   void dispose() {
