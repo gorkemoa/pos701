@@ -72,6 +72,9 @@ class TableCard extends StatelessWidget {
                   onTap: () {
                     Navigator.pop(bottomSheetContext);
                     // İptal işlemi
+                    Future.microtask(() {
+                      _handleCancelOrder(context, viewModel);
+                    });
                   },
                 ),
                 const Divider(),
@@ -1015,6 +1018,166 @@ class TableCard extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _handleCancelOrder(BuildContext context, TablesViewModel viewModel) async {
+    // Sipariş iptali için onay diyaloğu
+    if (!table.isActive || table.orderID <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İptal edilecek aktif bir sipariş bulunamadı.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    // İptal nedeni girişi için controller
+    final TextEditingController cancelDescController = TextEditingController();
+    
+    // İptal onay diyaloğu
+    final confirmCancel = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Sipariş İptali'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Bu işlem siparişi iptal edecek ve masayı kapatacaktır. Devam etmek istiyor musunuz?',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: cancelDescController,
+              decoration: const InputDecoration(
+                hintText: 'İptal nedeni (opsiyonel)',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(16),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Siparişi İptal Et', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmCancel != true) return;
+
+    // Yükleniyor diyaloğu göster
+    if (!context.mounted) return;
+    
+    BuildContext? loadingContext;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        loadingContext = ctx;
+        return const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Sipariş iptal ediliyor...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      // Sipariş iptal API çağrısı
+      final success = await viewModel.cancelOrder(
+        userToken: userToken,
+        compID: compID,
+        orderID: table.orderID,
+        cancelDesc: cancelDescController.text,
+      );
+      
+      // Yükleniyor diyaloğunu kapat
+      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingContext!).pop();
+        loadingContext = null;
+      }
+      
+      // Küçük bir gecikme ekle
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      if (!context.mounted) return;
+      
+      if (success) {
+        // Başarılı mesajını göster
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(viewModel.successMessage ?? 'Sipariş başarıyla iptal edildi'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        
+        // Tabloları yenile
+        await viewModel.refreshTablesDataSilently(
+          userToken: userToken,
+          compID: compID,
+        );
+      } else {
+        // Hata mesajını göster
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(viewModel.errorMessage ?? 'Sipariş iptal edilemedi'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Sipariş iptal hatası: $e');
+      
+      // Yükleniyor diyaloğunu kapat (hata durumunda da)
+      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(loadingContext!).pop();
+        loadingContext = null;
+      }
+      
+      // Küçük bir gecikme ekle
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // Hata mesajını göster
+      if (context.mounted) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sipariş iptal edilirken hata oluştu: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   Widget _optionButton(BuildContext context, {
