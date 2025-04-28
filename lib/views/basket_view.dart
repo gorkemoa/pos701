@@ -34,11 +34,20 @@ class _BasketViewState extends State<BasketView> {
   bool _isLoading = true;
   String _errorMessage = '';
   bool _isProcessing = false; // İşlem yapılıp yapılmadığını takip etmek için flag
+  bool _isSiparisOlusturuldu = false; // Sipariş oluşturuldu mu flag'i
+  BasketViewModel? _basketViewModel; // BasketViewModel referansı
 
   @override
   void initState() {
     super.initState();
     _initializeData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Erken aşamada BasketViewModel referansını al
+    _basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
   }
 
   Future<void> _initializeData() async {
@@ -68,22 +77,20 @@ class _BasketViewState extends State<BasketView> {
         } else if (widget.orderID != null) {
           _getSiparisDetayi(widget.orderID!);
         } else {
-          // İnaktif masa için sepeti temizle
-          if (_isInactiveTable()) {
-            final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-            basketViewModel.clearBasket();
-            debugPrint('🧹 İnaktif masa için sepet temizlendi');
+          // Burada sepeti temizlemiyoruz, ilk girişte sepet korunmalı
+          // Yalnızca çıkışta temizleme yapılacak
+          if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
+            debugPrint('📦 Sepette ${_basketViewModel!.totalQuantity} adet ürün var');
           }
           setState(() => _isLoading = false);
         }
       } else if (widget.orderID != null) {
         _getSiparisDetayi(widget.orderID!);
       } else {
-        // İnaktif masa için sepeti temizle
-        if (_isInactiveTable()) {
-          final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-          basketViewModel.clearBasket();
-          debugPrint('🧹 İnaktif masa için sepet temizlendi');
+        // Burada sepeti temizlemiyoruz, ilk girişte sepet korunmalı
+        // Yalnızca çıkışta temizleme yapılacak
+        if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
+          debugPrint('📦 Sepette ${_basketViewModel!.totalQuantity} adet ürün var');
         }
         setState(() => _isLoading = false);
       }
@@ -224,7 +231,10 @@ class _BasketViewState extends State<BasketView> {
         ? await _siparisGuncelle(orderViewModel, basketViewModel)
         : await _yeniSiparisOlustur(orderViewModel, basketViewModel);
     
-    setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = false;
+      _isSiparisOlusturuldu = success; // Sipariş oluşturuldu mu durumunu kaydet
+    });
     
     if (success) {
       basketViewModel.clearBasket();
@@ -282,12 +292,11 @@ class _BasketViewState extends State<BasketView> {
 
   // Geri dönüş kontrolü - Kullanıcı geri tuşuna bastığında çalışır
   Future<bool> _onWillPop() async {
-    // İnaktif masa ise sepeti temizle
-    if (_isInactiveTable()) {
-      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      if (!basketViewModel.isEmpty) {
+    // İnaktif masa ise ve sipariş oluşturulmadıysa sepeti temizle
+    if (_isInactiveTable() && !_isSiparisOlusturuldu) {
+      if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
         debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (WillPopScope)');
-        basketViewModel.clearBasket();
+        _basketViewModel!.clearBasket();
       }
     }
     return true; // Geri dönüşe izin ver
@@ -296,12 +305,11 @@ class _BasketViewState extends State<BasketView> {
   // Sayfadan çıkış durumunda sepeti temizleme kontrolü
   @override
   void dispose() {
-    // İnaktif masa ise sepeti temizle
-    if (_isInactiveTable()) {
-      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      if (!basketViewModel.isEmpty) {
+    // İnaktif masa ise ve sipariş oluşturulmadıysa sepeti temizle
+    if (_isInactiveTable() && !_isSiparisOlusturuldu) {
+      if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
         debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (dispose)');
-        basketViewModel.clearBasket();
+        _basketViewModel!.clearBasket();
       }
     }
     super.dispose();
@@ -328,12 +336,11 @@ class _BasketViewState extends State<BasketView> {
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () async {
-              // İnaktif masa ise sepeti temizle
-              if (_isInactiveTable()) {
-                final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-                if (!basketViewModel.isEmpty) {
+              // İnaktif masa ise ve sipariş oluşturulmadıysa sepeti temizle
+              if (_isInactiveTable() && !_isSiparisOlusturuldu) {
+                if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
                   debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (IconButton)');
-                  basketViewModel.clearBasket();
+                  _basketViewModel!.clearBasket();
                 }
               }
               Navigator.of(context).pop();
@@ -466,30 +473,35 @@ class _BasketViewState extends State<BasketView> {
                   ),
                   
                   // Toplam Bilgileri
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.grey.shade300)),
-                    ),
-                    child: Consumer<BasketViewModel>(
-                      builder: (context, basketViewModel, child) {
-                        // Sepet içeriğini logla
-                        double manuelToplam = 0;
-                        for (var item in basketViewModel.items) {
-                          debugPrint('🧮 [BASKET_VIEW] Ürün: ${item.product.proName}, Miktar: ${item.proQty}, Birim: ${item.birimFiyat}, Toplam: ${item.totalPrice}');
-                          manuelToplam += item.totalPrice;
-                        }
-                        debugPrint('💲 [BASKET_VIEW] Manuel hesaplanan toplam: $manuelToplam');
-                        debugPrint('💲 [BASKET_VIEW] ViewModel toplam: ${basketViewModel.totalAmount}');
-                        debugPrint('💲 [BASKET_VIEW] API sipariş tutarı: ${basketViewModel.orderAmount}');
-                        debugPrint('💰 [BASKET_VIEW] Tahsil edilen tutar: ${basketViewModel.orderPayAmount}');
-                        debugPrint('💳 [BASKET_VIEW] İndirim tutarı: ${basketViewModel.discount}');
-                        
-                        // Manuel kalan hesapla
-                        final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.orderPayAmount;
-                        debugPrint('💸 [BASKET_VIEW] Manuel kalan: $manuelKalan');
-                        
-                        return Column(
+                  Consumer<BasketViewModel>(
+                    builder: (context, basketViewModel, child) {
+                      // Sepet boşsa, toplam bilgileri gösterme
+                      if (basketViewModel.isEmpty) {
+                        return const SizedBox.shrink(); // Boş widget
+                      }
+                      
+                      // Sepet içeriğini logla
+                      double manuelToplam = 0;
+                      for (var item in basketViewModel.items) {
+                        debugPrint('🧮 [BASKET_VIEW] Ürün: ${item.product.proName}, Miktar: ${item.proQty}, Birim: ${item.birimFiyat}, Toplam: ${item.totalPrice}');
+                        manuelToplam += item.totalPrice;
+                      }
+                      debugPrint('💲 [BASKET_VIEW] Manuel hesaplanan toplam: $manuelToplam');
+                      debugPrint('💲 [BASKET_VIEW] ViewModel toplam: ${basketViewModel.totalAmount}');
+                      debugPrint('💲 [BASKET_VIEW] API sipariş tutarı: ${basketViewModel.orderAmount}');
+                      debugPrint('💰 [BASKET_VIEW] Tahsil edilen tutar: ${basketViewModel.orderPayAmount}');
+                      debugPrint('💳 [BASKET_VIEW] İndirim tutarı: ${basketViewModel.discount}');
+                      
+                      // Manuel kalan hesapla
+                      final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.orderPayAmount;
+                      debugPrint('💸 [BASKET_VIEW] Manuel kalan: $manuelKalan');
+                      
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                        ),
+                        child: Column(
                           children: [
                             _buildInfoRow(
                               "Toplam Tutar",
@@ -509,9 +521,9 @@ class _BasketViewState extends State<BasketView> {
                               isBold: true,
                             ),
                           ],
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
                   
                   // Alt Butonlar
@@ -584,6 +596,7 @@ class _BasketViewState extends State<BasketView> {
                                     totalAmount: basketViewModel.totalAmount,
                                     basketItems: basketViewModel.items,
                                     onPaymentSuccess: () {
+                                      setState(() => _isSiparisOlusturuldu = true); // Ödeme yapıldı, sepeti temizleme
                                       basketViewModel.clearBasket();
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
@@ -678,6 +691,7 @@ class _BasketViewState extends State<BasketView> {
             _buildQuantityButton(
               icon: Icons.remove,
               onPressed: () {
+                setState(() => _isProcessing = true); // İşlem başladı
                 Provider.of<BasketViewModel>(context, listen: false)
                     .decrementQuantity(item.product.proID);
               },
@@ -694,6 +708,7 @@ class _BasketViewState extends State<BasketView> {
             _buildQuantityButton(
               icon: Icons.add,
               onPressed: () {
+                setState(() => _isProcessing = true); // İşlem başladı
                 Provider.of<BasketViewModel>(context, listen: false)
                     .incrementQuantity(item.product.proID);
               },
@@ -736,6 +751,7 @@ class _BasketViewState extends State<BasketView> {
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () {
+                setState(() => _isProcessing = true); // İşlem başladı
                 Provider.of<BasketViewModel>(context, listen: false)
                     .removeProduct(item.product.proID, opID: item.opID);
               },
