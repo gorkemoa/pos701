@@ -1,7 +1,5 @@
 # POS701 Flutter Mobil Uygulaması
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 POS701 projesinin Flutter ile geliştirilmiş mobil istemcisidir. Bu uygulama, satış noktası (POS) işlemlerini mobil cihazlar üzerinden yönetmeyi hedefler.
 
 ## ✨ Temel Özellikler (Planlanan)
@@ -52,33 +50,24 @@ flutter run
 *   **Dependency Injection:** [GetIt](https://pub.dev/packages/get_it) (Planlanan)
 *   **Immutable States:** [Freezed](https://pub.dev/packages/freezed) (Planlanan)
 
-## 📂 Klasör Yapısı
+## 📂 Klasör Yapısı (Mevcut Durum)
 
-Proje, ölçeklenebilir ve bakımı kolay bir kod tabanı sağlamak için Clean Architecture prensiplerine uygun bir klasör yapısı benimsemeyi hedefler:
+Projenin mevcut klasör yapısı aşağıdaki gibidir:
 
 ```
 lib/
-|-- core/             # Uygulama geneli çekirdek modüller (API istemcisi, tema, sabitler vb.)
-|-- features/         # Uygulama özellikleri (modüller)
-|   |-- auth/
-|   |-- products/
-|   |-- sales/
-|   |-- ...
-|-- main.dart         # Uygulama giriş noktası
+|-- constants/      # Uygulama sabitleri
+|-- models/         # Veri modelleri (entities)
+|-- services/       # API servisleri, yerel depolama vb.
+|-- viewmodels/     # İş mantığı ve durum yönetimi (controllers/providers)
+|-- views/          # Kullanıcı arayüzü ekranları (pages/screens)
+|-- widgets/        # Tekrar kullanılabilir UI bileşenleri
+|-- utils/          # Yardımcı fonksiyonlar ve sınıflar
+|-- main.dart       # Uygulama giriş noktası
 ```
 
-*Her özellik (feature) kendi içinde `data`, `domain`, ve `presentation` katmanlarını barındıracaktır.*
+*Not: Proje geliştikçe Clean Architecture prensiplerine daha yakın bir yapıya geçiş hedeflenmektedir.*
 
 ## 🤝 Katkıda Bulunma
 
-Katkılarınız projeyi daha iyi hale getirmemize yardımcı olur! Lütfen katkıda bulunma yönergeleri için `CONTRIBUTING.md` (oluşturulacak) dosyasına göz atın.
-
-1.  Projeyi Fork'layın
-2.  Kendi Feature Branch'inizi oluşturun (`git checkout -b feature/AmazingFeature`)
-3.  Değişikliklerinizi Commit'leyin (`git commit -m 'Add some AmazingFeature'`)
-4.  Branch'inizi Push'layın (`git push origin feature/AmazingFeature`)
-5.  Bir Pull Request açın
-
-## 📄 Lisans
-
-Bu proje MIT Lisansı altında lisanslanmıştır - detaylar için [LICENSE](LICENSE) (oluşturulacak) dosyasına bakın.
+Bu özel (private) bir depodur. Katkıda bulunmak isteyen ekip üyeleri, standart iş akışını (branch oluşturma, pull request açma vb.) takip etmelidir.
