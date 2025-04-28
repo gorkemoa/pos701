@@ -41,6 +41,7 @@ class _CategoryViewState extends State<CategoryView> {
   Category? _selectedCategory;
   int _cartCount = 0;
   String _orderDesc = '';
+  int _orderGuest = 1; // Misafir sayısı için değişken
 
   @override
   void initState() {
@@ -613,6 +614,7 @@ class _CategoryViewState extends State<CategoryView> {
       'tableID': widget.tableID,
       'tableName': widget.tableName,
       'orderDesc': _orderDesc,
+      'orderGuest': _orderGuest,
     };
     
     // Eğer sipariş varsa orderID ekleyelim
@@ -624,6 +626,7 @@ class _CategoryViewState extends State<CategoryView> {
     }
     
     debugPrint('🛒 Sipariş notu: $_orderDesc');
+    debugPrint('🛒 Misafir sayısı: $_orderGuest');
     
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -631,6 +634,7 @@ class _CategoryViewState extends State<CategoryView> {
           tableName: widget.tableName,
           orderID: widget.orderID,
           orderDesc: _orderDesc,
+          orderGuest: _orderGuest,
         ),
         settings: RouteSettings(
           arguments: arguments,
@@ -837,7 +841,7 @@ class _CategoryViewState extends State<CategoryView> {
                       title: 'Misafir Sayısı',
                       onTap: () {
                         Navigator.of(context).pop();
-                        // Misafir sayısı işlemi
+                        _showGuestCountDialog();
                       },
                     ),
                     
@@ -989,6 +993,97 @@ class _CategoryViewState extends State<CategoryView> {
             child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  // Misafir sayısı seçme diyaloğu
+  void _showGuestCountDialog() {
+    int tempGuestCount = _orderGuest;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Misafir Sayısı', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove_circle, color: Color(AppConstants.primaryColorValue)),
+                    onPressed: () {
+                      if (tempGuestCount > 1) {
+                        setState(() {
+                          tempGuestCount--;
+                        });
+                      }
+                    },
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$tempGuestCount',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_circle, color: Color(AppConstants.primaryColorValue)),
+                    onPressed: () {
+                      setState(() {
+                        tempGuestCount++;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Masadaki misafir sayısını belirleyin',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                this.setState(() {
+                  _orderGuest = tempGuestCount;
+                });
+                Navigator.of(context).pop();
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Misafir sayısı: $_orderGuest'),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(AppConstants.primaryColorValue),
+              ),
+              child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }

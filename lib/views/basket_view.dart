@@ -17,12 +17,14 @@ class BasketView extends StatefulWidget {
   final String tableName;
   final int? orderID;
   final String orderDesc;
+  final int orderGuest;
   
   const BasketView({
     Key? key,
     required this.tableName,
     this.orderID,
     this.orderDesc = '',
+    this.orderGuest = 1,
   }) : super(key: key);
 
   @override
@@ -39,11 +41,13 @@ class _BasketViewState extends State<BasketView> {
   bool _isSiparisOlusturuldu = false; // Sipariş oluşturuldu mu flag'i
   BasketViewModel? _basketViewModel; // BasketViewModel referansı
   String _orderDesc = ''; // Sipariş açıklaması
+  int _orderGuest = 1; // Misafir sayısı
 
   @override
   void initState() {
     super.initState();
     _orderDesc = widget.orderDesc; // Sipariş açıklamasını başlangıçta al
+    _orderGuest = widget.orderGuest; // Misafir sayısını başlangıçta al
     _initializeData();
   }
 
@@ -269,7 +273,7 @@ class _BasketViewState extends State<BasketView> {
       tableID: _tableID!,
       tableName: widget.tableName,
       sepetUrunleri: basketViewModel.items,
-      orderGuest: 1,
+      orderGuest: _orderGuest,
       kuverQty: 1,
       orderDesc: _orderDesc, // Sipariş açıklamasını gönder
     );
@@ -284,7 +288,7 @@ class _BasketViewState extends State<BasketView> {
       compID: _compID!,
       orderID: widget.orderID!,
       sepetUrunleri: basketViewModel.items,
-      orderGuest: 1,
+      orderGuest: _orderGuest,
       kuverQty: 1,
       orderDesc: _orderDesc, // Sipariş açıklamasını gönder
     );
@@ -494,6 +498,40 @@ class _BasketViewState extends State<BasketView> {
                         ],
                       ),
                     ),
+                  
+                  // Misafir Sayısı Bilgisi
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.people, color: Colors.green.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Misafir Sayısı:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$_orderGuest',
+                          style: TextStyle(
+                            color: Colors.green.shade800,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   
                   // Sepet Öğeleri Listesi
                   Expanded(
