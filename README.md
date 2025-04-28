@@ -1,16 +1,16 @@
-# pos701
+# pos701-flutter-mobile
 
-A new Flutter project.
+POS701 Flutter mobil uygulaması.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+Bu proje bir Flutter uygulaması için başlangıç noktasıdır.
 
-A few resources to get you started if this is your first Flutter project:
+Eğer bu sizin ilk Flutter projeniz ise, aşağıdaki kaynaklar size yardımcı olabilir:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- [Lab: İlk Flutter uygulamanızı yazın](https://docs.flutter.dev/get-started/codelab)
+- [Yemek Kitabı: Kullanışlı Flutter örnekleri](https://docs.flutter.dev/cookbook)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Flutter geliştirmeye başlarken yardım almak için
+[çevrimiçi belgelere](https://docs.flutter.dev/) göz atabilirsiniz. Bu belgeler öğreticiler,
+örnekler, mobil geliştirme kılavuzları ve tam bir API referansı sunar.
