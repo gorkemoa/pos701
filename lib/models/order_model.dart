@@ -250,6 +250,7 @@ class OrderDetailProduct {
   final bool isCanceled;
   final bool isGift;
   final bool isPaid;
+  final String? proNote;
 
   OrderDetailProduct({
     this.opID = 0,
@@ -265,6 +266,7 @@ class OrderDetailProduct {
     required this.isCanceled,
     required this.isGift,
     required this.isPaid,
+    this.proNote,
   });
 
   factory OrderDetailProduct.fromJson(Map<String, dynamic> json) {
@@ -282,6 +284,7 @@ class OrderDetailProduct {
       isCanceled: json['isCanceled'],
       isGift: json['isGift'],
       isPaid: json['isPaid'],
+      proNote: json['proNote'],
     );
   }
 }

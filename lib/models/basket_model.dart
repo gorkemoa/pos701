@@ -5,6 +5,8 @@ class BasketItem {
   final Product product;
   int proQty;
   final int opID;
+  String proNote;
+  bool isGift;
   
   // Birim fiyat hesaplama metodu - proPrice'ı temizleyip işler
   double get birimFiyat {
@@ -40,6 +42,9 @@ class BasketItem {
   int? _cachedQuantity;
   
   double get totalPrice {
+    // İkram ürün ise 0 TL
+    if (isGift) return 0.0;
+    
     // Eğer miktar değişmemişse ve fiyat hesaplanmışsa, önbelleği kullan
     if (_cachedQuantity == proQty && _cachedPrice != null) {
       return _cachedPrice!;
@@ -62,14 +67,16 @@ class BasketItem {
     required this.product,
     required this.proQty,
     this.opID = 0,
-  }) {
+    String? proNote,
+    this.isGift = false,
+  }) : proNote = proNote ?? product.proNote {
     // Oluşturulduğunda fiyatı kontrol et
-    developer.log("Yeni sepet öğesi: ${product.proName}, Miktar: $proQty, OpID: $opID");
+    developer.log("Yeni sepet öğesi: ${product.proName}, Miktar: $proQty, OpID: $opID, Not: $proNote, İkram: $isGift");
   }
   
   @override
   String toString() {
-    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID}';
+    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID, proNote: $proNote, isGift: $isGift}';
   }
 }
 

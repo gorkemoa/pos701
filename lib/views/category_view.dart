@@ -37,8 +37,10 @@ class _CategoryViewState extends State<CategoryView> {
   late ProductViewModel _productViewModel;
   bool _isInitialized = false;
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _orderDescController = TextEditingController();
   Category? _selectedCategory;
   int _cartCount = 0;
+  String _orderDesc = '';
 
   @override
   void initState() {
@@ -51,6 +53,7 @@ class _CategoryViewState extends State<CategoryView> {
   @override
   void dispose() {
     _searchController.dispose();
+    _orderDescController.dispose();
     super.dispose();
   }
 
@@ -609,6 +612,7 @@ class _CategoryViewState extends State<CategoryView> {
     final Map<String, dynamic> arguments = {
       'tableID': widget.tableID,
       'tableName': widget.tableName,
+      'orderDesc': _orderDesc,
     };
     
     // Eğer sipariş varsa orderID ekleyelim
@@ -619,11 +623,14 @@ class _CategoryViewState extends State<CategoryView> {
       debugPrint('🛒 Yeni sipariş oluşturuluyor.');
     }
     
+    debugPrint('🛒 Sipariş notu: $_orderDesc');
+    
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => BasketView(
           tableName: widget.tableName,
           orderID: widget.orderID,
+          orderDesc: _orderDesc,
         ),
         settings: RouteSettings(
           arguments: arguments,
@@ -819,7 +826,7 @@ class _CategoryViewState extends State<CategoryView> {
                       title: 'NOT',
                       onTap: () {
                         Navigator.of(context).pop();
-                        // NOT işlemi
+                        _showOrderDescDialog();
                       },
                     ),
                     
@@ -920,6 +927,69 @@ class _CategoryViewState extends State<CategoryView> {
       leading: Icon(icon),
       title: Text(title),
       onTap: onTap,
+    );
+  }
+
+  // Sipariş açıklaması ekleme diyaloğu
+  void _showOrderDescDialog() {
+    _orderDescController.text = _orderDesc;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sipariş Notu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _orderDescController,
+              decoration: const InputDecoration(
+                hintText: 'Sipariş için not ekleyin',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(16),
+              ),
+              maxLines: 4,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Bu not sipariş ile ilişkilendirilecek ve mutfağa iletilecektir.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _orderDesc = _orderDescController.text.trim();
+              });
+              Navigator.of(context).pop();
+              
+              if (_orderDesc.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sipariş notu kaydedildi'),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(AppConstants.primaryColorValue),
+            ),
+            child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 } 

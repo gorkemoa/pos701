@@ -14,6 +14,8 @@ class ProductDetailView extends StatefulWidget {
   final int postID;
   final String tableName;
   final int? selectedProID;
+  final String? initialNote;
+  final bool? initialIsGift;
 
   const ProductDetailView({
     Key? key,
@@ -22,6 +24,8 @@ class ProductDetailView extends StatefulWidget {
     required this.postID,
     required this.tableName,
     this.selectedProID,
+    this.initialNote,
+    this.initialIsGift,
   }) : super(key: key);
 
   @override
@@ -31,16 +35,26 @@ class ProductDetailView extends StatefulWidget {
 class _ProductDetailViewState extends State<ProductDetailView> {
   final ProductService _productService = ProductService();
   final AppLogger _logger = AppLogger();
+  final TextEditingController _noteController = TextEditingController();
   
   ProductDetail? _productDetail;
   bool _isLoading = true;
   String? _errorMessage;
   int _selectedPorsiyonIndex = 0;
+  bool _isGift = false;
 
   @override
   void initState() {
     super.initState();
+    _noteController.text = widget.initialNote ?? '';
+    _isGift = widget.initialIsGift ?? false;
     _loadProductDetail();
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProductDetail() async {
@@ -106,6 +120,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proUnit: selectedPorsiyon.proUnit,
         proStock: selectedPorsiyon.proStock.toString(),
         proPrice: selectedPorsiyon.proPrice.toString(),
+        proNote: _noteController.text,
       );
       
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
@@ -115,8 +130,17 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         // Sepetten gelen ürünün eski proID'si
         int oldProID = widget.selectedProID!;
         
-        // Eğer aynı porsiyon seçildiyse işlem yapmaya gerek yok
+        // Eğer aynı porsiyon seçildiyse sadece notu ve ikram durumunu güncelle
         if (oldProID == selectedPorsiyon.proID) {
+          basketViewModel.updateProductNote(oldProID, _noteController.text);
+          basketViewModel.toggleGiftStatus(oldProID, isGift: _isGift);
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ürün bilgileri güncellendi'),
+              duration: Duration(seconds: 2),
+            ),
+          );
           Navigator.of(context).pop();
           return;
         }
@@ -128,18 +152,28 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         );
         
         if (existingItem.proQty > 0) {
-          // Sadece seçili öğeyi güncelle, miktar korunacak
-          basketViewModel.updateSpecificItem(oldProID, product, existingItem.proQty);
+          // Sadece seçili öğeyi güncelle, miktar korunacak ve not eklenecek
+          basketViewModel.updateSpecificItem(
+            oldProID, 
+            product, 
+            existingItem.proQty,
+            proNote: _noteController.text,
+            isGift: _isGift,
+          );
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Ürün porsiyonu güncellendi'),
+              content: Text('Ürün bilgileri güncellendi'),
               duration: Duration(seconds: 2),
             ),
           );
         } else {
           // Ürün bulunamadı, normal ekleme yap
-          basketViewModel.addProduct(product);
+          basketViewModel.addProduct(
+            product, 
+            proNote: _noteController.text,
+            isGift: _isGift,
+          );
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -150,7 +184,11 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         }
       } else {
         // Normal ürün ekleme
-        basketViewModel.addProduct(product);
+        basketViewModel.addProduct(
+          product, 
+          proNote: _noteController.text,
+          isGift: _isGift,
+        );
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -234,6 +272,84 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           
           // Porsiyon Listesi
           _buildPorsiyonList(),
+          
+          // Ürün Notu Alanı
+          const SizedBox(height: 24),
+          const Text(
+            'Ürün Notu',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _noteController,
+            decoration: const InputDecoration(
+              hintText: 'Ürün ile ilgili eklemek istediğiniz notları yazın',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            maxLines: 3,
+          ),
+          
+          // İkram Seçeneği
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Checkbox(
+                value: _isGift,
+                activeColor: Color(AppConstants.primaryColorValue),
+                onChanged: (value) {
+                  setState(() {
+                    _isGift = value ?? false;
+                  });
+                },
+              ),
+              const Text(
+                'İkram olarak işaretle',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (_isGift)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.card_giftcard, color: Colors.red.shade400, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'İkram',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          if (_isGift)
+            Padding(
+              padding: const EdgeInsets.only(left: 40, top: 8),
+              child: Text(
+                'Bu ürün ikram olarak işaretlenecek ve ücretlendirilmeyecek.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -360,9 +476,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text(
-              'Porsiyonu Güncelle',
+              'Sepete Ekle',
               style: TextStyle(
                 fontSize: 16,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),

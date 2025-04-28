@@ -23,7 +23,7 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Ürün ekleme (tekil olarak)
-  void addProduct(Product product, {int opID = 0}) {
+  void addProduct(Product product, {int opID = 0, String? proNote, bool isGift = false}) {
     final existingIndex = _basket.items.indexWhere(
       (item) => item.product.proID == product.proID && item.opID == opID
     );
@@ -31,12 +31,20 @@ class BasketViewModel extends ChangeNotifier {
     if (existingIndex != -1) {
       // Mevcut ürün miktarını artır
       _basket.items[existingIndex].proQty++;
+      // Not varsa güncelle
+      if (proNote != null) {
+        _basket.items[existingIndex].proNote = proNote;
+      }
+      // İkram durumunu güncelle
+      _basket.items[existingIndex].isGift = isGift;
     } else {
       // Yeni ürün ekle
       _basket.items.add(BasketItem(
         product: product,
         proQty: 1,
-        opID: opID
+        opID: opID,
+        proNote: proNote,
+        isGift: isGift,
       ));
     }
     
@@ -44,13 +52,13 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Sepete ürün ekleme/güncelleme (özel opID ile)
-  void addProductWithOpID(Product product, int quantity, int opID) {
+  void addProductWithOpID(Product product, int quantity, int opID, {String? proNote, bool isGift = false}) {
     // Önce debug log ekleyerek ne eklediğimizi görelim
-    debugPrint('📥 [BASKET_VM] Sepete ürün ekleniyor: ${product.proName}, ProID: ${product.proID}, Miktar: $quantity, OpID: $opID');
+    debugPrint('📥 [BASKET_VM] Sepete ürün ekleniyor: ${product.proName}, ProID: ${product.proID}, Miktar: $quantity, OpID: $opID, Not: ${proNote ?? product.proNote}, İkram: $isGift');
     
     // Mevcut sepetteki ürünleri logla
     for (var item in _basket.items) {
-      debugPrint('🔍 [BASKET_VM] Mevcut sepet ürünü: ${item.product.proName}, ProID: ${item.product.proID}, Miktar: ${item.proQty}, OpID: ${item.opID}');
+      debugPrint('🔍 [BASKET_VM] Mevcut sepet ürünü: ${item.product.proName}, ProID: ${item.product.proID}, Miktar: ${item.proQty}, OpID: ${item.opID}, Not: ${item.proNote}, İkram: ${item.isGift}');
     }
 
     // Aynı ürün ve opID varsa miktarını güncelle, yoksa ekle
@@ -61,15 +69,24 @@ class BasketViewModel extends ChangeNotifier {
       // Aynı ürün ve opID varsa miktarını güncelle
       final oldQuantity = _basket.items[existingIndex].proQty;
       _basket.items[existingIndex].proQty = quantity;
-      debugPrint('🔄 [BASKET_VM] Ürün güncellendi: ${product.proName}, ProID: ${product.proID}, Eski miktar: $oldQuantity, Yeni miktar: $quantity, OpID: $opID');
+      // Not varsa güncelle
+      if (proNote != null) {
+        _basket.items[existingIndex].proNote = proNote;
+      }
+      // İkram durumunu güncelle
+      _basket.items[existingIndex].isGift = isGift;
+      
+      debugPrint('🔄 [BASKET_VM] Ürün güncellendi: ${product.proName}, ProID: ${product.proID}, Eski miktar: $oldQuantity, Yeni miktar: $quantity, OpID: $opID, Not: ${_basket.items[existingIndex].proNote}, İkram: ${_basket.items[existingIndex].isGift}');
     } else {
       // Yeni ürün ekle
       _basket.items.add(BasketItem(
         product: product,
         proQty: quantity,
-        opID: opID
+        opID: opID,
+        proNote: proNote,
+        isGift: isGift,
       ));
-      debugPrint('➕ [BASKET_VM] Yeni ürün eklendi: ${product.proName}, ProID: ${product.proID}, Miktar: $quantity, OpID: $opID');
+      debugPrint('➕ [BASKET_VM] Yeni ürün eklendi: ${product.proName}, ProID: ${product.proID}, Miktar: $quantity, OpID: $opID, Not: ${proNote ?? product.proNote}, İkram: $isGift');
     }
     
     // Güncellenmiş sepet bilgisini göster
@@ -190,18 +207,58 @@ class BasketViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateSpecificItem(int oldProID, Product newProduct, int quantity) {
+  void updateSpecificItem(int oldProID, Product newProduct, int quantity, {String? proNote, bool? isGift}) {
+    // Eski ürünün bilgilerini al (eğer varsa)
+    String? oldNote;
+    bool oldIsGift = false;
+    final oldItemIndex = _basket.items.indexWhere((item) => item.product.proID == oldProID);
+    if (oldItemIndex != -1) {
+      oldNote = _basket.items[oldItemIndex].proNote;
+      oldIsGift = _basket.items[oldItemIndex].isGift;
+    }
+    
     // Eski ürünü sepetten kaldır
     _basket.removeProduct(oldProID);
     
-    // Yeni ürünü ekle
-    _basket.addProduct(newProduct);
-    
-    // Eğer miktar 1'den fazlaysa, miktarı ayarla
-    for (int i = 1; i < quantity; i++) {
-      _basket.incrementQuantity(newProduct.proID);
-    }
+    // Yeni ürünü ekle (not ve ikram bilgisi de transfer edilecek)
+    _basket.items.add(BasketItem(
+      product: newProduct,
+      proQty: quantity,
+      proNote: proNote ?? oldNote ?? newProduct.proNote,
+      isGift: isGift ?? oldIsGift,
+    ));
     
     notifyListeners();
+  }
+
+  // Ürün notunu güncelle
+  void updateProductNote(int productId, String note, {int? opID}) {
+    final existingIndex = opID != null 
+        ? _basket.items.indexWhere((item) => item.product.proID == productId && item.opID == opID)
+        : _basket.items.indexWhere((item) => item.product.proID == productId);
+    
+    if (existingIndex != -1) {
+      _basket.items[existingIndex].proNote = note;
+      debugPrint('📝 [BASKET_VM] Ürün notu güncellendi: ${_basket.items[existingIndex].product.proName}, Not: $note');
+      notifyListeners();
+    }
+  }
+
+  // Ürünün ikram durumunu değiştir
+  void toggleGiftStatus(int productId, {int? opID, bool? isGift}) {
+    final existingIndex = opID != null 
+        ? _basket.items.indexWhere((item) => item.product.proID == productId && item.opID == opID)
+        : _basket.items.indexWhere((item) => item.product.proID == productId);
+    
+    if (existingIndex != -1) {
+      if (isGift != null) {
+        _basket.items[existingIndex].isGift = isGift;
+      } else {
+        _basket.items[existingIndex].isGift = !_basket.items[existingIndex].isGift;
+      }
+      
+      debugPrint('🎁 [BASKET_VM] Ürün ikram durumu değiştirildi: ${_basket.items[existingIndex].product.proName}, İkram: ${_basket.items[existingIndex].isGift}');
+      notifyListeners();
+    }
   }
 } 

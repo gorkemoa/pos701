@@ -16,11 +16,13 @@ import 'package:pos701/views/payment_view.dart';
 class BasketView extends StatefulWidget {
   final String tableName;
   final int? orderID;
+  final String orderDesc;
   
   const BasketView({
     Key? key,
     required this.tableName,
     this.orderID,
+    this.orderDesc = '',
   }) : super(key: key);
 
   @override
@@ -36,10 +38,12 @@ class _BasketViewState extends State<BasketView> {
   bool _isProcessing = false; // İşlem yapılıp yapılmadığını takip etmek için flag
   bool _isSiparisOlusturuldu = false; // Sipariş oluşturuldu mu flag'i
   BasketViewModel? _basketViewModel; // BasketViewModel referansı
+  String _orderDesc = ''; // Sipariş açıklaması
 
   @override
   void initState() {
     super.initState();
+    _orderDesc = widget.orderDesc; // Sipariş açıklamasını başlangıçta al
     _initializeData();
   }
 
@@ -267,6 +271,7 @@ class _BasketViewState extends State<BasketView> {
       sepetUrunleri: basketViewModel.items,
       orderGuest: 1,
       kuverQty: 1,
+      orderDesc: _orderDesc, // Sipariş açıklamasını gönder
     );
   }
   
@@ -281,6 +286,7 @@ class _BasketViewState extends State<BasketView> {
       sepetUrunleri: basketViewModel.items,
       orderGuest: 1,
       kuverQty: 1,
+      orderDesc: _orderDesc, // Sipariş açıklamasını gönder
     );
   }
 
@@ -441,6 +447,48 @@ class _BasketViewState extends State<BasketView> {
                                 fontSize: 12,
                                 color: Colors.blue.shade800,
                               ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  // Sipariş Açıklaması (varsa göster)
+                  if (_orderDesc.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.description, color: Colors.blue.shade700, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sipariş Notu:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _orderDesc,
+                                  style: TextStyle(
+                                    color: Colors.blue.shade800,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -681,6 +729,8 @@ class _BasketViewState extends State<BasketView> {
                   postID: item.product.postID,
                   tableName: widget.tableName,
                   selectedProID: item.product.proID,
+                  initialNote: item.proNote,
+                  initialIsGift: item.isGift,
                 ),
               ),
             );
@@ -720,14 +770,51 @@ class _BasketViewState extends State<BasketView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.product.proName,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.product.proName,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        if (item.isGift)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.card_giftcard, color: Colors.red.shade700, size: 12),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'İkram',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                     Text(
                       "Birim Fiyat: ₺${item.product.proPrice}",
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
+                    if (item.proNote.isNotEmpty)
+                      Text(
+                        "Not: ${item.proNote}",
+                        style: TextStyle(fontSize: 12, color: Colors.blue.shade600, fontStyle: FontStyle.italic),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                   ],
                 ),
               ),
@@ -737,10 +824,14 @@ class _BasketViewState extends State<BasketView> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  "₺${item.totalPrice.toStringAsFixed(2)}",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  item.isGift ? "₺0.00" : "₺${item.totalPrice.toStringAsFixed(2)}",
+                  style: TextStyle(
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold,
+                    color: item.isGift ? Colors.red.shade700 : Colors.black,
+                  ),
                 ),
-                  if (item.proQty > 1)
+                  if (item.proQty > 1 && !item.isGift)
                   Text(
                     "${item.proQty} x ₺${(item.totalPrice / item.proQty).toStringAsFixed(2)}",
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),

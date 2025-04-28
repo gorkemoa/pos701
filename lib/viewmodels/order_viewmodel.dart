@@ -49,7 +49,7 @@ class OrderViewModel extends ChangeNotifier {
 
     for (var item in items) {
       // Debug için ürün bilgilerini logla
-      debugPrint('🔄 [ORDER_VM] Sipariş ürünü hazırlanıyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}');
+      debugPrint('🔄 [ORDER_VM] Sipariş ürünü hazırlanıyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}, Not: ${item.proNote}, İkram: ${item.isGift}');
       
       // OrderProduct oluştur
       orderProducts.add(OrderProduct(
@@ -58,6 +58,8 @@ class OrderViewModel extends ChangeNotifier {
         proID: item.product.proID,
         proQty: item.proQty, // Sepetteki miktarı doğrudan kullan
         proPrice: item.product.proPrice,
+        proNote: item.proNote, // Sepetteki notu kullan
+        isGift: item.isGift, // İkram bilgisini kullan
       ));
     }
     
@@ -81,6 +83,7 @@ class OrderViewModel extends ChangeNotifier {
     int kuverQty = 1,
     bool isKuver = false,
     bool isWaiter = false,
+    String orderDesc = '',
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -96,6 +99,7 @@ class OrderViewModel extends ChangeNotifier {
         tableID: tableID,
         orderType: orderType,
         orderName: tableName,
+        orderDesc: orderDesc,
         orderGuest: orderGuest,
         kuverQty: kuverQty,
         isKuver: isKuver,
@@ -219,6 +223,7 @@ class OrderViewModel extends ChangeNotifier {
         proUnit: product.proUnit,
         proStock: "0", // Stok bilgisi olmadığı için 0 olarak gönderildi
         proPrice: product.retailPrice.toString(), // product.price yerine product.retailPrice (birim fiyat) kullanıldı
+        proNote: product.proNote ?? '', // API'den gelen notu ekle
       );
       
       // Kalan ödenmemiş miktar hesaplanır (proQty - paidQty)
@@ -226,13 +231,15 @@ class OrderViewModel extends ChangeNotifier {
       
       // Birden fazla aynı ürün varsa, bunları tek bir sepet öğesi olarak ekle
       if (kalanMiktar > 0) {
-        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Toplam miktar: $kalanMiktar, OpID: ${product.opID}, Fiyat: ${urun.proPrice}');
+        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Toplam miktar: $kalanMiktar, OpID: ${product.opID}, Fiyat: ${urun.proPrice}, Not: ${urun.proNote}, İkram: ${product.isGift}');
         
         // Tek bir sepet öğesi oluştur
         final BasketItem sepetItem = BasketItem(
           product: urun,
           proQty: kalanMiktar, // Toplam miktar
           opID: product.opID, // OpID'ler aynı kalır - API hangi sipariş kalemi olduğunu bilmeli
+          proNote: urun.proNote, // Ürün notu
+          isGift: product.isGift, // İkram bilgisi
         );
         
         sepetItems.add(sepetItem);
@@ -242,10 +249,10 @@ class OrderViewModel extends ChangeNotifier {
     // Her bir sepet öğesi için detaylı bilgi göster
     double toplamFiyat = 0;
     for (var item in sepetItems) {
-      double itemTotalPrice = item.birimFiyat * item.proQty;
+      double itemTotalPrice = item.isGift ? 0.0 : (item.birimFiyat * item.proQty);
       toplamFiyat += itemTotalPrice;
       
-      debugPrint('🔢 [ORDER_VM] Sepet öğesi: ${item.product.proName}, Birim Fiyat: ${item.birimFiyat}, Miktar: ${item.proQty}, Toplam: $itemTotalPrice');
+      debugPrint('🔢 [ORDER_VM] Sepet öğesi: ${item.product.proName}, Birim Fiyat: ${item.birimFiyat}, Miktar: ${item.proQty}, Toplam: $itemTotalPrice, Not: ${item.proNote}, İkram: ${item.isGift}');
     }
     
     debugPrint('🛒 [ORDER_VM] Sepete ${sepetItems.length} ürün çeşidi eklendi.');
@@ -264,6 +271,7 @@ class OrderViewModel extends ChangeNotifier {
     int kuverQty = 1,
     bool isKuver = false,
     bool isWaiter = false,
+    String orderDesc = '',
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -278,6 +286,7 @@ class OrderViewModel extends ChangeNotifier {
         compID: compID,
         orderID: orderID,
         orderGuest: orderGuest,
+        orderDesc: orderDesc,
         kuverQty: kuverQty,
         isKuver: isKuver ? 1 : 0,
         isWaiter: isWaiter ? 1 : 0,
