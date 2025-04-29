@@ -151,7 +151,7 @@ class _KitchenViewState extends State<KitchenView> {
                   const SizedBox(height: 16),
                   Text(
                     'Hata: ${kitchenViewModel.errorMessage}',
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -189,7 +189,7 @@ class _KitchenViewState extends State<KitchenView> {
             return const Center(
               child: Text(
                 'Bekleyen sipariş bulunmuyor',
-                style: TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 14),
               ),
             );
           }
@@ -252,7 +252,7 @@ class _KitchenViewState extends State<KitchenView> {
                       order.userName,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -267,7 +267,7 @@ class _KitchenViewState extends State<KitchenView> {
                       order.tableName,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 16,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -283,7 +283,7 @@ class _KitchenViewState extends State<KitchenView> {
                 Text(
                   order.orderInfo,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -401,7 +401,7 @@ class _KitchenViewState extends State<KitchenView> {
             child: Text(
               elapsedTimeStr,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -411,7 +411,7 @@ class _KitchenViewState extends State<KitchenView> {
           Expanded(
             child: Text(
               '${product.proQty} ${product.proUnit} - ${product.proName}',
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 13),
             ),
           ),
           Container(
