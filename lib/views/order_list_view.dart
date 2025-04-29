@@ -118,7 +118,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Text(
                 'Hata: $errorMessage',
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 13),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -136,7 +136,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
               ),
               child: const Text('Yeniden Dene', 
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -163,7 +163,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
             const SizedBox(height: 16),
             const Text(
               'Sipariş bulunamadı',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -245,7 +245,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                 Text(
                   order.orderName,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -258,7 +258,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                   child: Text(
                     order.orderStatus,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: statusColor,
                     ),
@@ -275,7 +275,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                   'Sipariş Kodu: ${order.orderCode}',
                   style: const TextStyle(
                     color: Colors.grey,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -289,7 +289,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                   'Garson: ${order.orderUserName}',
                   style: const TextStyle(
                     color: Colors.grey,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -303,7 +303,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                   'Tarih: ${order.orderDate}',
                   style: const TextStyle(
                     color: Colors.grey,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ],
@@ -316,7 +316,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                   order.orderAmount,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 14,
                   ),
                 ),
                 if (order.orderPayment.isNotEmpty)
@@ -329,7 +329,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                     child: Text(
                       order.orderPayment,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: Colors.black87,
                       ),
                     ),
@@ -342,7 +342,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                 'Ödemeler:',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: 12,
                 ),
               ),
               ...order.payments.map((payment) => Padding(
