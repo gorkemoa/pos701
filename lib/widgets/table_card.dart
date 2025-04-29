@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:pos701/views/category_view.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/models/user_model.dart';
+import 'package:pos701/views/tables_view.dart';
 
 class TableCard extends StatelessWidget {
   final TableItem table;
@@ -342,11 +343,21 @@ class TableCard extends StatelessWidget {
           ),
         );
         
-        // Tabloları yenile
-        await viewModel.refreshTablesDataSilently(
-          userToken: userToken,
-          compID: compID,
-        );
+        // Masalar sayfasına yönlendir
+        if (context.mounted) {
+          // ignore: use_build_context_synchronously
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TablesView(
+                userToken: userToken,
+                compID: compID,
+                title: 'Masalar',
+              ),
+            ),
+            (route) => false, // Tüm geçmiş sayfaları temizle
+          );
+        }
       } else {
         // Hata mesajını göster
         if (!context.mounted) return;
@@ -479,11 +490,21 @@ class TableCard extends StatelessWidget {
           ),
         );
         
-        // Tabloları yenile
-        await viewModel.refreshTablesDataSilently(
-          userToken: userToken,
-          compID: compID,
-        );
+        // Masalar sayfasına yönlendir
+        if (context.mounted) {
+          // ignore: use_build_context_synchronously
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TablesView(
+                userToken: userToken,
+                compID: compID,
+                title: 'Masalar',
+              ),
+            ),
+            (route) => false, // Tüm geçmiş sayfaları temizle
+          );
+        }
       } else {
         // Hata mesajını göster
         if (!context.mounted) return;
@@ -597,11 +618,21 @@ class TableCard extends StatelessWidget {
                 SnackBar(content: Text(viewModel.successMessage ?? 'Masa başarıyla değiştirildi')),
               );
               
-              // Tabloları yenile
-              await viewModel.refreshTablesDataSilently(
-                userToken: userToken,
-                compID: compID,
-              );
+              // Masalar sayfasına yönlendir
+              if (context.mounted) {
+                // ignore: use_build_context_synchronously
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TablesView(
+                      userToken: userToken,
+                      compID: compID,
+                      title: 'Masalar',
+                    ),
+                  ),
+                  (route) => false, // Tüm geçmiş sayfaları temizle
+                );
+              }
             } else {
               // Hata mesajını göster
               if (!context.mounted) return;
@@ -778,32 +809,43 @@ class TableCard extends StatelessWidget {
                           if (success) {
                             debugPrint('✅ Adisyon aktarma başarılı!');
                             debugPrint('✅ Yanıt: ${viewModel.successMessage}');
+                            
+                            // ignore: use_build_context_synchronously
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(viewModel.successMessage ?? 'Adisyon başarıyla aktarıldı'),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                            
+                            // Masalar sayfasına yönlendir
+                            if (context.mounted) {
+                              // ignore: use_build_context_synchronously
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TablesView(
+                                    userToken: userToken,
+                                    compID: compID,
+                                    title: 'Masalar',
+                                  ),
+                                ),
+                                (route) => false, // Tüm geçmiş sayfaları temizle
+                              );
+                            }
                           } else {
                             debugPrint('❌ Adisyon aktarma başarısız!');
                             debugPrint('❌ Hata: ${viewModel.errorMessage}');
-                          }
-                          
-                          // ignore: use_build_context_synchronously
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                success
-                                  ? (viewModel.successMessage ?? 'Adisyon başarıyla aktarıldı')
-                                  : (viewModel.errorMessage ?? 'Adisyon aktarma işlemi başarısız oldu')
+                            
+                            // ignore: use_build_context_synchronously
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(viewModel.errorMessage ?? 'Adisyon aktarma işlemi başarısız oldu'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
                               ),
-                              backgroundColor: success ? Colors.green : Colors.red,
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                          
-                          if (success) {
-                            // Tabloları yenile
-                            debugPrint('🔄 Tablolar yenileniyor...');
-                            await viewModel.refreshTablesDataSilently(
-                              userToken: userToken,
-                              compID: compID,
                             );
-                            debugPrint('✅ Tablolar başarıyla yenilendi');
                           }
                         } catch (e) {
                           debugPrint('🔴 Adisyon aktarma hatası: $e');
@@ -955,6 +997,22 @@ class TableCard extends StatelessWidget {
                       ElevatedButton(
                         onPressed: () {
                           Navigator.of(successContext).pop();
+                          
+                          // Masalar sayfasına yönlendir
+                          if (context.mounted) {
+                            // ignore: use_build_context_synchronously
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TablesView(
+                                  userToken: userToken,
+                                  compID: compID,
+                                  title: 'Masalar',
+                                ),
+                              ),
+                              (route) => false, // Tüm geçmiş sayfaları temizle
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(AppConstants.primaryColorValue),
@@ -974,12 +1032,6 @@ class TableCard extends StatelessWidget {
                   ),
                 );
               }
-              
-              // Tabloları yenile
-              await viewModel.refreshTablesDataSilently(
-                userToken: userToken,
-                compID: compID,
-              );
             } else {
               // Hata mesajını göster
               if (context.mounted) {
@@ -1140,11 +1192,21 @@ class TableCard extends StatelessWidget {
           ),
         );
         
-        // Tabloları yenile
-        await viewModel.refreshTablesDataSilently(
-          userToken: userToken,
-          compID: compID,
-        );
+        // Masalar sayfasına yönlendir
+        if (context.mounted) {
+          // ignore: use_build_context_synchronously
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TablesView(
+                userToken: userToken,
+                compID: compID,
+                title: 'Masalar',
+              ),
+            ),
+            (route) => false, // Tüm geçmiş sayfaları temizle
+          );
+        }
       } else {
         // Hata mesajını göster
         // ignore: use_build_context_synchronously
