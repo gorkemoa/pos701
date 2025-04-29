@@ -40,11 +40,11 @@ class TableCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   child: Text(
                     'Masa & Sipariş İşlemleri',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -153,8 +153,8 @@ class TableCard extends StatelessWidget {
                   onPressed: () {
                     Navigator.pop(bottomSheetContext);
                   },
-                  icon: const Icon(Icons.arrow_back, color: Colors.blue),
-                  label: const Text('Vazgeç', style: TextStyle(color: Colors.blue)),
+                  icon: const Icon(Icons.arrow_back, color: Colors.blue, size: 20),
+                  label: const Text('Vazgeç', style: TextStyle(color: Colors.blue, fontSize: 15)),
                 ),
               ],
             ),
@@ -190,9 +190,9 @@ class TableCard extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.payment, color: Colors.red),
-            SizedBox(width: 10),
-            Text('Ödeme Tipi Seçin'),
+            Icon(Icons.payment, color: Colors.red, size: 20),
+            SizedBox(width: 8),
+            Text('Ödeme Tipi Seçin', style: TextStyle(fontSize: 17)),
           ],
         ),
         content: SizedBox(
@@ -223,12 +223,12 @@ class TableCard extends StatelessWidget {
                       )
                     : Icon(Icons.payment, color: typeColor),
                 ),
-                title: Text(paymentType.typeName),
+                title: Text(paymentType.typeName, style: TextStyle(fontSize: 15)),
                 onTap: () {
                   selectedPaymentType = paymentType;
                   Navigator.of(dialogContext).pop();
                 },
-                trailing: Icon(Icons.chevron_right, color: typeColor),
+                trailing: Icon(Icons.chevron_right, color: typeColor, size: 20),
               );
             },
           ),
@@ -236,7 +236,7 @@ class TableCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('İptal'),
+            child: const Text('İptal', style: TextStyle(fontSize: 15)),
           ),
         ],
       ),
@@ -253,19 +253,19 @@ class TableCard extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.payment, color: Colors.red),
-            SizedBox(width: 10),
-            Text('${selectedPaymentType!.typeName} ile Ödeme'),
+            Icon(Icons.payment, color: Colors.red, size: 20),
+            SizedBox(width: 8),
+            Text('${selectedPaymentType!.typeName} ile Ödeme', style: TextStyle(fontSize: 17)),
           ],
         ),
         content: Text(
           '${table.tableName} masasının ${table.orderAmount} ₺ tutarındaki hesabı ${selectedPaymentType!.typeName} ile ödenecektir. Onaylıyor musunuz?',
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 15),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('İptal'),
+            child: const Text('İptal', style: TextStyle(fontSize: 15)),
             style: TextButton.styleFrom(
               foregroundColor: Colors.grey[700],
             ),
@@ -276,7 +276,7 @@ class TableCard extends StatelessWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Onayla'),
+            child: const Text('Onayla', style: TextStyle(fontSize: 15)),
           ),
         ],
       ),
@@ -299,8 +299,8 @@ class TableCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Ödeme işlemi gerçekleştiriliyor...'),
+              SizedBox(height: 12),
+              Text('Ödeme işlemi gerçekleştiriliyor...', style: TextStyle(fontSize: 15)),
             ],
           ),
         );
@@ -393,19 +393,19 @@ class TableCard extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.help_outline, color: Colors.orange),
-            SizedBox(width: 10),
-            Text('Masaları Ayır'),
+            Icon(Icons.help_outline, color: Colors.orange, size: 20),
+            SizedBox(width: 8),
+            Text('Masaları Ayır', style: TextStyle(fontSize: 17)),
           ],
         ),
         content: Text(
           'Bu işlem ${table.tableName} masasını ve bağlı masaları ayıracaktır. Devam etmek istiyor musunuz?',
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 15),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('İptal'),
+            child: const Text('İptal', style: TextStyle(fontSize: 15)),
             style: TextButton.styleFrom(
               foregroundColor: Colors.grey[700],
             ),
@@ -416,7 +416,7 @@ class TableCard extends StatelessWidget {
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Evet, Ayır'),
+            child: const Text('Evet, Ayır', style: TextStyle(fontSize: 15)),
           ),
         ],
       ),
@@ -439,8 +439,8 @@ class TableCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Masalar ayrılıyor...'),
+              SizedBox(height: 12),
+              Text('Masalar ayrılıyor...', style: TextStyle(fontSize: 15)),
             ],
           ),
         );
@@ -562,8 +562,8 @@ class TableCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Masa değiştiriliyor...'),
+                    SizedBox(height: 12),
+                    Text('Masa değiştiriliyor...', style: TextStyle(fontSize: 15)),
                   ],
                 ),
               );
@@ -662,9 +662,9 @@ class TableCard extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.receipt, color: Colors.blue),
-            SizedBox(width: 10),
-            Text('Adisyon Aktarım'),
+            Icon(Icons.receipt, color: Colors.blue, size: 20),
+            SizedBox(width: 8),
+            Text('Adisyon Aktarım', style: TextStyle(fontSize: 17)),
           ],
         ),
         content: SizedBox(
@@ -675,9 +675,9 @@ class TableCard extends StatelessWidget {
             children: [
               const Text(
                 'Adisyonu aktarmak istediğiniz hedef masayı seçin:',
-                style: TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 15),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               SizedBox(
                 height: 200,
                 child: ListView.builder(
@@ -686,28 +686,29 @@ class TableCard extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final targetTable = activeTables[index];
                     return ListTile(
-                      title: Text(targetTable.tableName),
-                      subtitle: Text('Sipariş: ${targetTable.orderAmount} ₺'),
+                      title: Text(targetTable.tableName, style: TextStyle(fontSize: 15)),
+                      subtitle: Text('Sipariş: ${targetTable.orderAmount} ₺', style: TextStyle(fontSize: 13)),
                       onTap: () async {
                         // Onay dialogu göster
                         final confirmTransfer = await showDialog<bool>(
                           context: dialogContext,
                           builder: (confirmContext) => AlertDialog(
-                            title: const Text('Onay'),
+                            title: const Text('Onay', style: TextStyle(fontSize: 17)),
                             content: Text(
                               '${table.tableName} masasının adisyonu ${targetTable.tableName} masasına aktarılacak. Onaylıyor musunuz?',
+                              style: TextStyle(fontSize: 15),
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.of(confirmContext).pop(false),
-                                child: const Text('İptal'),
+                                child: const Text('İptal', style: TextStyle(fontSize: 15)),
                               ),
                               ElevatedButton(
                                 onPressed: () => Navigator.of(confirmContext).pop(true),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue,
                                 ),
-                                child: const Text('Onayla'),
+                                child: const Text('Onayla', style: TextStyle(fontSize: 15)),
                               ),
                             ],
                           ),
@@ -743,8 +744,8 @@ class TableCard extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   CircularProgressIndicator(),
-                                  SizedBox(height: 16),
-                                  Text('Adisyon aktarılıyor...'),
+                                  SizedBox(height: 12),
+                                  Text('Adisyon aktarılıyor...', style: TextStyle(fontSize: 15)),
                                 ],
                               ),
                             );
@@ -840,7 +841,7 @@ class TableCard extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('İptal'),
+            child: const Text('İptal', style: TextStyle(fontSize: 15)),
           ),
         ],
       ),
@@ -892,8 +893,8 @@ class TableCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Masalar birleştiriliyor...'),
+                    SizedBox(height: 12),
+                    Text('Masalar birleştiriliyor...', style: TextStyle(fontSize: 15)),
                   ],
                 ),
               );
@@ -933,19 +934,20 @@ class TableCard extends StatelessWidget {
                         Icon(
                           Icons.check_circle,
                           color: Color(AppConstants.primaryColorValue),
+                          size: 20,
                         ),
-                        const SizedBox(width: 10),
-                        const Text('İşlem Başarılı'),
+                        const SizedBox(width: 8),
+                        const Text('İşlem Başarılı', style: TextStyle(fontSize: 17)),
                       ],
                     ),
                     content: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('${table.tableName} masası başarıyla birleştirildi.'),
-                        const SizedBox(height: 16),
+                        Text('${table.tableName} masası başarıyla birleştirildi.', style: TextStyle(fontSize: 15)),
+                        const SizedBox(height: 12),
                         const Text(
                           'Birleştirilen masalar sol üst köşedeki insan simgesiyle işaretlenmiştir.',
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                          style: TextStyle(fontSize: 13, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -957,7 +959,7 @@ class TableCard extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(AppConstants.primaryColorValue),
                         ),
-                        child: const Text('Tamam'),
+                        child: const Text('Tamam', style: TextStyle(fontSize: 15)),
                       ),
                     ],
                   ),
@@ -1041,9 +1043,9 @@ class TableCard extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.warning, color: Colors.red),
-            SizedBox(width: 10),
-            Text('Sipariş İptali'),
+            Icon(Icons.warning, color: Colors.red, size: 20),
+            SizedBox(width: 8),
+            Text('Sipariş İptali', style: TextStyle(fontSize: 17)),
           ],
         ),
         content: Column(
@@ -1051,31 +1053,32 @@ class TableCard extends StatelessWidget {
           children: [
             const Text(
               'Bu işlem siparişi iptal edecek ve masayı kapatacaktır. Devam etmek istiyor musunuz?',
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 15),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             TextField(
               controller: cancelDescController,
               decoration: const InputDecoration(
                 hintText: 'İptal nedeni (opsiyonel)',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.all(16),
+                contentPadding: EdgeInsets.all(12),
               ),
               maxLines: 2,
+              style: TextStyle(fontSize: 15),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Vazgeç'),
+            child: const Text('Vazgeç', style: TextStyle(fontSize: 15)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Siparişi İptal Et', style: TextStyle(color: Colors.white)),
+            child: const Text('Siparişi İptal Et', style: TextStyle(color: Colors.white, fontSize: 15)),
           ),
         ],
       ),
@@ -1097,8 +1100,8 @@ class TableCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Sipariş iptal ediliyor...'),
+              SizedBox(height: 12),
+              Text('Sipariş iptal ediliyor...', style: TextStyle(fontSize: 15)),
             ],
           ),
         );
@@ -1189,14 +1192,14 @@ class TableCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
         child: Row(
           children: [
-            Icon(icon, color: iconColor),
-            const SizedBox(width: 16),
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(width: 12),
             Text(
               text,
-              style: const TextStyle(fontSize: 16),
+              style: const TextStyle(fontSize: 15),
             ),
           ],
         ),
@@ -1206,7 +1209,7 @@ class TableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(8);
+    final borderRadius = BorderRadius.circular(12);
     final primaryColor = Color(AppConstants.primaryColorValue);
     
     return GestureDetector(
@@ -1237,25 +1240,31 @@ class TableCard extends StatelessWidget {
       },
       onLongPress: table.isActive ? () => _showTableOptions(context) : null,
       child: Container(
-        margin: const EdgeInsets.all(4),
+        margin: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: borderRadius,
           border: Border.all(
             color: table.isActive 
-                ? primaryColor 
-                : primaryColor,
-            width: table.isActive ? 2 : 1,
+                ? primaryColor.withOpacity(0.8)
+                : Colors.grey.shade300,
+            width: table.isActive ? 1.5 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
-        height: 100, // Sabit yükseklik
         child: Stack(
-          fit: StackFit.expand,
           children: [
             // Ana içerik
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(10.0),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1263,9 +1272,10 @@ class TableCard extends StatelessWidget {
                   children: [
                     Text(
                       table.tableName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: table.isActive ? Colors.black87 : Colors.grey.shade700,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -1273,10 +1283,11 @@ class TableCard extends StatelessWidget {
                     ),
                     if (table.isActive && table.orderAmount.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: 5),
                         child: Text(
                           '₺${table.orderAmount}',
                           style: TextStyle(
+                            fontSize: 14,
                             color: primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1292,58 +1303,46 @@ class TableCard extends StatelessWidget {
             // Aktif masa için sağ üst köşede menü ikonu
             if (table.isActive)
               Positioned(
-                top: 0,
-                right: 0,
+                top: 2,
+                right: 2,
                 child: IconButton(
-                  icon: const Icon(Icons.more_vert, size: 20),
+                  icon: Icon(Icons.more_vert, size: 18, color: Colors.grey.shade600),
                   padding: EdgeInsets.zero,
-                  constraints: BoxConstraints.tight(const Size(32, 32)),
+                  constraints: BoxConstraints.tight(const Size(28, 28)),
                   onPressed: () => _showTableOptions(context),
-                ),
-              ),
-              
-            // Birleştirilmiş masa için arka plan overlay
-            if (table.isMerged)
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: true,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.15),
-                      borderRadius: borderRadius,
-                    ),
-                  ),
+                  tooltip: 'Masa İşlemleri',
                 ),
               ),
             
-            // Birleştirilmiş masa ikonu - daha belirgin ve ortada
+            // Birleştirilmiş masa için arka plan overlay kaldırıldı, yerine ikon kullanılacak
+            // if (table.isMerged)
+            //   Positioned.fill(
+            //     child: IgnorePointer(
+            //       ignoring: true,
+            //       child: Container(
+            //         decoration: BoxDecoration(
+            //           color: primaryColor.withOpacity(0.10),
+            //           borderRadius: borderRadius,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            
+            // Birleştirilmiş masa ikonu - sol üstte daha küçük
             if (table.isMerged)
               Positioned(
-                top: 3,
-                left: 3,
+                top: 4,
+                left: 4,
                 child: Container(
-                  padding: const EdgeInsets.all(3),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
-                    color: primaryColor,
+                    color: primaryColor.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.people_alt,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Birleşik',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  child: const Icon(
+                    Icons.people_alt,
+                    color: Colors.white,
+                    size: 12,
                   ),
                 ),
               ),

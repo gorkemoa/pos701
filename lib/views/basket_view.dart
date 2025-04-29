@@ -402,7 +402,12 @@ class _BasketViewState extends State<BasketView> {
             },
           ),
           actions: [
-            IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+            IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                _showMenuDialog();
+              }
+            ),
           ],
         ),
         body: _isLoading
@@ -988,7 +993,6 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
-
   /// Seçilen ödeme tipi ile ödeme işlemini gerçekleştir
   Future<void> _processPayment(PaymentType paymentType) async {
     if (_userToken == null || _compID == null || widget.orderID == null) {
@@ -1026,7 +1030,7 @@ class _BasketViewState extends State<BasketView> {
       ),
     );
   }
-  
+
   // Sipariş detaylarını yeniden yükle (Ödeme sonrası)
   Future<void> _refreshSiparisDetayi() async {
     if (_userToken == null || _compID == null || widget.orderID == null) {
@@ -1082,5 +1086,396 @@ class _BasketViewState extends State<BasketView> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  // Menü dialogu
+  void _showMenuDialog() {
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final bool showKuverGarsoniye = userViewModel.userInfo?.company?.compKuverWaiter ?? false;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(0),
+        ),
+        insetPadding: EdgeInsets.zero,
+        alignment: Alignment.topRight,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.7,
+          height: MediaQuery.of(context).size.height,
+          color: Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                color: Color(AppConstants.primaryColorValue),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const Text(
+                      'Menü',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildMenuItem(
+                      icon: Icons.description,
+                      title: 'NOT',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _showOrderDescDialog();
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.people,
+                      title: 'Misafir Sayısı',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        _showGuestCountDialog();
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.person,
+                      title: 'Müşteri',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Müşteri işlemi - Sepette müşteri ekleme özelliği yoksa burada uyarı gösterilebilir
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Müşteri ekleme işlemi bu ekrandan yapılamaz'))
+                        );
+                      },
+                    ),
+                    
+                    if (showKuverGarsoniye) const Divider(height: 1),
+                    
+                    if (showKuverGarsoniye)
+                      _buildMenuItem(
+                        icon: Icons.attach_money,
+                        title: 'Kuver Ücreti Ekle',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          // Kuver ücreti işlemi
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Kuver ücreti ekleme özelliği henüz aktif değil'))
+                          );
+                        },
+                      ),
+                    
+                    if (showKuverGarsoniye) const Divider(height: 1),
+                    
+                    if (showKuverGarsoniye)
+                      _buildMenuItem(
+                        icon: Icons.monetization_on,
+                        title: 'Garsoniye Ücreti Ekle',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          // Garsoniye ücreti işlemi
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Garsoniye ücreti ekleme özelliği henüz aktif değil'))
+                          );
+                        },
+                      ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.print,
+                      title: 'Yazdır',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Yazdır işlemi
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Yazdırma işlemi başlatılıyor...'))
+                        );
+                      },
+                    ),
+                    
+                    const Divider(height: 1),
+                    
+                    _buildMenuItem(
+                      icon: Icons.qr_code,
+                      title: 'Barkod',
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        // Barkod işlemi
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Barkod görüntüleme özelliği henüz aktif değil'))
+                        );
+                      },
+                    ),
+                    
+                    if (widget.orderID != null) ...[
+                      const Divider(height: 1),
+                      _buildMenuItem(
+                        icon: Icons.close,
+                        title: 'Sipariş İptal',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _showCancelOrderDialog();
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title, style: const TextStyle(fontSize: 14)),
+      onTap: onTap,
+    );
+  }
+
+  // Sipariş açıklaması ekleme diyaloğu
+  void _showOrderDescDialog() {
+    final TextEditingController noteController = TextEditingController(text: _orderDesc);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sipariş Notu', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: noteController,
+              decoration: const InputDecoration(
+                hintText: 'Sipariş için not ekleyin',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(16),
+              ),
+              maxLines: 4,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Bu not sipariş ile ilişkilendirilecek ve mutfağa iletilecektir.',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _orderDesc = noteController.text.trim();
+              });
+              Navigator.of(context).pop();
+              
+              if (_orderDesc.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sipariş notu kaydedildi'),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(AppConstants.primaryColorValue),
+            ),
+            child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Misafir sayısı seçme diyaloğu
+  void _showGuestCountDialog() {
+    int tempGuestCount = _orderGuest;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Misafir Sayısı', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove_circle, color: Color(AppConstants.primaryColorValue)),
+                    onPressed: () {
+                      if (tempGuestCount > 1) {
+                        setState(() {
+                          tempGuestCount--;
+                        });
+                      }
+                    },
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$tempGuestCount',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_circle, color: Color(AppConstants.primaryColorValue)),
+                    onPressed: () {
+                      setState(() {
+                        tempGuestCount++;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Masadaki misafir sayısını belirleyin',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                this.setState(() {
+                  _orderGuest = tempGuestCount;
+                });
+                Navigator.of(context).pop();
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Misafir sayısı: $_orderGuest'),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(AppConstants.primaryColorValue),
+              ),
+              child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Sipariş iptali için onay diyaloğu
+  void _showCancelOrderDialog() {
+    final TextEditingController cancelDescController = TextEditingController();
+    
+    // Sipariş ID kontrolü
+    if (widget.orderID == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İptal edilecek aktif bir sipariş bulunmuyor.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Siparişi İptal Et', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Bu işlem mevcut siparişi iptal edecektir. Devam etmek istiyor musunuz?',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: cancelDescController,
+              decoration: const InputDecoration(
+                hintText: 'İptal nedeni (opsiyonel)',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(16),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              
+              // İptal işlemi gerçeği burada yapılabilir veya sadece bildirim gösterilebilir
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Sipariş iptal edildi: ${cancelDescController.text}'),
+                  backgroundColor: Colors.red,
+                )
+              );
+              
+              // Ana sayfaya dön
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Siparişi İptal Et', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 } 
