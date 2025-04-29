@@ -14,6 +14,7 @@ import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/views/payment_view.dart';
 import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;
+import 'package:pos701/views/tables_view.dart';
 
 class BasketView extends StatefulWidget {
   final String tableName;
@@ -330,8 +331,18 @@ class _BasketViewState extends State<BasketView> {
         // Sepeti temizle
         basketViewModel.clearBasket();
         
-        // Ana sayfaya dön
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Ana sayfaya dönmek yerine, TablesView'a yönlendir
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TablesView(
+              userToken: _userToken!,
+              compID: _compID!,
+              title: 'Masalar',
+            ),
+          ),
+          (route) => false, // Tüm geçmiş sayfaları temizle
+        );
       } else {
         setState(() {
           _errorMessage = orderViewModel.errorMessage ?? 'Sipariş oluşturulamadı';
