@@ -107,8 +107,8 @@ class _HomeViewState extends State<HomeView> {
                         const SizedBox(height: 24),
                         
                         Container(
-                          height: 350,
-                          padding: const EdgeInsets.all(24),
+                          height: 450,
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
                           margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -125,27 +125,35 @@ class _HomeViewState extends State<HomeView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const Text(
+                                'Günlük Satış Grafiği',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               Row(
                                 children: [
                                   Container(
-                                    width: 18,
-                                    height: 18,
+                                    width: 16,
+                                    height: 16,
                                     decoration: BoxDecoration(
                                       color: Color(AppConstants.chartLineColor),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 8),
                                   const Text(
                                     'Bugün',
                                     style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.normal,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 40),
                               Expanded(
                                 child: _buildSalesChart(statisticsViewModel),
                               ),
@@ -154,7 +162,7 @@ class _HomeViewState extends State<HomeView> {
                         ),
                         
                         Container(
-                          height: 350,
+                          height: 450,
                           padding: const EdgeInsets.all(24),
                           margin: const EdgeInsets.only(bottom: 24),
                           decoration: BoxDecoration(
@@ -206,7 +214,7 @@ class _HomeViewState extends State<HomeView> {
           'Veri yok',
           style: TextStyle(
             color: Colors.grey,
-            fontSize: 16,
+            fontSize: 14,
           ),
         ),
       );
@@ -236,7 +244,7 @@ class _HomeViewState extends State<HomeView> {
       
       // Grafik daha iyi görünsün diye biraz boşluk ekle
       minY = minY > 0 ? 0 : minY * 1.1;
-      maxY = maxY * 1.1;
+      maxY = maxY * 1.2; // Üst boşluğu artır
       
       // Eğer min ve max eşitse, görsel aralık oluştur
       if (minY == maxY) {
@@ -249,113 +257,159 @@ class _HomeViewState extends State<HomeView> {
     }
     
     // Interval değerinin 0 olmamasını sağla
-    double horizontalInterval = maxY > 5 ? maxY / 5 : 1;
+    double horizontalInterval = maxY > 5 ? maxY / 4 : 1; // Yatay çizgi sayısını azalt
     if (horizontalInterval <= 0) {
       horizontalInterval = 1.0; // Minimum interval değeri
     }
     
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: true,
-          horizontalInterval: horizontalInterval,
-          verticalInterval: 2,
-          getDrawingHorizontalLine: (value) {
-            return FlLine(
-              color: Colors.grey.shade200,
-              strokeWidth: 1,
-            );
-          },
-          getDrawingVerticalLine: (value) {
-            return FlLine(
-              color: Colors.grey.shade200,
-              strokeWidth: 1,
-            );
-          },
-        ),
-        titlesData: FlTitlesData(
-          show: true,
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              interval: 2,
-              getTitlesWidget: (value, meta) {
-                const style = TextStyle(
-                  color: Color(0xff72719b),
-                  fontWeight: FontWeight.normal,
-                  fontSize: 12,
-                );
-                String text;
-                if (value % 2 == 0) {
-                  text = '${value.toInt().toString()}:00';
-                } else {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: LineChart(
+        LineChartData(
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              tooltipBgColor: Colors.blueGrey.shade800,
+              tooltipRoundedRadius: 8,
+              tooltipPadding: const EdgeInsets.all(8),
+              getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                return touchedSpots.map((LineBarSpot touchedSpot) {
+                  final int hour = touchedSpot.x.toInt();
+                  final double amount = touchedSpot.y;
+                  return LineTooltipItem(
+                    '$hour:00\n${amount.toStringAsFixed(1)} TL',
+                    const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 9,
+                    ),
+                  );
+                }).toList();
+              },
+            ),
+            handleBuiltInTouches: true,
+          ),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: true,
+            horizontalInterval: horizontalInterval,
+            verticalInterval: 4, // Dikey ızgaraları seyrekleştir
+            getDrawingHorizontalLine: (value) {
+              return FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 0.5, // İnce çizgi
+                dashArray: [5, 5], // Kesikli çizgi
+              );
+            },
+            getDrawingVerticalLine: (value) {
+              return FlLine(
+                color: Colors.grey.shade200,
+                strokeWidth: 0.5, // İnce çizgi
+              );
+            },
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 24, // Boyutu azalt
+                interval: 4, // Sadece her 4 saatte bir göster
+                getTitlesWidget: (value, meta) {
+                  if (value % 4 == 0 && value <= 24) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        '${value.toInt()}:00',
+                        style: const TextStyle(
+                          color: Color(0xff72719b),
+                          fontWeight: FontWeight.normal,
+                          fontSize: 9, // Font boyutu küçültüldü
+                        ),
+                      ),
+                    );
+                  }
                   return const SizedBox.shrink();
-                }
-                return Padding(
-                  padding: const EdgeInsets.only(top: 10.0),
-                  child: Text(text, style: style),
-                );
-              },
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: horizontalInterval,
+                reservedSize: 40, // Boyutu azalt
+                getTitlesWidget: (value, meta) {
+                  String formattedValue;
+                  if (value >= 1000) {
+                    formattedValue = '${(value / 1000).toStringAsFixed(1)}K';
+                  } else {
+                    formattedValue = value.toInt().toString();
+                  }
+                  
+                  return Text(
+                    formattedValue, 
+                    style: const TextStyle(
+                      color: Color(0xff72719b),
+                      fontWeight: FontWeight.normal,
+                      fontSize: 9, // Font boyutu küçültüldü
+                    ),
+                  );
+                },
+              ),
+            ),
+            rightTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
             ),
           ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: horizontalInterval,
-              reservedSize: 50,
-              getTitlesWidget: (value, meta) {
-                return Text(
-                  '${value.toStringAsFixed(0)}', 
-                  style: const TextStyle(
-                    color: Color(0xff72719b),
-                    fontWeight: FontWeight.normal,
-                    fontSize: 12,
-                  ),
-                );
-              },
+          borderData: FlBorderData(
+            show: true,
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.shade300, width: 0.5),
+              left: BorderSide(color: Colors.grey.shade300, width: 0.5),
+              right: BorderSide.none,
+              top: BorderSide.none,
             ),
           ),
-          rightTitles: AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
+          minX: 0,
+          maxX: 24,
+          minY: minY,
+          maxY: maxY,
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              curveSmoothness: 0.3, // Eğriyi biraz daha yumuşat
+              color: Color(AppConstants.chartLineColor),
+              barWidth: 3, // Çizgi inceltildi
+              isStrokeCapRound: true,
+              dotData: FlDotData(
+                show: false, // Noktaları kaldır, sadece çizgi göster
+                getDotPainter: (spot, percent, barData, index) {
+                  return FlDotCirclePainter(
+                    radius: 3, // Nokta boyutu küçültüldü
+                    color: Color(AppConstants.chartLineColor),
+                    strokeWidth: 1, // Kenar çizgisi inceltildi
+                    strokeColor: Colors.white,
+                  );
+                },
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                color: Color(AppConstants.chartLineColor).withOpacity(0.1), // Daha hafif dolgu
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(AppConstants.chartLineColor).withOpacity(0.2),
+                    Color(AppConstants.chartLineColor).withOpacity(0.05),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(color: const Color(0xffeceff1)),
-        ),
-        minX: 0,
-        maxX: 24,
-        minY: minY,
-        maxY: maxY,
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Color(AppConstants.chartLineColor),
-            barWidth: 4,
-            isStrokeCapRound: true,
-            dotData: FlDotData(
-              show: true,
-              getDotPainter: (spot, percent, barData, index) {
-                return FlDotCirclePainter(
-                  radius: 4,
-                  color: Color(AppConstants.chartLineColor),
-                  strokeWidth: 2,
-                  strokeColor: Colors.white,
-                );
-              },
-            ),
-            belowBarData: BarAreaData(
-              show: true,
-              color: Color(AppConstants.chartLineColor).withOpacity(0.15),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -369,7 +423,7 @@ class _HomeViewState extends State<HomeView> {
           'Veri yok',
           style: TextStyle(
             color: Colors.grey,
-            fontSize: 16,
+            fontSize: 14,
           ),
         ),
       );
@@ -406,17 +460,18 @@ class _HomeViewState extends State<HomeView> {
         const Text(
           'Ödeme Tipleri',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 40),
         
         // Grafik
         Expanded(
           child: BarChart(
             BarChartData(
-              alignment: BarChartAlignment.center,
+              alignment: BarChartAlignment.spaceBetween,
+              groupsSpace: 25,
               maxY: maxY,
               barTouchData: BarTouchData(
                 enabled: true,
@@ -434,7 +489,7 @@ class _HomeViewState extends State<HomeView> {
                       const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 10,
                       ),
                     );
                   },
@@ -448,15 +503,15 @@ class _HomeViewState extends State<HomeView> {
                     getTitlesWidget: (value, meta) {
                       if (value.toInt() >= 0 && value.toInt() < payments.length) {
                         return Padding(
-                          padding: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.only(top: 15),
                           child: Text(
                             payments[value.toInt()].type ?? '',
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF444444),
                             ),
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                           ),
@@ -464,7 +519,7 @@ class _HomeViewState extends State<HomeView> {
                       }
                       return const SizedBox.shrink();
                     },
-                    reservedSize: 40,
+                    reservedSize: 30,
                   ),
                 ),
                 leftTitles: AxisTitles(
@@ -480,12 +535,15 @@ class _HomeViewState extends State<HomeView> {
                         formattedValue = value.toInt().toString();
                       }
                       
-                      return Text(
-                        formattedValue,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF666666),
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: Text(
+                          formattedValue,
+                          style: const TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF666666),
+                          ),
                         ),
                       );
                     },
@@ -525,7 +583,7 @@ class _HomeViewState extends State<HomeView> {
                     ? _hexToColor(payment.color!)
                     : Colors.pink.shade300;
                 
-                final double barWidth = payments.length > 3 ? 22 : 35;
+                final double barWidth = payments.length > 4 ? 12 : payments.length > 2 ? 16 : 22;
 
                 return BarChartGroupData(
                   x: index,
@@ -540,8 +598,8 @@ class _HomeViewState extends State<HomeView> {
                         color: Colors.grey.shade100,
                       ),
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(4),
                       ),
                     ),
                   ],
@@ -551,72 +609,93 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         
-        // Tutarlar ve yüzdeler
+        // Sadeleştirilmiş tutarlar ve yüzdeler
         Container(
           margin: const EdgeInsets.only(top: 20),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: Colors.grey.shade200),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: payments.map((payment) {
-              final Color color = payment.color != null && payment.color!.startsWith('#')
-                  ? _hexToColor(payment.color!)
-                  : Colors.pink.shade300;
-              
-              final double percentage = totalAmount > 0 
-                  ? ((payment.amount ?? 0.0) / totalAmount * 100)
-                  : 0.0;
-              
-              return Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Column(
+            children: [
+              // Ödeme tiplerini 2 veya 3'lü gruplarda göster
+              for (int i = 0; i < payments.length; i += 3)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6.0),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(4),
+                      for (int j = i; j < i + 3 && j < payments.length; j++)
+                        Expanded(
+                          child: _buildPaymentLegendItem(payments[j], totalAmount),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              payment.type ?? 'Bilinmeyen',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF333333),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              '${payment.amount?.toStringAsFixed(2)} TL (%${percentage.toStringAsFixed(1)})',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF666666),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
+                      // Boş alan ekleme (eğer son grupta 3'ten az öğe varsa)
+                      if (i + 3 > payments.length)
+                        for (int k = 0; k < 3 - (payments.length - i); k++)
+                          const Spacer(),
                     ],
                   ),
                 ),
-              );
-            }).toList(),
+            ],
           ),
         ),
       ],
+    );
+  }
+  
+  // Ödeme açıklama öğesi
+  Widget _buildPaymentLegendItem(PaymentData payment, double totalAmount) {
+    final Color color = payment.color != null && payment.color!.startsWith('#')
+        ? _hexToColor(payment.color!)
+        : Colors.pink.shade300;
+    
+    final double percentage = totalAmount > 0 
+        ? ((payment.amount ?? 0.0) / totalAmount * 100)
+        : 0.0;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  payment.type ?? 'Bilinmeyen',
+                  style: const TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF333333),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                Text(
+                  '${payment.amount?.toStringAsFixed(0)} ₺ (%${percentage.toStringAsFixed(0)})',
+                  style: const TextStyle(
+                    fontSize: 7,
+                    color: Color(0xFF666666),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
   
@@ -629,10 +708,10 @@ class _HomeViewState extends State<HomeView> {
     if (totalTables <= 0) {
       return const Center(
         child: Text(
-          'Masa verisi yok',
+          'Veri yok',
           style: TextStyle(
             color: Colors.grey,
-            fontSize: 16,
+            fontSize: 14,
           ),
         ),
       );
@@ -652,7 +731,7 @@ class _HomeViewState extends State<HomeView> {
         const Text(
           'Masa Doluluk Oranı',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold
           ),
         ),
@@ -701,7 +780,7 @@ class _HomeViewState extends State<HomeView> {
                           Text(
                             '${occupancyPercentage.toStringAsFixed(1)}%',
                             style: const TextStyle(
-                              fontSize: 24, // Font boyutu küçültüldü
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF333333),
                             ),
@@ -710,7 +789,7 @@ class _HomeViewState extends State<HomeView> {
                           const Text(
                             'Doluluk',
                             style: TextStyle(
-                              fontSize: 14, // Font boyutu küçültüldü
+                              fontSize: 12,
                               color: Color(0xFF666666),
                             ),
                           ),
@@ -776,7 +855,7 @@ class _HomeViewState extends State<HomeView> {
                                   const Text(
                                     'Toplam Masalar',
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       color: Color(0xFF666666),
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -785,7 +864,7 @@ class _HomeViewState extends State<HomeView> {
                                   Text(
                                     '$totalTables masa',
                                     style: const TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF333333),
                                     ),
@@ -834,7 +913,7 @@ class _HomeViewState extends State<HomeView> {
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   color: Color(0xFF666666),
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -843,7 +922,7 @@ class _HomeViewState extends State<HomeView> {
               Text(
                 '$count masa (${percentage.toStringAsFixed(1)}%)',
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF333333),
                 ),
