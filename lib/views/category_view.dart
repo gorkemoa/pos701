@@ -111,13 +111,16 @@ class _CategoryViewState extends State<CategoryView> {
         appBar: AppBar(
           backgroundColor: Color(AppConstants.primaryColorValue),
           title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(widget.tableName.toUpperCase(), 
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
               Text(widget.orderID != null ? "Sipariş Düzenle" : "Yeni sipariş", 
                 style: const TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -144,6 +147,7 @@ class _CategoryViewState extends State<CategoryView> {
                 decoration: InputDecoration(
                   hintText: 'Ürün arayın...',
                   prefixIcon: Icon(Icons.search),
+                  hintStyle: TextStyle(fontSize: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(color: Colors.grey.shade300),
@@ -466,7 +470,7 @@ class _CategoryViewState extends State<CategoryView> {
             category.catName.toUpperCase(),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
@@ -507,7 +511,7 @@ class _CategoryViewState extends State<CategoryView> {
                         child: Text(
                           product.proName.toUpperCase(),
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                           textAlign: TextAlign.center,
@@ -526,7 +530,7 @@ class _CategoryViewState extends State<CategoryView> {
                       child: Text(
                         '₺${product.proPrice.replaceAll(" TL", "")}',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Color(AppConstants.primaryColorValue),
                         ),

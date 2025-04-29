@@ -36,8 +36,8 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
     super.initState();
     _loadData();
     
-    // 20 saniyede bir verileri otomatik yenile
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (timer) {
+    // 10 saniyede bir masa aktiflik durumlarını kontrol et
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         _refreshDataSilently();
       }
@@ -48,7 +48,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
     if (!mounted) return;
     
     // Arka planda veri yenileme - gösterge olmadan
-    await _viewModel.refreshTablesDataSilently(
+    await _viewModel.refreshTableActiveStatusOnly(
       userToken: widget.userToken,
       compID: widget.compID,
     );
