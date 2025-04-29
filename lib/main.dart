@@ -19,13 +19,34 @@ import 'package:pos701/views/basket_view.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/customer_viewmodel.dart';
 import 'package:pos701/services/customer_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:pos701/services/firebase_messaging_service.dart';
+import 'package:pos701/viewmodels/notification_viewmodel.dart';
+import 'package:pos701/firebase_options.dart';
 
-void main() {
+// Uygulama başlatıldı mı kontrolü için global değişken
+bool _isFirebaseInitialized = false;
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   final logger = AppLogger();
   logger.i('Uygulama başlatılıyor');
   logger.i('API Base URL: ${AppConstants.baseUrl}');
+  
+  // Firebase'i başlat
+  await _initializeFirebase(logger);
+  
+  // Firebase Messaging servisini oluştur
+  final firebaseMessagingService = FirebaseMessagingService();
+  
+  // Firebase Messaging servisini başlat
+  try {
+    await firebaseMessagingService.initialize();
+    logger.i('Firebase Messaging servisi başarıyla başlatıldı');
+  } catch (e) {
+    logger.e('Firebase Messaging servisi başlatılamadı: $e');
+  }
   
   runApp(
     MultiProvider(
@@ -72,6 +93,22 @@ void main() {
         ),
         ChangeNotifierProvider<CustomerViewModel>(
           create: (_) => CustomerViewModel(customerService: CustomerService()),
+        ),
+        // Firebase başlatma durumunu provider olarak ekle
+        Provider<bool>(
+          create: (_) => _isFirebaseInitialized,
+        ),
+        // Firebase Messaging servisini provider olarak ekle
+        Provider<FirebaseMessagingService>(
+          create: (_) => firebaseMessagingService,
+          dispose: (_, service) => service.dispose(),
+        ),
+        // Notification ViewModel ekle
+        ChangeNotifierProxyProvider<FirebaseMessagingService, NotificationViewModel>(
+          create: (context) => NotificationViewModel(
+            Provider.of<FirebaseMessagingService>(context, listen: false),
+          ),
+          update: (_, messagingService, previous) => previous ?? NotificationViewModel(messagingService),
         ),
       ],
       child: MaterialApp(
@@ -121,6 +158,36 @@ void main() {
       ),
     ),
   );
+}
+
+/// Firebase başlatma işlemi
+Future<void> _initializeFirebase(AppLogger logger) async {
+  if (_isFirebaseInitialized) {
+    logger.i('Firebase zaten başlatılmış durumda');
+    return;
+  }
+
+  try {
+    // Firebase'i başlat
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    _isFirebaseInitialized = true;
+    logger.i('Firebase başarıyla başlatıldı');
+  } catch (e) {
+    logger.e('Firebase başlatılamadı: $e');
+    _isFirebaseInitialized = false;
+    // Hata durumunda tekrar deneme mekanizması eklenebilir
+  }
+}
+
+// Firebase'i başlatma yardımcı fonksiyonu - bu diğer sınıflardan çağrılabilir
+Future<bool> ensureFirebaseInitialized() async {
+  if (_isFirebaseInitialized) return true;
+  
+  final logger = AppLogger();
+  await _initializeFirebase(logger);
+  return _isFirebaseInitialized;
 }
 
 Future<bool> _checkIfLoggedIn(AuthService authService) async {

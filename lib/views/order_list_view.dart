@@ -4,6 +4,9 @@ import 'package:pos701/viewmodels/order_list_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/models/order_model.dart';
 import 'package:pos701/widgets/app_drawer.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:pos701/utils/app_logger.dart';
+import 'package:pos701/main.dart' as app;
 
 class OrderListView extends StatefulWidget {
   final String userToken;
@@ -20,7 +23,8 @@ class OrderListView extends StatefulWidget {
 }
 
 class _OrderListViewState extends State<OrderListView> with SingleTickerProviderStateMixin {
-  final OrderListViewModel _viewModel = OrderListViewModel();
+  late OrderListViewModel _viewModel = OrderListViewModel();
+  final AppLogger _logger = AppLogger();
   late TabController _tabController;
   final List<Tab> _tabs = [
     const Tab(text: 'Tümü'),
@@ -32,7 +36,24 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _ensureFirebaseInitialized();
     _loadData();
+  }
+
+  Future<void> _ensureFirebaseInitialized() async {
+    // Global fonksiyonu kullanarak Firebase kontrolü yap
+    final bool isInitialized = await app.ensureFirebaseInitialized();
+    if (!isInitialized) {
+      _logger.e('Firebase başlatılamadı, bazı özellikler çalışmayabilir');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bildirim servisi başlatılamadı. Bazı özellikler çalışmayabilir.'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _loadData() async {

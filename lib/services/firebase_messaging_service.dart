@@ -7,11 +7,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pos701/utils/app_logger.dart';
+import 'package:pos701/main.dart';
+import 'package:pos701/firebase_options.dart';
 
 /// Arka planda mesaj alındığında çalışacak fonksiyon
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  // Arka planda çalıştığımız için Firebase'in başlatıldığından emin olalım
+  await ensureFirebaseInitialized();
   final logger = AppLogger();
   logger.i('Arka planda mesaj alındı: ${message.messageId}');
 }
@@ -34,6 +37,12 @@ class FirebaseMessagingService {
   /// Firebase mesajlaşma servisini başlat
   Future<void> initialize() async {
     _logger.i('Firebase Messaging servisi başlatılıyor...');
+    
+    // Firebase'in başlatıldığından emin ol
+    if (!await ensureFirebaseInitialized()) {
+      _logger.e('Firebase başlatılamadı, mesajlaşma servisi başlatılamıyor');
+      throw Exception('Firebase başlatılamadı');
+    }
     
     // Arka plan mesaj işleyicisini ayarla
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -197,19 +206,56 @@ class FirebaseMessagingService {
   void _setupTokenHandlers() {
     _logger.d('Token işleyicileri ayarlanıyor...');
     
-    // Token al
-    _messaging.getToken().then((String? token) {
-      if (token != null) {
-        _logger.i('FCM Token alındı: $token');
-        // Bu token'ı backend'e kaydetme işlemi burada yapılabilir
+    // Firebase'in düzgün başlatıldığından emin ol
+    ensureFirebaseInitialized().then((bool initialized) {
+      if (!initialized) {
+        _logger.e('Firebase başlatılmadığı için token işlemleri yapılamıyor');
+        return;
       }
+      
+      // Güvenli token alma işlemi
+      _getTokenSafely();
+      
+      // Token güncellendiğinde dinleyici
+      _setupTokenRefreshListener();
+    }).catchError((error) {
+      _logger.e('Firebase başlatma kontrolü sırasında hata: $error');
     });
-
-    // Token güncellendiğinde
-    _messaging.onTokenRefresh.listen((String token) {
-      _logger.i('FCM Token güncellendi: $token');
-      // Bu token'ı backend'e güncelleme işlemi burada yapılabilir
-    });
+  }
+  
+  /// Güvenli token alma işlemi
+  void _getTokenSafely() {
+    try {
+      _messaging.getToken().then((String? token) {
+        if (token != null) {
+          _logger.i('FCM Token alındı: $token');
+          // Bu token'ı backend'e kaydetme işlemi burada yapılabilir
+        } else {
+          _logger.w('FCM Token null olarak alındı');
+        }
+      }).catchError((error) {
+        _logger.e('FCM Token alınamadı: $error');
+      });
+    } catch (e) {
+      _logger.e('Token alma sırasında beklenmeyen hata: $e');
+    }
+  }
+  
+  /// Token yenileme dinleyicisini ayarla
+  void _setupTokenRefreshListener() {
+    try {
+      _messaging.onTokenRefresh.listen(
+        (String token) {
+          _logger.i('FCM Token güncellendi: $token');
+          // Bu token'ı backend'e güncelleme işlemi burada yapılabilir
+        },
+        onError: (error) {
+          _logger.e('FCM Token güncelleme dinleyicisi hatası: $error');
+        },
+      );
+    } catch (e) {
+      _logger.e('Token yenileme dinleyicisi ayarlanırken hata: $e');
+    }
   }
 
   /// Belirli bir konuya abone ol
