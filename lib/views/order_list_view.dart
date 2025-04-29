@@ -67,7 +67,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
         builder: (context, viewModel, _) {
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Sipariş Listesi'),
+              title: const Text('Sipariş Listesi', style: TextStyle(color: Colors.white)),
               backgroundColor: Color(AppConstants.primaryColorValue),
               bottom: TabBar(
                 controller: _tabController,
@@ -75,8 +75,10 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                 indicatorColor: Colors.white,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white70,
+                
                 onTap: (index) {
                   setState(() {});
+
                 },
               ),
             ),
@@ -229,130 +231,175 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     }
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(1),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  order.orderName,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    order.orderStatus,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
+            Container(
+              width: 6,
+              color: statusColor,
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Text(
+                              order.orderName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        _buildStatusBadge(order.orderStatus, statusColor),
+                      ],
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.receipt, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  'Sipariş Kodu: ${order.orderCode}',
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.person, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  'Garson: ${order.orderUserName}',
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  'Tarih: ${order.orderDate}',
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  order.orderAmount,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                if (order.orderPayment.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 16),
+                    
+                    _buildDetailRow(Icons.receipt_outlined, 'Sipariş Kodu: ${order.orderCode}'),
+                    const SizedBox(height: 8),
+                    _buildDetailRow(Icons.person_outline, 'Garson: ${order.orderUserName}'),
+                    const SizedBox(height: 8),
+                    _buildDetailRow(Icons.access_time, 'Tarih: ${order.orderDate}'),
+                    
+                    const Divider(height: 24, thickness: 0.5, color: Colors.black12),
+                    
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          order.orderAmount,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Color(AppConstants.primaryColorValue).withOpacity(0.9),
+                          ),
+                        ),
+                        if (order.orderPayment.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              order.orderPayment,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    child: Text(
-                      order.orderPayment,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black87,
+                    
+                    if (order.payments.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Ödemeler:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                    ),
-                  ),
-              ],
-            ),
-            if (order.payments.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'Ödemeler:',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                      const SizedBox(height: 5),
+                      ...order.payments.map((payment) => Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '• ${payment.payType}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      )),
+                    ],
+                  ],
                 ),
               ),
-              ...order.payments.map((payment) => Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text('• ${payment.payType}'),
-              )),
-            ],
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status, Color color) {
+    IconData iconData;
+    switch (status.toLowerCase()) {
+      case 'hazır':
+        iconData = Icons.check_circle_outline;
+        break;
+      case 'tamamlandı':
+        iconData = Icons.task_alt;
+        break;
+      default:
+        iconData = Icons.hourglass_empty;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: color.withOpacity(0.2), width: 1)
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(iconData, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: Colors.grey.shade500),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 11,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 } 
