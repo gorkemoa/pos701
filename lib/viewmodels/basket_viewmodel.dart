@@ -117,6 +117,12 @@ class BasketViewModel extends ChangeNotifier {
   void clearBasket() {
     debugPrint('🧹 [BASKET_VM] Sepet temizleme başlatıldı. Ürün sayısı: ${_basket.items.length}');
     
+    // Sepet zaten boşsa bildirim gönderme
+    if (_basket.items.isEmpty && _orderAmount == 0.0 && _basket.discount == 0.0 && _basket.orderPayAmount == 0.0) {
+      debugPrint('🧹 [BASKET_VM] Sepet zaten boş, işlem yapılmadı.');
+      return;
+    }
+    
     // Basket modeli içindeki clear metodunu çağır
     _basket.clear();
     
@@ -125,7 +131,12 @@ class BasketViewModel extends ChangeNotifier {
     
     debugPrint('🧹 [BASKET_VM] Sepet temizlendi. Tüm tutarlar sıfırlandı.');
     
-    notifyListeners();
+    try {
+      notifyListeners();
+    } catch (e) {
+      debugPrint('⚠️ [BASKET_VM] Sepet temizlenirken bildirim hatası: $e');
+      // Hatayı yut, uygulama çökmemeli
+    }
   }
   
   // İndirim uygulama

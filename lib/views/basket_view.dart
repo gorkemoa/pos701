@@ -66,7 +66,28 @@ class _BasketViewState extends State<BasketView> {
     super.didChangeDependencies();
     // Erken aşamada BasketViewModel referansını al
     _basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    
+    // Başka masaya geçişlerde karışmaması için sepeti temizle
+    // Artık bu işlemi burada değil, sadece _initializeData içinde yapacağız
+    // _clearBasketOnNewTable();
   }
+  
+  // Bu metodu kaldırıyorum çünkü _initializeData içinde yapacağız
+  // void _clearBasketOnNewTable() {
+  //   if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
+  //     // Sadece yeni sipariş oluşturuyorsak sepeti temizle (orderID null ise)
+  //     if (widget.orderID == null) {
+  //       debugPrint('🧹 Yeni masa açıldı, önceki sepet temizleniyor...');
+  //       // Future.microtask ile UI thread'inden çıkıp sepeti temizle
+  //       Future.microtask(() {
+  //         if (_basketViewModel != null && mounted) {
+  //           _basketViewModel!.clearBasket();
+  //           debugPrint('✅ Sepet temizlendi, yeni sipariş için hazır');
+  //         }
+  //       });
+  //     }
+  //   }
+  // }
 
   Future<void> _initializeData() async {
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
@@ -85,6 +106,11 @@ class _BasketViewState extends State<BasketView> {
     // TableView'den gelen bilgileri al
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      
+      // ÖNEMLİ: Sepet temizleme mantığını değiştiriyoruz
+      // Artık otomatik temizleme yapmıyoruz. Sepete eklenen ürünleri koruyoruz.
+      // Sadece mevcut bir siparişi görüntülüyorsak yeni sepet oluşturuyoruz
+      
       if (args != null) {
         if (args.containsKey('tableID')) {
           _tableID = args['tableID'];
@@ -95,21 +121,15 @@ class _BasketViewState extends State<BasketView> {
         } else if (widget.orderID != null) {
           _getSiparisDetayi(widget.orderID!);
         } else {
-          // Burada sepeti temizlemiyoruz, ilk girişte sepet korunmalı
-          // Yalnızca çıkışta temizleme yapılacak
-          if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
-            debugPrint('📦 Sepette ${_basketViewModel!.totalQuantity} adet ürün var');
-          }
+          // Sepeti koruyoruz! Temizlemiyoruz!
+          debugPrint('📦 Sepet korunuyor. Sepetteki ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
           setState(() => _isLoading = false);
         }
       } else if (widget.orderID != null) {
         _getSiparisDetayi(widget.orderID!);
       } else {
-        // Burada sepeti temizlemiyoruz, ilk girişte sepet korunmalı
-        // Yalnızca çıkışta temizleme yapılacak
-        if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
-          debugPrint('📦 Sepette ${_basketViewModel!.totalQuantity} adet ürün var');
-        }
+        // Sepeti koruyoruz! Temizlemiyoruz!
+        debugPrint('📦 Sepet korunuyor. Sepetteki ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
         setState(() => _isLoading = false);
       }
     });
@@ -347,26 +367,18 @@ class _BasketViewState extends State<BasketView> {
 
   // Geri dönüş kontrolü - Kullanıcı geri tuşuna bastığında çalışır
   Future<bool> _onWillPop() async {
-    // İnaktif masa ise ve sipariş oluşturulmadıysa sepeti temizle
-    if (_isInactiveTable() && !_isSiparisOlusturuldu) {
-      if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
-        debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (WillPopScope)');
-        _basketViewModel!.clearBasket();
-      }
-    }
+    // Sepeti temizlemiyoruz, sepetteki ürünleri koruyoruz
+    // Kullanıcı ürün ekleyip sonra geri döndüğünde ürünlerin korunması gerekiyor
+    debugPrint('⬅️ Sepetten çıkılıyor. Sepet korunacak. Ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
     return true; // Geri dönüşe izin ver
   }
 
   // Sayfadan çıkış durumunda sepeti temizleme kontrolü
   @override
   void dispose() {
-    // İnaktif masa ise ve sipariş oluşturulmadıysa sepeti temizle
-    if (_isInactiveTable() && !_isSiparisOlusturuldu) {
-      if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
-        debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (dispose)');
-        _basketViewModel!.clearBasket();
-      }
-    }
+    // Sepeti temizlemiyoruz, sepetteki ürünleri koruyoruz
+    // Kullanıcı ürün ekleyip sonra geri döndüğünde ürünlerin korunması gerekiyor
+    debugPrint('🔚 Sepet sayfası kapanıyor. Sepet korunacak. Ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
     super.dispose();
   }
 
@@ -391,13 +403,9 @@ class _BasketViewState extends State<BasketView> {
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () async {
-              // İnaktif masa ise ve sipariş oluşturulmadıysa sepeti temizle
-              if (_isInactiveTable() && !_isSiparisOlusturuldu) {
-                if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
-                  debugPrint('🧹 İnaktif masadan çıkıldı, sepet temizleniyor (IconButton)');
-                  _basketViewModel!.clearBasket();
-                }
-              }
+              // Sepeti temizlemiyoruz, sepetteki ürünleri koruyoruz
+              // Kullanıcı ürün ekleyip sonra geri döndüğünde ürünlerin korunması gerekiyor
+              debugPrint('❌ Sepet kapatılıyor. Sepet korunacak. Ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
               Navigator.of(context).pop();
             },
           ),
