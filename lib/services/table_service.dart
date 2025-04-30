@@ -93,7 +93,7 @@ class TableService {
     required String step, // "merged" veya "unmerged" değeri alabilir
   }) async {
     try {
-      final url = '${AppConstants.baseUrl}${AppConstants.tableChangeEndpoint}';
+      final url = '${AppConstants.baseUrl}${AppConstants.tableOrderMergeEndpoint}';
       debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} API isteği: $url');
       
       final requestBody = {

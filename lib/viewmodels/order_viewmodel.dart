@@ -71,23 +71,23 @@ class OrderViewModel extends ChangeNotifier {
     return orderProducts;
   }
   
-  /// Yeni bir sipariş oluşturur
+  /// Sipariş oluşturma isteği
   Future<bool> siparisSunucuyaGonder({
     required String userToken,
     required int compID,
     required int tableID,
     required String tableName,
     required List<BasketItem> sepetUrunleri,
-    int orderType = 1, // 1- Masa Siparişi varsayılan
-    int orderGuest = 1,
-    int kuverQty = 1,
-    bool isKuver = false,
-    bool isWaiter = false,
+    required int orderType,
     String orderDesc = '',
-    int custID = 0, // Müşteri ID'si, varsayılan olarak 0
-    String custName = '', // Müşteri adı
-    String custPhone = '', // Müşteri telefonu
-    List<dynamic> custAdrs = const [], // Müşteri adres bilgileri
+    required int orderGuest,
+    int kuverQty = 0,
+    int custID = 0,
+    String custName = '',
+    String custPhone = '',
+    List<dynamic> custAdrs = const [],
+    required int isKuver, // Kuver durumu, int tipinde olduğundan emin ol
+    required int isWaiter, // Garsoniye durumu, int tipinde olduğundan emin ol
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -106,6 +106,8 @@ class OrderViewModel extends ChangeNotifier {
           }
         }
       }
+      
+      debugPrint('🔄 [ORDER_VM] Sipariş oluşturuluyor. Kuver: $isKuver, Garsoniye: $isWaiter değerleri ile gönderiliyor');
       
       final orderRequest = OrderRequest(
         userToken: userToken,
@@ -139,6 +141,7 @@ class OrderViewModel extends ChangeNotifier {
         return false;
       }
     } catch (e) {
+      debugPrint('🔴 [ORDER_VM] Sipariş gönderilirken hata: $e');
       _setError('Sipariş gönderilirken hata oluştu: ${e.toString()}');
       return false;
     }
@@ -203,6 +206,10 @@ class OrderViewModel extends ChangeNotifier {
     // ViewModel'e basketViewModel enjekte edilmediği için buradan doğrudan sepeti güncelleyemiyoruz
     // Bu fonksiyon basket_view.dart içerisinden kullanılacak
     _orderDetail = orderDetail;
+    
+    // Kuver ve garsoniye durumlarını logla
+    debugPrint('🔵 [ORDER_VM] Sipariş kuver durumu: ${orderDetail.isKuver}, garsoniye durumu: ${orderDetail.isWaiter}');
+    
     notifyListeners();
   }
   
@@ -288,15 +295,15 @@ class OrderViewModel extends ChangeNotifier {
     required int compID,
     required int orderID,
     required List<BasketItem> sepetUrunleri,
-    int orderGuest = 1,
-    int kuverQty = 1,
-    bool isKuver = false,
-    bool isWaiter = false,
     String orderDesc = '',
-    int custID = 0, // Müşteri ID'si, varsayılan olarak 0
-    String custName = '', // Müşteri adı
-    String custPhone = '', // Müşteri telefonu
-    List<dynamic> custAdrs = const [], // Müşteri adres bilgileri
+    int orderGuest = 1,
+    int kuverQty = 0,
+    int custID = 0,
+    String custName = '',
+    String custPhone = '',
+    List<dynamic> custAdrs = const [],
+    required int isKuver, // Kuver durumu, int tipinde olduğundan emin ol
+    required int isWaiter, // Garsoniye durumu, int tipinde olduğundan emin ol
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -306,6 +313,7 @@ class OrderViewModel extends ChangeNotifier {
     try {
       _setStatus(OrderStatus.loading);
       debugPrint('🔄 [ORDER_VM] Sipariş güncelleniyor. OrderID: $orderID, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${custAdrs.length}');
+      debugPrint('🔄 [ORDER_VM] Kuver: $isKuver, Garsoniye: $isWaiter değerleri ile güncelleniyor');
       
       // CustomerAddress nesnelerini dönüştür
       List<dynamic> formattedAddresses = [];
@@ -331,6 +339,8 @@ class OrderViewModel extends ChangeNotifier {
         custPhone: custPhone, // Müşteri telefonunu ekle
         custAdrs: formattedAddresses, // Dönüştürülmüş adresleri ekle
         isCust: custID > 0 || custName.isNotEmpty || custPhone.isNotEmpty ? 1 : 0, // Müşteri bilgisi varsa 1 olarak ayarla
+        isKuver: isKuver, // Kuver durumu
+        isWaiter: isWaiter, // Garsoniye durumu
       );
       
       // Siparişi güncelle

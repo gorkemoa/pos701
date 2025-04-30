@@ -22,11 +22,15 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
   late List<TableItem> filteredTables;
   final TextEditingController _searchController = TextEditingController();
   final List<TableItem> _selectedTables = [];
+  // Masa birleştirme endpoint'i
+  final String _mergeEndpoint = AppConstants.tableOrderMergeEndpoint;
 
   @override
   void initState() {
     super.initState();
     filteredTables = List.from(widget.availableTables);
+    // Endpoint'i logla
+    debugPrint('Masa birleştirme endpoint: $_mergeEndpoint');
   }
 
   void _filterTables(String query) {
@@ -114,6 +118,7 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                 }).toList(),
               ),
             ),
+         
           ],
         ),
         actions: [
@@ -198,6 +203,15 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                         ),
                       ),
                       const SizedBox(height: 4),
+                      Text(
+                        'Endpoint: $_mergeEndpoint',
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 10,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
                       const Text(
                         'Not: Sadece boş masalar birleştirilebilir',
                         style: TextStyle(
@@ -356,37 +370,43 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
               // Buttons
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                child: Column(
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.grey[700],
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      child: const Text('İptal', style: TextStyle(fontSize: 16)),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _selectedTables.isEmpty ? null : _confirmMerge,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    
+        
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[700],
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          child: const Text('İptal', style: TextStyle(fontSize: 16)),
                         ),
-                        disabledBackgroundColor: Colors.grey[300],
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.merge_type),
-                          SizedBox(width: 8),
-                          Text('Birleştir', style: TextStyle(fontSize: 16)),
-                        ],
-                      ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: _selectedTables.isEmpty ? null : _confirmMerge,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            disabledBackgroundColor: Colors.grey[300],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.merge_type),
+                              SizedBox(width: 8),
+                              Text('Birleştir', style: TextStyle(fontSize: 16)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -25,6 +25,8 @@ class BasketView extends StatefulWidget {
   final List<order_model.CustomerAddress>? customerAddresses;
   final int? tableID; // Masa ID
   final int orderType; // Sipariş türü: 1-Masa, 2-Paket, 3-Gel-Al
+  final int isKuver; // Kuver ücretinin aktif/pasif durumu
+  final int isWaiter; // Garsoniye ücretinin aktif/pasif durumu
   
   const BasketView({
     Key? key,
@@ -36,6 +38,8 @@ class BasketView extends StatefulWidget {
     this.customerAddresses,
     this.tableID,
     this.orderType = 1, // Varsayılan değer: Masa siparişi
+    this.isKuver = 0, // Varsayılan değer: Pasif
+    this.isWaiter = 0, // Varsayılan değer: Pasif
   }) : super(key: key);
 
   @override
@@ -53,12 +57,16 @@ class _BasketViewState extends State<BasketView> {
   BasketViewModel? _basketViewModel; // BasketViewModel referansı
   String _orderDesc = ''; // Sipariş açıklaması
   int _orderGuest = 1; // Misafir sayısı
+  int _isKuver = 0; // Kuver ücretinin aktif/pasif durumu
+  int _isWaiter = 0; // Garsoniye ücretinin aktif/pasif durumu
 
   @override
   void initState() {
     super.initState();
     _orderDesc = widget.orderDesc; // Sipariş açıklamasını başlangıçta al
     _orderGuest = widget.orderGuest; // Misafir sayısını başlangıçta al
+    _isKuver = widget.isKuver; // Kuver durumunu başlangıçta al
+    _isWaiter = widget.isWaiter; // Garsoniye durumunu başlangıçta al
     _initializeData();
   }
 
@@ -103,6 +111,13 @@ class _BasketViewState extends State<BasketView> {
         _compID = userViewModel.userInfo?.compID;
       }
     }
+    
+    // Int tipleri kontrol et
+    _isKuver = widget.isKuver;
+    _isWaiter = widget.isWaiter;
+    
+    debugPrint('🔵 [BASKET_VIEW] Widget\'tan alınan kuver durumu: ${widget.isKuver}, garsoniye durumu: ${widget.isWaiter}');
+    debugPrint('🔵 [BASKET_VIEW] Kullanılacak değerler: kuver: $_isKuver, garsoniye: $_isWaiter (her ikisi de int tipinde)');
     
     // TableView'den gelen bilgileri al
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -165,6 +180,15 @@ class _BasketViewState extends State<BasketView> {
         // Sipariş detayları başarıyla alındı
         final orderDetail = orderViewModel.orderDetail!;
         debugPrint('✅ Sipariş detayları alındı. Ürün sayısı: ${orderDetail.products.length}');
+        
+        // API'den gelen kuver ve garsoniye durumlarını güncelle
+        // Int dönüşümüne dikkat et
+        setState(() {
+          _isKuver = orderDetail.isKuver;
+          _isWaiter = orderDetail.isWaiter;
+        });
+        
+        debugPrint('🔵 [BASKET_VIEW] API\'den kuver durumu: ${orderDetail.isKuver}, garsoniye durumu: ${orderDetail.isWaiter} (her ikisi de int tipinde)');
         
         // API'den gelen sipariş tutarını güncelle
         debugPrint('💰 API sipariş tutarı: ${orderDetail.orderAmount}');
@@ -266,6 +290,7 @@ class _BasketViewState extends State<BasketView> {
     
     debugPrint('🛒 Sipariş oluşturuluyor...');
     debugPrint('🛒 Sipariş tipi: ${widget.orderType}, Masa ID: ${widget.tableID}');
+    debugPrint('🛒 Kuver durumu: $_isKuver, Garsoniye durumu: $_isWaiter');
     
     try {
       setState(() {
@@ -291,28 +316,82 @@ class _BasketViewState extends State<BasketView> {
         if (widget.customerAddresses != null && widget.customerAddresses!.isNotEmpty) {
           custAdrs = widget.customerAddresses!;
         }
-        
-        debugPrint('👤 Müşteri bilgisi: ID: $custID, Ad: $custName, Tel: $custPhone, Adres sayısı: ${custAdrs.length}');
-      } else {
-        debugPrint('👤 Müşteri bilgisi yok');
       }
       
-      // Sipariş oluştur
-      final bool success = await orderViewModel.siparisSunucuyaGonder(
-        userToken: _userToken!,
-        compID: _compID!,
-        tableID: widget.tableID ?? 0, // tableID null ise 0 gönder
-        tableName: widget.tableName,
-        sepetUrunleri: basketViewModel.items,
-        orderType: widget.orderType, // Sipariş tipini ekle
-        orderGuest: _orderGuest,
-        orderDesc: _orderDesc,
-        custID: custID,
-        custName: custName,
-        custPhone: custPhone,
-        custAdrs: custAdrs,
+      // TableID null ise güvenli bir değer kullan
+      int tableID = widget.tableID ?? 0;
+      
+      // _isKuver ve _isWaiter int tipinde olduğundan emin ol
+      int kuverDurumu = _isKuver;
+      int garsoniyeDurumu = _isWaiter;
+      
+      debugPrint('🔄 Int olarak gönderilecek değerler - kuver: $kuverDurumu, garsoniye: $garsoniyeDurumu');
+      
+      if (widget.orderID != null) {
+        // Mevcut siparişi güncelle
+        debugPrint('🔄 Mevcut sipariş güncelleniyor. OrderID: ${widget.orderID}');
+        debugPrint('🛎️ Kuver: $_isKuver, Garsoniye: $_isWaiter değerleri ile gönderiliyor');
+        
+        final success = await orderViewModel.siparisGuncelle(
+          userToken: _userToken!,
+          compID: _compID!,
+          orderID: widget.orderID!,
+          sepetUrunleri: basketViewModel.items,
+          orderDesc: _orderDesc,
+          orderGuest: _orderGuest,
+          custID: custID,
+          custName: custName,
+          custPhone: custPhone,
+          custAdrs: custAdrs,
+          isKuver: kuverDurumu, // Int tipinde kuver durumu
+          isWaiter: garsoniyeDurumu, // Int tipinde garsoniye durumu
+        );
+        
+        _handleOrderResult(success, orderViewModel, true);
+      } else {
+        // Yeni sipariş oluştur
+        debugPrint('➕ Yeni sipariş oluşturuluyor.');
+        debugPrint('🛎️ Kuver: $_isKuver, Garsoniye: $_isWaiter değerleri ile gönderiliyor');
+      
+        final success = await orderViewModel.siparisSunucuyaGonder(
+          userToken: _userToken!,
+          compID: _compID!,
+          tableID: tableID,
+          tableName: widget.tableName,
+          sepetUrunleri: basketViewModel.items,
+          orderType: widget.orderType,
+          orderDesc: _orderDesc,
+          orderGuest: _orderGuest,
+          custID: custID,
+          custName: custName,
+          custPhone: custPhone,
+          custAdrs: custAdrs,
+          isKuver: kuverDurumu, // Int tipinde kuver durumu
+          isWaiter: garsoniyeDurumu, // Int tipinde garsoniye durumu
+        );
+        
+        _handleOrderResult(success, orderViewModel, false);
+      }
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _isLoading = false;
+        _errorMessage = 'Sipariş gönderilirken hata oluştu: $e';
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
       
+      debugPrint('🔴 Sipariş gönderilirken hata: $_errorMessage');
+    }
+  }
+
+  void _handleOrderResult(bool success, OrderViewModel orderViewModel, bool isUpdate) {
       if (!mounted) return;
       
       setState(() {
@@ -329,7 +408,7 @@ class _BasketViewState extends State<BasketView> {
         );
         
         // Sepeti temizle
-        basketViewModel.clearBasket();
+      _basketViewModel!.clearBasket();
         
         // Ana sayfaya dönmek yerine, TablesView'a yönlendir
         Navigator.pushAndRemoveUntil(
@@ -346,19 +425,6 @@ class _BasketViewState extends State<BasketView> {
       } else {
         setState(() {
           _errorMessage = orderViewModel.errorMessage ?? 'Sipariş oluşturulamadı';
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_errorMessage),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Hata: ${e.toString()}';
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -651,7 +717,90 @@ class _BasketViewState extends State<BasketView> {
                       final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.orderPayAmount;
                       debugPrint('💸 [BASKET_VIEW] Manuel kalan: $manuelKalan');
                       
-                      return Container(
+                      return Column(
+                        children: [
+                          // Kuver ve Garsoniye Durum Göstergesi
+                          if (_isKuver == 1 || _isWaiter == 1)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.amber.shade200),
+                              ),
+                              child: Column(
+                                children: [
+                                  if (_isKuver == 1)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.attach_money, color: Colors.amber.shade800, size: 18),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Kuver Ücreti:',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: Colors.amber.shade800,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade100,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'AKTİF',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green.shade800,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (_isWaiter == 1)
+                                    Row(
+                                      children: [
+                                        Icon(Icons.monetization_on, color: Colors.amber.shade800, size: 18),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Garsoniye Ücreti:',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: Colors.amber.shade800,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.shade100,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'AKTİF',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green.shade800,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          
+                          Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           border: Border(top: BorderSide(color: Colors.grey.shade300)),
@@ -677,6 +826,8 @@ class _BasketViewState extends State<BasketView> {
                             ),
                           ],
                         ),
+                          ),
+                        ],
                       );
                     },
                   ),
@@ -1107,6 +1258,42 @@ class _BasketViewState extends State<BasketView> {
     }
   }
 
+  // Kuver durumunu değiştirme fonksiyonu
+  void _toggleKuverDurumu() {
+    setState(() {
+      // _isKuver değerini tersine çevir (0 -> 1, 1 -> 0)
+      _isKuver = _isKuver == 0 ? 1 : 0;
+    });
+    
+    debugPrint('🛎️ Kuver durumu değiştirildi: $_isKuver (int tipinde)');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isKuver == 1 ? 'Kuver ücreti eklendi' : 'Kuver ücreti kaldırıldı'),
+        backgroundColor: _isKuver == 1 ? Colors.green : Colors.orange,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+  
+  // Garsoniye durumunu değiştirme fonksiyonu
+  void _toggleGarsoniyeDurumu() {
+    setState(() {
+      // _isWaiter değerini tersine çevir (0 -> 1, 1 -> 0)
+      _isWaiter = _isWaiter == 0 ? 1 : 0;
+    });
+    
+    debugPrint('🛎️ Garsoniye durumu değiştirildi: $_isWaiter (int tipinde)');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isWaiter == 1 ? 'Garsoniye ücreti eklendi' : 'Garsoniye ücreti kaldırıldı'),
+        backgroundColor: _isWaiter == 1 ? Colors.green : Colors.orange,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   // Menü dialogu
   void _showMenuDialog() {
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
@@ -1189,14 +1376,11 @@ class _BasketViewState extends State<BasketView> {
                     
                     if (showKuverGarsoniye)
                       _buildMenuItem(
-                        icon: Icons.attach_money,
-                        title: 'Kuver Ücreti Ekle',
+                        icon: _isKuver == 0 ? Icons.attach_money : Icons.money_off,
+                        title: _isKuver == 0 ? 'Kuver Ücreti Ekle' : 'Kuver Ücretini Kaldır',
                         onTap: () {
                           Navigator.of(context).pop();
-                          // Kuver ücreti işlemi
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Kuver ücreti ekleme özelliği henüz aktif değil'))
-                          );
+                          _toggleKuverDurumu();
                         },
                       ),
                     
@@ -1204,14 +1388,11 @@ class _BasketViewState extends State<BasketView> {
                     
                     if (showKuverGarsoniye)
                       _buildMenuItem(
-                        icon: Icons.monetization_on,
-                        title: 'Garsoniye Ücreti Ekle',
+                        icon: _isWaiter == 0 ? Icons.monetization_on : Icons.money_off_csred,
+                        title: _isWaiter == 0 ? 'Garsoniye Ücreti Ekle' : 'Garsoniye Ücretini Kaldır',
                         onTap: () {
                           Navigator.of(context).pop();
-                          // Garsoniye ücreti işlemi
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Garsoniye ücreti ekleme özelliği henüz aktif değil'))
-                          );
+                          _toggleGarsoniyeDurumu();
                         },
                       ),
                     

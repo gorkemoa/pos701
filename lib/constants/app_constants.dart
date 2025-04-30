@@ -7,6 +7,7 @@ class AppConstants {
   static const String loginEndpoint = 'service/auth/login';
   static const String userInfoEndpoint = 'service/user/id/';
   static const String getTablesEndpoint = 'service/user/order/tableList';
+  static const String tableOrderMergeEndpoint = 'service/user/order/tableOrderMerge';
   static const String tableChangeEndpoint = 'service/user/order/tableChange';
   static const String productDetailEndpoint = 'service/product/id/detail';
   static const String customersEndpoint = 'service/user/account/customers';
