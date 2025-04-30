@@ -86,8 +86,8 @@ class OrderRequest {
   final String orderDesc;
   final int orderGuest;
   final int kuverQty;
-  final bool isKuver;
-  final bool isWaiter;
+  final int isKuver;
+  final int isWaiter;
   final bool isCust;
   final String custName;
   final String custPhone;
@@ -104,8 +104,8 @@ class OrderRequest {
     this.orderDesc = '',
     required this.orderGuest,
     required this.kuverQty,
-    this.isKuver = false,
-    this.isWaiter = false,
+    this.isKuver = 0,
+    this.isWaiter = 0,
     this.isCust = false,
     this.custName = '',
     this.custPhone = '',
@@ -124,8 +124,8 @@ class OrderRequest {
       'orderDesc': orderDesc,
       'orderGuest': orderGuest,
       'kuverQty': kuverQty,
-      'isKuver': isKuver ? 1 : 0,
-      'isWaiter': isWaiter ? 1 : 0,
+      'isKuver': isKuver,
+      'isWaiter': isWaiter,
       'isCust': isCust ? 1 : 0,
       'custName': custName,
       'custPhone': custPhone,
@@ -192,6 +192,8 @@ class OrderDetail {
   final bool isCanceled;
   final Map<String, dynamic> customer;
   final List<OrderDetailProduct> products;
+  final int isKuver;
+  final int isWaiter;
 
   OrderDetail({
     required this.orderID,
@@ -210,6 +212,8 @@ class OrderDetail {
     required this.isCanceled,
     required this.customer,
     required this.products,
+    this.isKuver = 0,
+    this.isWaiter = 0,
   });
 
   factory OrderDetail.fromJson(Map<String, dynamic> json) {
@@ -251,6 +255,34 @@ class OrderDetail {
       debugPrint('🔴 [OrderDetail] Customer alanı dönüştürme hatası: $e');
     }
     
+    // isKuver ve isWaiter değerlerini string'den int'e dönüştür
+    int isKuver = 0;
+    int isWaiter = 0;
+    
+    try {
+      if (json.containsKey('isKuver')) {
+        if (json['isKuver'] is String) {
+          isKuver = int.tryParse(json['isKuver']) ?? 0;
+          debugPrint('🔄 [OrderDetail] isKuver string değeri int\'e dönüştürüldü: ${json['isKuver']} -> $isKuver');
+        } else if (json['isKuver'] is int) {
+          isKuver = json['isKuver'];
+        }
+      }
+      
+      if (json.containsKey('isWaiter')) {
+        if (json['isWaiter'] is String) {
+          isWaiter = int.tryParse(json['isWaiter']) ?? 0;
+          debugPrint('🔄 [OrderDetail] isWaiter string değeri int\'e dönüştürüldü: ${json['isWaiter']} -> $isWaiter');
+        } else if (json['isWaiter'] is int) {
+          isWaiter = json['isWaiter'];
+        }
+      }
+      
+      debugPrint('🔵 [OrderDetail] isKuver: $isKuver, isWaiter: $isWaiter değerleri parse edildi');
+    } catch (e) {
+      debugPrint('⚠️ [OrderDetail] isKuver/isWaiter dönüştürme hatası: $e');
+    }
+    
     return OrderDetail(
       orderID: json['orderID'] ?? 0,
       tableID: json['tableID'] ?? 0,
@@ -268,6 +300,8 @@ class OrderDetail {
       isCanceled: json['isCanceled'] ?? false,
       customer: customerData,
       products: productList,
+      isKuver: isKuver,
+      isWaiter: isWaiter,
     );
   }
 }
@@ -330,35 +364,33 @@ class OrderUpdateRequest {
   final String userToken;
   final int compID;
   final int orderID;
-  final int custID;
-  final String orderName;
-  final String orderDesc;
   final int orderGuest;
   final int kuverQty;
-  final int isKuver;
-  final int isWaiter;
-  final int isCust;
+  final String orderDesc;
+  final int custID;
   final String custName;
   final String custPhone;
   final List<dynamic> custAdrs;
+  final int isCust;
   final List<OrderProduct> products;
+  final int isKuver;
+  final int isWaiter;
 
   OrderUpdateRequest({
     required this.userToken,
     required this.compID,
     required this.orderID,
-    this.custID = 0,
-    this.orderName = '',
+    required this.orderGuest,
+    required this.kuverQty,
     this.orderDesc = '',
-    this.orderGuest = 1,
-    this.kuverQty = 1,
-    this.isKuver = 0,
-    this.isWaiter = 0,
-    this.isCust = 0,
+    this.custID = 0,
     this.custName = '',
     this.custPhone = '',
     this.custAdrs = const [],
+    this.isCust = 0,
     required this.products,
+    required this.isKuver,
+    required this.isWaiter,
   });
 
   Map<String, dynamic> toJson() {
@@ -366,18 +398,17 @@ class OrderUpdateRequest {
       'userToken': userToken,
       'compID': compID,
       'orderID': orderID,
-      'custID': custID,
-      'orderName': orderName,
-      'orderDesc': orderDesc,
       'orderGuest': orderGuest,
       'kuverQty': kuverQty,
-      'isKuver': isKuver,
-      'isWaiter': isWaiter,
-      'isCust': isCust,
+      'orderDesc': orderDesc,
+      'custID': custID,
       'custName': custName,
       'custPhone': custPhone,
       'custAdrs': custAdrs,
+      'isCust': isCust,
       'products': products.map((product) => product.toJson()).toList(),
+      'isKuver': isKuver,
+      'isWaiter': isWaiter,
     };
   }
 }

@@ -51,6 +51,8 @@ class _CategoryViewState extends State<CategoryView> {
   int _orderGuest = 1; // Misafir sayısı için değişken
   Customer? _selectedCustomer; // Seçili müşteri
   List<order_model.CustomerAddress> _selectedCustomerAddresses = [];
+  int _isKuver = 0; // Kuver ücretinin aktif/pasif durumu (0: pasif, 1: aktif)
+  int _isWaiter = 0; // Garsoniye ücretinin aktif/pasif durumu (0: pasif, 1: aktif)
 
   @override
   void initState() {
@@ -631,6 +633,8 @@ class _CategoryViewState extends State<CategoryView> {
       'orderDesc': _orderDesc,
       'orderGuest': _orderGuest,
       'orderType': widget.orderType, // Sipariş türünü ekle
+      'isKuver': _isKuver, // Kuver aktif/pasif durumu
+      'isWaiter': _isWaiter, // Garsoniye aktif/pasif durumu
     };
     
     // Eğer müşteri seçilmişse müşteri bilgilerini ekleyelim
@@ -658,6 +662,8 @@ class _CategoryViewState extends State<CategoryView> {
     
     debugPrint('🛒 Sipariş notu: $_orderDesc');
     debugPrint('🛒 Misafir sayısı: $_orderGuest');
+    debugPrint('🛒 Kuver durumu: $_isKuver');
+    debugPrint('🛒 Garsoniye durumu: $_isWaiter');
     
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -670,6 +676,8 @@ class _CategoryViewState extends State<CategoryView> {
           customerAddresses: _selectedCustomerAddresses,  // Müşteri adres bilgilerini ekle
           tableID: widget.tableID, // Masa ID'sini ekle
           orderType: widget.orderType, // Sipariş türünü ekle
+          isKuver: _isKuver, // Kuver durumunu ekle
+          isWaiter: _isWaiter, // Garsoniye durumunu ekle
         ),
         settings: RouteSettings(
           arguments: arguments,
@@ -899,7 +907,7 @@ class _CategoryViewState extends State<CategoryView> {
                         title: 'Kuver Ücreti Ekle',
                         onTap: () {
                           Navigator.of(context).pop();
-                          // Kuver ücreti işlemi
+                          _toggleKuverDurumu();
                         },
                       ),
                     
@@ -911,7 +919,7 @@ class _CategoryViewState extends State<CategoryView> {
                         title: 'Garsoniye Ücreti Ekle',
                         onTap: () {
                           Navigator.of(context).pop();
-                          // Garsoniye ücreti işlemi
+                          _toggleGarsoniyeDurumu();
                         },
                       ),
                     
@@ -1780,5 +1788,35 @@ class _CategoryViewState extends State<CategoryView> {
         );
       }
     }
+  }
+
+  // Kuver durumunu değiştirme fonksiyonu
+  void _toggleKuverDurumu() {
+    setState(() {
+      _isKuver = _isKuver == 0 ? 1 : 0;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isKuver == 1 ? 'Kuver ücreti eklendi' : 'Kuver ücreti kaldırıldı'),
+        backgroundColor: _isKuver == 1 ? Colors.green : Colors.orange,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+  
+  // Garsoniye durumunu değiştirme fonksiyonu
+  void _toggleGarsoniyeDurumu() {
+    setState(() {
+      _isWaiter = _isWaiter == 0 ? 1 : 0;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isWaiter == 1 ? 'Garsoniye ücreti eklendi' : 'Garsoniye ücreti kaldırıldı'),
+        backgroundColor: _isWaiter == 1 ? Colors.green : Colors.orange,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }

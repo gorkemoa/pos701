@@ -167,39 +167,6 @@ class _AppDrawerState extends State<AppDrawer> {
             padding: const EdgeInsets.all(8),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // Restaurant Ayarları sayfasına yönlendirme
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Restaurant Ayarları'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // Uygulama Ayarları sayfasına yönlendirme
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Uygulama Ayarları'),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
