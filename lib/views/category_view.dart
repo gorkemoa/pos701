@@ -1162,14 +1162,14 @@ class _CategoryViewState extends State<CategoryView> {
     
     // Sipariş oluşturmak için kullanılacak adres listesi
     List<order_model.CustomerAddress> orderAddresses = [];
+
+    // Aktif tab değişkenini diyalog dışında tanımlayalım
+    int activeTabIndex = 0;
     
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
-          // Tab indeksini takip etmek için değişken
-          int activeTabIndex = 0;
-          
           return Dialog(
             insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             shape: RoundedRectangleBorder(
@@ -1185,7 +1185,9 @@ class _CategoryViewState extends State<CategoryView> {
                   tabController.addListener(() {
                     if (!tabController.indexIsChanging) {
                       setState(() {
+                        // Tab değişikliğini burada izleyip StatefulBuilder içindeki değişkeni güncelliyoruz
                         activeTabIndex = tabController.index;
+                        debugPrint('🔄 Tab değişti: $activeTabIndex');
                       });
                     }
                   });
@@ -1567,7 +1569,249 @@ class _CategoryViewState extends State<CategoryView> {
                                   ],
                                 ),
                                 
-                           ],
+                                // Yeni müşteri ekleme tab içeriği
+                                Form(
+                                  key: formKey,
+                                  child: SingleChildScrollView(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Müşteri adı
+                                          TextFormField(
+                                            decoration: const InputDecoration(
+                                              labelText: 'Müşteri Adı *',
+                                              hintText: 'Müşteri adını giriniz',
+                                              border: OutlineInputBorder(),
+                                              prefixIcon: Icon(Icons.person),
+                                            ),
+                                            validator: (value) {
+                                              if (value == null || value.trim().isEmpty) {
+                                                return 'Müşteri adı boş olamaz';
+                                              }
+                                              return null;
+                                            },
+                                            onChanged: (value) {
+                                              newCustomerName = value.trim();
+                                            },
+                                          ),
+                                          
+                                          const SizedBox(height: 16),
+                                          
+                                          // Telefon numarası
+                                          TextFormField(
+                                            decoration: InputDecoration(
+                                              labelText: 'Telefon Numarası *',
+                                              hintText: '05XXXXXXXXX',
+                                              border: const OutlineInputBorder(),
+                                              prefixIcon: const Icon(Icons.phone),
+                                              errorText: isPhoneValid ? null : 'Geçerli bir telefon numarası giriniz (05XXXXXXXXX)',
+                                            ),
+                                            keyboardType: TextInputType.phone,
+                                            validator: (value) {
+                                              if (value == null || value.trim().isEmpty) {
+                                                return 'Telefon numarası boş olamaz';
+                                              }
+                                              
+                                              // Telefon numarası kontrolü (05XXXXXXXXX formatında)
+                                              final RegExp phoneRegex = RegExp(r'^0[5][0-9]{9}$');
+                                              if (!phoneRegex.hasMatch(value.trim())) {
+                                                return 'Geçerli bir telefon numarası giriniz (05XXXXXXXXX)';
+                                              }
+                                              
+                                              return null;
+                                            },
+                                            onChanged: (value) {
+                                              final String phone = value.trim();
+                                              newCustomerPhone = phone;
+                                              
+                                              // Telefon formatını anlık kontrol et
+                                              final RegExp phoneRegex = RegExp(r'^0[5][0-9]{9}$');
+                                              setState(() {
+                                                isPhoneValid = phone.isEmpty || phoneRegex.hasMatch(phone);
+                                              });
+                                            },
+                                          ),
+                                          
+                                          const SizedBox(height: 16),
+                                          
+                                          // E-posta adresi (opsiyonel)
+                                          TextFormField(
+                                            decoration: const InputDecoration(
+                                              labelText: 'E-posta Adresi (Opsiyonel)',
+                                              hintText: 'ornek@email.com',
+                                              border: OutlineInputBorder(),
+                                              prefixIcon: Icon(Icons.email),
+                                            ),
+                                            keyboardType: TextInputType.emailAddress,
+                                            validator: (value) {
+                                              if (value != null && value.trim().isNotEmpty) {
+                                                // E-posta formatı kontrolü
+                                                final RegExp emailRegex = RegExp(
+                                                  r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+',
+                                                );
+                                                if (!emailRegex.hasMatch(value.trim())) {
+                                                  return 'Geçerli bir e-posta adresi giriniz';
+                                                }
+                                              }
+                                              return null;
+                                            },
+                                            onChanged: (value) {
+                                              newCustomerEmail = value.trim();
+                                            },
+                                          ),
+                                          
+                                          // Adres ekle butonu
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            child: Row(
+                                              children: [
+                                                const Text(
+                                                  'Adres Bilgileri',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 16),
+                                                TextButton.icon(
+                                                  icon: Icon(
+                                                    showAddressForm ? Icons.remove_circle : Icons.add_circle,
+                                                    color: Color(AppConstants.primaryColorValue),
+                                                  ),
+                                                  label: Text(
+                                                    showAddressForm ? 'Adres İptal' : 'Adres Ekle',
+                                                    style: TextStyle(color: Color(AppConstants.primaryColorValue)),
+                                                  ),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      showAddressForm = !showAddressForm;
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          
+                                          // Adres formu (göster/gizle)
+                                          if (showAddressForm) ...[
+                                            const Divider(),
+                                            
+                                            // Adres başlığı
+                                            TextFormField(
+                                              decoration: const InputDecoration(
+                                                labelText: 'Adres Başlığı *',
+                                                hintText: 'Ev, İş vb.',
+                                                border: OutlineInputBorder(),
+                                                prefixIcon: Icon(Icons.label),
+                                              ),
+                                              validator: (value) {
+                                                if (showAddressForm && (value == null || value.trim().isEmpty)) {
+                                                  return 'Adres başlığı boş olamaz';
+                                                }
+                                                return null;
+                                              },
+                                              onChanged: (value) {
+                                                addrTitle = value.trim();
+                                              },
+                                            ),
+                                            
+                                            const SizedBox(height: 16),
+                                            
+                                            // Adres
+                                            TextFormField(
+                                              decoration: const InputDecoration(
+                                                labelText: 'Adres *',
+                                                hintText: 'Adres bilgilerini giriniz',
+                                                border: OutlineInputBorder(),
+                                                prefixIcon: Icon(Icons.location_on),
+                                              ),
+                                              maxLines: 3,
+                                              validator: (value) {
+                                                if (showAddressForm && (value == null || value.trim().isEmpty)) {
+                                                  return 'Adres boş olamaz';
+                                                }
+                                                return null;
+                                              },
+                                              onChanged: (value) {
+                                                addrAddress = value.trim();
+                                              },
+                                            ),
+                                            
+                                            const SizedBox(height: 16),
+                                            
+                                            // Adres notu
+                                            TextFormField(
+                                              decoration: const InputDecoration(
+                                                labelText: 'Adres Notu (Opsiyonel)',
+                                                hintText: 'Kapı no, kat, daire vb.',
+                                                border: OutlineInputBorder(),
+                                                prefixIcon: Icon(Icons.note),
+                                              ),
+                                              maxLines: 2,
+                                              onChanged: (value) {
+                                                addrNote = value.trim();
+                                              },
+                                            ),
+                                            
+                                            const SizedBox(height: 16),
+                                            
+                                            // Varsayılan adres
+                                            CheckboxListTile(
+                                              title: const Text('Varsayılan adres olarak kaydet'),
+                                              value: isDefaultAddress,
+                                              contentPadding: EdgeInsets.zero,
+                                              controlAffinity: ListTileControlAffinity.leading,
+                                              activeColor: Color(AppConstants.primaryColorValue),
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  isDefaultAddress = value ?? true;
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                          
+                                          // Kaydet butonu için boşluk
+                                          const SizedBox(height: 16),
+                                          
+                                          // API'den gelen cevabı göster
+                                          if (customerViewModel.isLoading)
+                                            const Center(
+                                              child: Padding(
+                                                padding: EdgeInsets.all(16.0),
+                                                child: CircularProgressIndicator(),
+                                              ),
+                                            ),
+                                          
+                                          if (customerViewModel.errorMessage != null)
+                                            Container(
+                                              margin: const EdgeInsets.only(bottom: 16),
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade100,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: Colors.red.shade300),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.error_outline, color: Colors.red.shade700),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      customerViewModel.errorMessage!,
+                                                      style: TextStyle(color: Colors.red.shade700),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -1592,7 +1836,9 @@ class _CategoryViewState extends State<CategoryView> {
                               const SizedBox(width: 16),
                               ElevatedButton(
                                 onPressed: () {
-                                  // Aktif tab'ı kontrol et, DefaultTabController yerine takip ettiğimiz değişkeni kullan
+                                  // Aktif tab'ı kontrol et
+                                  debugPrint('🔄 Kaydet butonuna basıldı. Aktif tab: $activeTabIndex');
+                                  
                                   if (activeTabIndex == 0) {
                                     // Müşteri seçme tab'ı
                                     Navigator.of(context).pop();
@@ -1604,9 +1850,13 @@ class _CategoryViewState extends State<CategoryView> {
                                         ),
                                       );
                                     }
-                                  } else {
+                                  } else if (activeTabIndex == 1) {
                                     // Yeni müşteri ekleme tab'ı
-                                    if (formKey.currentState!.validate()) {
+                                    debugPrint('🔄 Yeni müşteri ekleme tab\'ı. Form doğrulanacak.');
+                                    
+                                    if (formKey.currentState != null && formKey.currentState!.validate()) {
+                                      debugPrint('🔄 Form doğrulandı. Adres bilgileri oluşturuluyor.');
+                                      
                                       // Adres bilgilerini oluştur (eğer eklenecekse)
                                       if (showAddressForm && addrTitle.isNotEmpty && addrAddress.isNotEmpty) {
                                         orderAddresses = [
@@ -1621,36 +1871,59 @@ class _CategoryViewState extends State<CategoryView> {
                                         orderAddresses = [];
                                       }
                                       
-                                      // Yeni müşteri oluştur (müşteri listesi için)
-                                      final newCustomer = Customer(
-                                        custID: 0, // ID 0 olarak gönderilecek
-                                        custCode: '',
-                                        custName: newCustomerName,
-                                        custEmail: newCustomerEmail,
-                                        custPhone: newCustomerPhone,
-                                        custPhone2: '',
-                                        addresses: [], // Customer sınıfında istenen boş adres listesi
-                                      );
+                                      debugPrint('🔄 Adres bilgileri oluşturuldu. Müşteri ekleme işlemi başlatılıyor.');
+                                      debugPrint('🔄 Müşteri Adı: $newCustomerName, Telefon: $newCustomerPhone');
                                       
-                                      // Müşteri seçili olarak ayarla
+                                      // Yeni müşteri oluştur ve API'ye gönder
                                       setState(() {
-                                        _selectedCustomer = newCustomer;
+                                        // Yükleniyor göster
                                       });
-                                      outerSetState(() {
-                                        _selectedCustomer = newCustomer;
+                                      
+                                      // API'ye müşteri ekleme isteği gönder
+                                      customerViewModel.addCustomer(
+                                        userToken: widget.userToken,
+                                        compID: widget.compID,
+                                        custName: newCustomerName,
+                                        custPhone: newCustomerPhone,
+                                        addresses: orderAddresses,
+                                      ).then((success) {
+                                        debugPrint('🔄 Müşteri ekleme sonucu: $success');
                                         
-                                        // Ayrıca adres bilgilerini de kaydet (sipariş oluşturma sırasında kullanılacak)
-                                        _selectedCustomerAddresses = orderAddresses;
+                                        if (success) {
+                                          // Müşteri başarıyla eklenirse
+                                          final newCustomer = customerViewModel.selectedCustomer;
+                                          debugPrint('🔄 Müşteri başarıyla eklendi: ${newCustomer?.custName}');
+                                          
+                                          // Müşteri seçili olarak ayarla
+                                          setState(() {
+                                            _selectedCustomer = newCustomer;
+                                          });
+                                          outerSetState(() {
+                                            _selectedCustomer = newCustomer;
+                                            
+                                            // Ayrıca adres bilgilerini de kaydet (sipariş oluşturma sırasında kullanılacak)
+                                            _selectedCustomerAddresses = orderAddresses;
+                                          });
+                                          
+                                          Navigator.of(context).pop();
+                                          
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('${newCustomerName} müşterisi başarıyla eklendi'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        } else {
+                                          // Form içinde hata gösteriliyor, pencereyi kapatma
+                                          debugPrint('🔴 Müşteri eklenirken hata oluştu: ${customerViewModel.errorMessage}');
+                                          setState(() {}); // UI'ı yenile
+                                        }
+                                      }).catchError((error) {
+                                        debugPrint('🔴 Müşteri ekleme hatası: $error');
+                                        setState(() {}); // UI'ı yenile
                                       });
-                                      
-                                      Navigator.of(context).pop();
-                                      
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('$newCustomerName müşteri bilgileri siparişe eklenecek'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
+                                    } else {
+                                      debugPrint('🔴 Form doğrulanamadı!');
                                     }
                                   }
                                 },

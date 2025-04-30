@@ -23,10 +23,10 @@ class BasketView extends StatefulWidget {
   final int orderGuest;
   final Customer? selectedCustomer;
   final List<order_model.CustomerAddress>? customerAddresses;
-  final int? tableID; // Masa ID
-  final int orderType; // Sipariş türü: 1-Masa, 2-Paket, 3-Gel-Al
-  final int isKuver; // Kuver ücretinin aktif/pasif durumu
-  final int isWaiter; // Garsoniye ücretinin aktif/pasif durumu
+  final int? tableID;
+  final int orderType;
+  final int isKuver;
+  final int isWaiter;
   
   const BasketView({
     Key? key,
@@ -37,9 +37,9 @@ class BasketView extends StatefulWidget {
     this.selectedCustomer,
     this.customerAddresses,
     this.tableID,
-    this.orderType = 1, // Varsayılan değer: Masa siparişi
-    this.isKuver = 0, // Varsayılan değer: Pasif
-    this.isWaiter = 0, // Varsayılan değer: Pasif
+    this.orderType = 1,
+    this.isKuver = 0,
+    this.isWaiter = 0,
   }) : super(key: key);
 
   @override
@@ -52,51 +52,29 @@ class _BasketViewState extends State<BasketView> {
   int? _tableID;
   bool _isLoading = true;
   String _errorMessage = '';
-  bool _isProcessing = false; // İşlem yapılıp yapılmadığını takip etmek için flag
-  bool _isSiparisOlusturuldu = false; // Sipariş oluşturuldu mu flag'i
-  BasketViewModel? _basketViewModel; // BasketViewModel referansı
-  String _orderDesc = ''; // Sipariş açıklaması
-  int _orderGuest = 1; // Misafir sayısı
-  int _isKuver = 0; // Kuver ücretinin aktif/pasif durumu
-  int _isWaiter = 0; // Garsoniye ücretinin aktif/pasif durumu
+  bool _isProcessing = false;
+  bool _isSiparisOlusturuldu = false;
+  BasketViewModel? _basketViewModel;
+  String _orderDesc = '';
+  int _orderGuest = 1;
+  int _isKuver = 0;
+  int _isWaiter = 0;
 
   @override
   void initState() {
     super.initState();
-    _orderDesc = widget.orderDesc; // Sipariş açıklamasını başlangıçta al
-    _orderGuest = widget.orderGuest; // Misafir sayısını başlangıçta al
-    _isKuver = widget.isKuver; // Kuver durumunu başlangıçta al
-    _isWaiter = widget.isWaiter; // Garsoniye durumunu başlangıçta al
+    _orderDesc = widget.orderDesc;
+    _orderGuest = widget.orderGuest;
+    _isKuver = widget.isKuver;
+    _isWaiter = widget.isWaiter;
     _initializeData();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Erken aşamada BasketViewModel referansını al
     _basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-    
-    // Başka masaya geçişlerde karışmaması için sepeti temizle
-    // Artık bu işlemi burada değil, sadece _initializeData içinde yapacağız
-    // _clearBasketOnNewTable();
   }
-  
-  // Bu metodu kaldırıyorum çünkü _initializeData içinde yapacağız
-  // void _clearBasketOnNewTable() {
-  //   if (_basketViewModel != null && !_basketViewModel!.isEmpty) {
-  //     // Sadece yeni sipariş oluşturuyorsak sepeti temizle (orderID null ise)
-  //     if (widget.orderID == null) {
-  //       debugPrint('🧹 Yeni masa açıldı, önceki sepet temizleniyor...');
-  //       // Future.microtask ile UI thread'inden çıkıp sepeti temizle
-  //       Future.microtask(() {
-  //         if (_basketViewModel != null && mounted) {
-  //           _basketViewModel!.clearBasket();
-  //           debugPrint('✅ Sepet temizlendi, yeni sipariş için hazır');
-  //         }
-  //       });
-  //     }
-  //   }
-  // }
 
   Future<void> _initializeData() async {
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
@@ -112,20 +90,11 @@ class _BasketViewState extends State<BasketView> {
       }
     }
     
-    // Int tipleri kontrol et
     _isKuver = widget.isKuver;
     _isWaiter = widget.isWaiter;
     
-    debugPrint('🔵 [BASKET_VIEW] Widget\'tan alınan kuver durumu: ${widget.isKuver}, garsoniye durumu: ${widget.isWaiter}');
-    debugPrint('🔵 [BASKET_VIEW] Kullanılacak değerler: kuver: $_isKuver, garsoniye: $_isWaiter (her ikisi de int tipinde)');
-    
-    // TableView'den gelen bilgileri al
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      
-      // ÖNEMLİ: Sepet temizleme mantığını değiştiriyoruz
-      // Artık otomatik temizleme yapmıyoruz. Sepete eklenen ürünleri koruyoruz.
-      // Sadece mevcut bir siparişi görüntülüyorsak yeni sepet oluşturuyoruz
       
       if (args != null) {
         if (args.containsKey('tableID')) {
@@ -137,15 +106,11 @@ class _BasketViewState extends State<BasketView> {
         } else if (widget.orderID != null) {
           _getSiparisDetayi(widget.orderID!);
         } else {
-          // Sepeti koruyoruz! Temizlemiyoruz!
-          debugPrint('📦 Sepet korunuyor. Sepetteki ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
           setState(() => _isLoading = false);
         }
       } else if (widget.orderID != null) {
         _getSiparisDetayi(widget.orderID!);
       } else {
-        // Sepeti koruyoruz! Temizlemiyoruz!
-        debugPrint('📦 Sepet korunuyor. Sepetteki ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
         setState(() => _isLoading = false);
       }
     });
@@ -164,11 +129,7 @@ class _BasketViewState extends State<BasketView> {
       final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
       
-      debugPrint('🔄 Sipariş detayları getiriliyor. OrderID: $orderID');
-      
-      // Sepeti temizle - çift eklemeyi önlemek için
       basketViewModel.clearBasket();
-      debugPrint('🧹 Sepet temizlendi, yeni ürünler yüklenecek');
       
       final success = await orderViewModel.getSiparisDetayi(
         userToken: _userToken!,
@@ -177,42 +138,22 @@ class _BasketViewState extends State<BasketView> {
       );
       
       if (success && orderViewModel.orderDetail != null) {
-        // Sipariş detayları başarıyla alındı
         final orderDetail = orderViewModel.orderDetail!;
-        debugPrint('✅ Sipariş detayları alındı. Ürün sayısı: ${orderDetail.products.length}');
         
-        // API'den gelen kuver ve garsoniye durumlarını güncelle
-        // Int dönüşümüne dikkat et
         setState(() {
           _isKuver = orderDetail.isKuver;
           _isWaiter = orderDetail.isWaiter;
         });
         
-        debugPrint('🔵 [BASKET_VIEW] API\'den kuver durumu: ${orderDetail.isKuver}, garsoniye durumu: ${orderDetail.isWaiter} (her ikisi de int tipinde)');
-        
-        // API'den gelen sipariş tutarını güncelle
-        debugPrint('💰 API sipariş tutarı: ${orderDetail.orderAmount}');
         basketViewModel.setOrderAmount(orderDetail.orderAmount);
-        
-        // Tahsil edilen tutar bilgilerini güncelle
-        debugPrint('💰 Tahsil edilen tutar güncelleniyor: ${orderDetail.orderPayAmount}');
         basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
         
-        // Kalan tutar hesaplaması
-        final double kalanTutar = orderDetail.orderAmount - orderDetail.orderPayAmount - orderDetail.orderDiscount;
-        debugPrint('💸 API değerlerinden kalan tutar hesaplandı: orderAmount(${orderDetail.orderAmount}) - orderPayAmount(${orderDetail.orderPayAmount}) - orderDiscount(${orderDetail.orderDiscount}) = $kalanTutar');
-        
-        // İndirim bilgisini güncelle
         if (orderDetail.orderDiscount > 0) {
-          debugPrint('🔖 İndirim tutarı güncelleniyor: ${orderDetail.orderDiscount}');
           basketViewModel.applyDiscount(orderDetail.orderDiscount);
         }
         
-        // Sipariş ürünlerini sepete ekle
         final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
         
-        // Sepeti doldur - Artık her ürün için ayrı eklemeler yapmıyoruz
-        // Bunun yerine ürünleri doğrudan kendi miktarı ve opID'si ile ekliyoruz
         for (var item in sepetItems) {
           basketViewModel.addProductWithOpID(
             item.product, 
@@ -220,15 +161,11 @@ class _BasketViewState extends State<BasketView> {
             item.opID
           );
         }
-        
-        debugPrint('✅ Sepete ${basketViewModel.totalQuantity} adet ürün eklendi.');
       } else {
-        // Hata mesajını göster
         setState(() {
           _errorMessage = orderViewModel.errorMessage ?? 'Sipariş detayları alınamadı.';
         });
         
-        // Kullanıcıya hata mesajı göster
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -238,15 +175,12 @@ class _BasketViewState extends State<BasketView> {
             ),
           );
         }
-        
-        debugPrint('⛔️ Sipariş detayları alınamadı: $_errorMessage');
       }
     } catch (e) {
       setState(() {
         _errorMessage = 'Sipariş detayları alınırken hata oluştu: $e';
       });
       
-      // Kullanıcıya hata mesajı göster
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -256,8 +190,6 @@ class _BasketViewState extends State<BasketView> {
           ),
         );
       }
-      
-      debugPrint('🔴 Sipariş detayları alınırken hata: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -288,26 +220,19 @@ class _BasketViewState extends State<BasketView> {
       return;
     }
     
-    debugPrint('🛒 Sipariş oluşturuluyor...');
-    debugPrint('🛒 Sipariş tipi: ${widget.orderType}, Masa ID: ${widget.tableID}');
-    debugPrint('🛒 Kuver durumu: $_isKuver, Garsoniye durumu: $_isWaiter');
-    
     try {
       setState(() {
         _isLoading = true;
         _errorMessage = '';
       });
       
-      // OrderViewModel oluştur
       final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
       
-      // Müşteri bilgilerini kontrol et
       int custID = 0;
       String custName = '';
       String custPhone = '';
       List<dynamic> custAdrs = [];
       
-      // Siparişte zaten müşteri bilgisi varsa veya eklenmişse
       if (widget.selectedCustomer != null) {
         custID = widget.selectedCustomer!.custID;
         custName = widget.selectedCustomer!.custName;
@@ -318,20 +243,11 @@ class _BasketViewState extends State<BasketView> {
         }
       }
       
-      // TableID null ise güvenli bir değer kullan
       int tableID = widget.tableID ?? 0;
-      
-      // _isKuver ve _isWaiter int tipinde olduğundan emin ol
       int kuverDurumu = _isKuver;
       int garsoniyeDurumu = _isWaiter;
       
-      debugPrint('🔄 Int olarak gönderilecek değerler - kuver: $kuverDurumu, garsoniye: $garsoniyeDurumu');
-      
       if (widget.orderID != null) {
-        // Mevcut siparişi güncelle
-        debugPrint('🔄 Mevcut sipariş güncelleniyor. OrderID: ${widget.orderID}');
-        debugPrint('🛎️ Kuver: $_isKuver, Garsoniye: $_isWaiter değerleri ile gönderiliyor');
-        
         final success = await orderViewModel.siparisGuncelle(
           userToken: _userToken!,
           compID: _compID!,
@@ -343,16 +259,12 @@ class _BasketViewState extends State<BasketView> {
           custName: custName,
           custPhone: custPhone,
           custAdrs: custAdrs,
-          isKuver: kuverDurumu, // Int tipinde kuver durumu
-          isWaiter: garsoniyeDurumu, // Int tipinde garsoniye durumu
+          isKuver: kuverDurumu,
+          isWaiter: garsoniyeDurumu,
         );
         
         _handleOrderResult(success, orderViewModel, true);
       } else {
-        // Yeni sipariş oluştur
-        debugPrint('➕ Yeni sipariş oluşturuluyor.');
-        debugPrint('🛎️ Kuver: $_isKuver, Garsoniye: $_isWaiter değerleri ile gönderiliyor');
-      
         final success = await orderViewModel.siparisSunucuyaGonder(
           userToken: _userToken!,
           compID: _compID!,
@@ -366,8 +278,8 @@ class _BasketViewState extends State<BasketView> {
           custName: custName,
           custPhone: custPhone,
           custAdrs: custAdrs,
-          isKuver: kuverDurumu, // Int tipinde kuver durumu
-          isWaiter: garsoniyeDurumu, // Int tipinde garsoniye durumu
+          isKuver: kuverDurumu,
+          isWaiter: garsoniyeDurumu,
         );
         
         _handleOrderResult(success, orderViewModel, false);
@@ -386,47 +298,43 @@ class _BasketViewState extends State<BasketView> {
           duration: const Duration(seconds: 5),
         ),
       );
-      
-      debugPrint('🔴 Sipariş gönderilirken hata: $_errorMessage');
     }
   }
 
   void _handleOrderResult(bool success, OrderViewModel orderViewModel, bool isUpdate) {
-      if (!mounted) return;
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = false;
+      _isSiparisOlusturuldu = success;
+    });
+    
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sipariş başarıyla oluşturuldu'),
+          backgroundColor: Colors.green,
+        ),
+      );
       
-      setState(() {
-        _isLoading = false;
-        _isSiparisOlusturuldu = success;
-      });
-      
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sipariş başarıyla oluşturuldu'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Sepeti temizle
       _basketViewModel!.clearBasket();
-        
-        // Ana sayfaya dönmek yerine, TablesView'a yönlendir
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TablesView(
-              userToken: _userToken!,
-              compID: _compID!,
-              title: 'Masalar',
-            ),
-          ),
-          (route) => false, // Tüm geçmiş sayfaları temizle
-        );
-      } else {
-        setState(() {
-          _errorMessage = orderViewModel.errorMessage ?? 'Sipariş oluşturulamadı';
-      });
       
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TablesView(
+            userToken: _userToken!,
+            compID: _compID!,
+            title: 'Masalar',
+          ),
+        ),
+        (route) => false,
+      );
+    } else {
+      setState(() {
+        _errorMessage = orderViewModel.errorMessage ?? 'Sipariş oluşturulamadı';
+      });
+    
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_errorMessage),
@@ -436,26 +344,16 @@ class _BasketViewState extends State<BasketView> {
     }
   }
 
-  // Aktif olmayan masa kontrolü
   bool _isInactiveTable() {
-    // orderID null ise, bu aktif olmayan bir masa demektir
     return widget.orderID == null;
   }
 
-  // Geri dönüş kontrolü - Kullanıcı geri tuşuna bastığında çalışır
   Future<bool> _onWillPop() async {
-    // Sepeti temizlemiyoruz, sepetteki ürünleri koruyoruz
-    // Kullanıcı ürün ekleyip sonra geri döndüğünde ürünlerin korunması gerekiyor
-    debugPrint('⬅️ Sepetten çıkılıyor. Sepet korunacak. Ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
-    return true; // Geri dönüşe izin ver
+    return true;
   }
 
-  // Sayfadan çıkış durumunda sepeti temizleme kontrolü
   @override
   void dispose() {
-    // Sepeti temizlemiyoruz, sepetteki ürünleri koruyoruz
-    // Kullanıcı ürün ekleyip sonra geri döndüğünde ürünlerin korunması gerekiyor
-    debugPrint('🔚 Sepet sayfası kapanıyor. Sepet korunacak. Ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
     super.dispose();
   }
 
@@ -480,9 +378,6 @@ class _BasketViewState extends State<BasketView> {
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () async {
-              // Sepeti temizlemiyoruz, sepetteki ürünleri koruyoruz
-              // Kullanıcı ürün ekleyip sonra geri döndüğünde ürünlerin korunması gerekiyor
-              debugPrint('❌ Sepet kapatılıyor. Sepet korunacak. Ürün sayısı: ${_basketViewModel?.totalQuantity ?? 0}');
               Navigator.of(context).pop();
             },
           ),
@@ -512,7 +407,6 @@ class _BasketViewState extends State<BasketView> {
                             color: Colors.black54,
                           ),
                         ),
-                        // Sipariş ID varsa sipariş detaylarını göster
                         if (widget.orderID != null)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -546,7 +440,6 @@ class _BasketViewState extends State<BasketView> {
                     ),
                   ),
                   
-                  // Sipariş güncelleme bilgi mesajı
                   if (widget.orderID != null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -569,7 +462,6 @@ class _BasketViewState extends State<BasketView> {
                       ),
                     ),
                   
-                  // İnaktif masa uyarısı
                   if (_isInactiveTable())
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -592,7 +484,6 @@ class _BasketViewState extends State<BasketView> {
                       ),
                     ),
                   
-                  // Sipariş Açıklaması (varsa göster)
                   if (_orderDesc.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -634,7 +525,6 @@ class _BasketViewState extends State<BasketView> {
                       ),
                     ),
                   
-                  // Misafir Sayısı Bilgisi
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     padding: const EdgeInsets.all(12),
@@ -668,7 +558,6 @@ class _BasketViewState extends State<BasketView> {
                     ),
                   ),
                   
-                  // Sepet Öğeleri Listesi
                   Expanded(
                     child: Consumer<BasketViewModel>(
                       builder: (context, basketViewModel, child) {
@@ -693,33 +582,21 @@ class _BasketViewState extends State<BasketView> {
                     ),
                   ),
                   
-                  // Toplam Bilgileri
                   Consumer<BasketViewModel>(
                     builder: (context, basketViewModel, child) {
-                      // Sepet boşsa, toplam bilgileri gösterme
                       if (basketViewModel.isEmpty) {
-                        return const SizedBox.shrink(); // Boş widget
+                        return const SizedBox.shrink();
                       }
                       
-                      // Sepet içeriğini logla
                       double manuelToplam = 0;
                       for (var item in basketViewModel.items) {
-                        debugPrint('🧮 [BASKET_VIEW] Ürün: ${item.product.proName}, Miktar: ${item.proQty}, Birim: ${item.birimFiyat}, Toplam: ${item.totalPrice}');
                         manuelToplam += item.totalPrice;
                       }
-                      debugPrint('💲 [BASKET_VIEW] Manuel hesaplanan toplam: $manuelToplam');
-                      debugPrint('💲 [BASKET_VIEW] ViewModel toplam: ${basketViewModel.totalAmount}');
-                      debugPrint('💲 [BASKET_VIEW] API sipariş tutarı: ${basketViewModel.orderAmount}');
-                      debugPrint('💰 [BASKET_VIEW] Tahsil edilen tutar: ${basketViewModel.orderPayAmount}');
-                      debugPrint('💳 [BASKET_VIEW] İndirim tutarı: ${basketViewModel.discount}');
                       
-                      // Manuel kalan hesapla
                       final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.orderPayAmount;
-                      debugPrint('💸 [BASKET_VIEW] Manuel kalan: $manuelKalan');
                       
                       return Column(
                         children: [
-                          // Kuver ve Garsoniye Durum Göstergesi
                           if (_isKuver == 1 || _isWaiter == 1)
                             Container(
                               padding: const EdgeInsets.all(12),
@@ -832,12 +709,10 @@ class _BasketViewState extends State<BasketView> {
                     },
                   ),
                   
-                  // Alt Butonlar
                   SizedBox(
                     height: 90,
                     child: Row(
                       children: [
-                        // Kaydet Butonu
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () => _createOrder(_basketViewModel!),
@@ -862,7 +737,6 @@ class _BasketViewState extends State<BasketView> {
                           ),
                         ),
                         
-                        // Ödeme Al Butonu
                         Expanded(
                           child: ElevatedButton(
                             onPressed: widget.orderID != null ? () {
@@ -889,10 +763,9 @@ class _BasketViewState extends State<BasketView> {
                               }
                               
                               setState(() {
-                                _isProcessing = true; // İşlem başladı
+                                _isProcessing = true;
                               });
                               
-                              // Doğrudan ödeme sayfasına git
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) => PaymentView(
@@ -902,7 +775,7 @@ class _BasketViewState extends State<BasketView> {
                                     totalAmount: basketViewModel.totalAmount,
                                     basketItems: basketViewModel.items,
                                     onPaymentSuccess: () {
-                                      setState(() => _isSiparisOlusturuldu = true); // Ödeme yapıldı, sepeti temizleme
+                                      setState(() => _isSiparisOlusturuldu = true);
                                       basketViewModel.clearBasket();
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
@@ -935,12 +808,11 @@ class _BasketViewState extends State<BasketView> {
                           ),
                         ),
                         
-                        // Yazdır Butonu
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                                _isProcessing = true; // İşlem başladı
+                                _isProcessing = true;
                               });
                             },
                             style: ElevatedButton.styleFrom(
@@ -976,7 +848,7 @@ class _BasketViewState extends State<BasketView> {
         onTap: () {
           if (_userToken != null && _compID != null) {
             setState(() {
-              _isProcessing = true; // İşlem başladı
+              _isProcessing = true;
             });
             Navigator.push(
               context,
@@ -999,7 +871,7 @@ class _BasketViewState extends State<BasketView> {
             _buildQuantityButton(
               icon: Icons.remove,
               onPressed: () {
-                setState(() => _isProcessing = true); // İşlem başladı
+                setState(() => _isProcessing = true);
                 Provider.of<BasketViewModel>(context, listen: false)
                     .decrementQuantity(item.product.proID);
               },
@@ -1016,7 +888,7 @@ class _BasketViewState extends State<BasketView> {
             _buildQuantityButton(
               icon: Icons.add,
               onPressed: () {
-                setState(() => _isProcessing = true); // İşlem başladı
+                setState(() => _isProcessing = true);
                 Provider.of<BasketViewModel>(context, listen: false)
                     .incrementQuantity(item.product.proID);
               },
@@ -1100,7 +972,7 @@ class _BasketViewState extends State<BasketView> {
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () {
-                setState(() => _isProcessing = true); // İşlem başladı
+                setState(() => _isProcessing = true);
                 Provider.of<BasketViewModel>(context, listen: false)
                     .removeProduct(item.product.proID, opID: item.opID);
               },
@@ -1127,18 +999,6 @@ class _BasketViewState extends State<BasketView> {
   }
 
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
-    // Debug için sepet durumunu logla
-    if (label == "Toplam Tutar") {
-      debugPrint('🛒 [BASKET] Sepet _buildInfoRow: $label = $value');
-      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      if (basketViewModel.items.isNotEmpty) {
-        for (var item in basketViewModel.items) {
-          debugPrint('📊 [BASKET] Item: ${item.product.proName}, Qty: ${item.proQty}, Birim: ${item.birimFiyat}, Toplam: ${item.totalPrice}');
-        }
-        debugPrint('💰 [BASKET] Toplam sepet tutarı: ${basketViewModel.totalAmount}');
-      }
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -1163,109 +1023,10 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
-  /// Seçilen ödeme tipi ile ödeme işlemini gerçekleştir
-  Future<void> _processPayment(PaymentType paymentType) async {
-    if (_userToken == null || _compID == null || widget.orderID == null) {
-      return;
-    }
-    
-    setState(() {
-      _isProcessing = true; // İşlem başladı
-    });
-    
-    // Ödeme sayfasını göster
-    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PaymentView(
-          userToken: _userToken!,
-          compID: _compID!,
-          orderID: widget.orderID!,
-          totalAmount: basketViewModel.totalAmount,
-          basketItems: basketViewModel.items,
-          onPaymentSuccess: () {
-            // Ödeme başarılı olduğunda çağrılacak
-            // Parçalı ödeme yapıldıysa, ödenmiş ürünleri sepetten çıkar
-            // Not: Tam ödeme yapıldıysa tüm sepet temizlenir
-            _refreshSiparisDetayi();
-            
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ödeme başarıyla alındı. Ödenen ürünler sepetten kaldırıldı.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  // Sipariş detaylarını yeniden yükle (Ödeme sonrası)
-  Future<void> _refreshSiparisDetayi() async {
-    if (_userToken == null || _compID == null || widget.orderID == null) {
-      debugPrint('⛔️ Ürün yenilemesi yapılamıyor: Kullanıcı bilgileri veya sipariş ID eksik');
-      return;
-    }
-    
-    setState(() => _isLoading = true);
-    debugPrint('🔄 Ödeme sonrası sepet yenileniyor. OrderID: ${widget.orderID}');
-    
-    try {
-      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
-      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      
-      // Mevcut sepeti temizle
-      basketViewModel.clearBasket();
-      debugPrint('🧹 Sepet temizlendi, yeni ürünler yüklenecek');
-      
-      // Sipariş detaylarını yeniden yükle
-      final success = await orderViewModel.getSiparisDetayi(
-        userToken: _userToken!,
-        compID: _compID!,
-        orderID: widget.orderID!,
-      );
-      
-      if (success && orderViewModel.orderDetail != null) {
-        // Sipariş ürünlerini sepete ekle
-        final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
-        debugPrint('📦 API\'den ${sepetItems.length} adet ürün alındı');
-        
-        if (sepetItems.isEmpty) {
-          debugPrint('✅ Tüm ürünler ödenmiş, sepet boş kalacak');
-        } else {
-          // Sepeti doldur - Burada sadece ödenmemiş ürünler olmalı
-          for (var item in sepetItems) {
-            debugPrint('➕ Sepete ekleniyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}');
-            basketViewModel.addProductWithOpID(
-              item.product, 
-              item.proQty,
-              item.opID
-            );
-          }
-          debugPrint('✅ Sepet güncellendi. Yeni ürün sayısı: ${basketViewModel.items.length}');
-        }
-      } else {
-        debugPrint('❌ Sipariş detayları alınamadı: ${orderViewModel.errorMessage}');
-      }
-    } catch (e) {
-      debugPrint('🔴 Sipariş detayları yenilenemedi: $e');
-    } finally {
-      // İşlem tamamlandı, yükleme durumunu kapat
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  // Kuver durumunu değiştirme fonksiyonu
   void _toggleKuverDurumu() {
     setState(() {
-      // _isKuver değerini tersine çevir (0 -> 1, 1 -> 0)
       _isKuver = _isKuver == 0 ? 1 : 0;
     });
-    
-    debugPrint('🛎️ Kuver durumu değiştirildi: $_isKuver (int tipinde)');
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1276,14 +1037,10 @@ class _BasketViewState extends State<BasketView> {
     );
   }
   
-  // Garsoniye durumunu değiştirme fonksiyonu
   void _toggleGarsoniyeDurumu() {
     setState(() {
-      // _isWaiter değerini tersine çevir (0 -> 1, 1 -> 0)
       _isWaiter = _isWaiter == 0 ? 1 : 0;
     });
-    
-    debugPrint('🛎️ Garsoniye durumu değiştirildi: $_isWaiter (int tipinde)');
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1294,7 +1051,6 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
-  // Menü dialogu
   void _showMenuDialog() {
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
     final bool showKuverGarsoniye = userViewModel.userInfo?.company?.compKuverWaiter ?? false;
@@ -1365,7 +1121,6 @@ class _BasketViewState extends State<BasketView> {
                       title: 'Müşteri',
                       onTap: () {
                         Navigator.of(context).pop();
-                        // Müşteri işlemi - Sepette müşteri ekleme özelliği yoksa burada uyarı gösterilebilir
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Müşteri ekleme işlemi bu ekrandan yapılamaz'))
                         );
@@ -1403,7 +1158,6 @@ class _BasketViewState extends State<BasketView> {
                       title: 'Yazdır',
                       onTap: () {
                         Navigator.of(context).pop();
-                        // Yazdır işlemi
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Yazdırma işlemi başlatılıyor...'))
                         );
@@ -1417,7 +1171,6 @@ class _BasketViewState extends State<BasketView> {
                       title: 'Barkod',
                       onTap: () {
                         Navigator.of(context).pop();
-                        // Barkod işlemi
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Barkod görüntüleme özelliği henüz aktif değil'))
                         );
@@ -1457,7 +1210,6 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
-  // Sipariş açıklaması ekleme diyaloğu
   void _showOrderDescDialog() {
     final TextEditingController noteController = TextEditingController(text: _orderDesc);
     
@@ -1520,7 +1272,6 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
-  // Misafir sayısı seçme diyaloğu
   void _showGuestCountDialog() {
     int tempGuestCount = _orderGuest;
     
@@ -1611,11 +1362,9 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
-  // Sipariş iptali için onay diyaloğu
   void _showCancelOrderDialog() {
     final TextEditingController cancelDescController = TextEditingController();
     
-    // Sipariş ID kontrolü
     if (widget.orderID == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1658,7 +1407,6 @@ class _BasketViewState extends State<BasketView> {
             onPressed: () {
               Navigator.of(context).pop();
               
-              // İptal işlemi gerçeği burada yapılabilir veya sadece bildirim gösterilebilir
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Sipariş iptal edildi: ${cancelDescController.text}'),
@@ -1666,7 +1414,6 @@ class _BasketViewState extends State<BasketView> {
                 )
               );
               
-              // Ana sayfaya dön
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
             style: ElevatedButton.styleFrom(
@@ -1678,4 +1425,5 @@ class _BasketViewState extends State<BasketView> {
       ),
     );
   }
-} 
+
+}

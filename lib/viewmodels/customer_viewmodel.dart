@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/services/customer_service.dart';
+import 'package:pos701/models/order_model.dart' as order_model;
 
 enum CustomerStatus {
   idle,
@@ -80,6 +81,58 @@ class CustomerViewModel extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Müşteri bilgileri alınırken hata oluştu: $e');
+      return false;
+    }
+  }
+
+  /// Yeni müşteri ekler
+  Future<bool> addCustomer({
+    required String userToken,
+    required int compID,
+    required String custName,
+    required String custPhone,
+    List<order_model.CustomerAddress>? addresses,
+  }) async {
+    _setStatus(CustomerStatus.loading);
+    _errorMessage = null;
+    
+    try {
+      // Adres bilgilerini API'nin beklediği formata dönüştür
+      final List<Map<String, dynamic>> addressMaps = [];
+      if (addresses != null && addresses.isNotEmpty) {
+        for (var address in addresses) {
+          addressMaps.add({
+            'adrTitle': address.adrTitle,
+            'adrAdress': address.adrAdress,
+            'adrNote': address.adrNote,
+            'isDefault': address.isDefault ? 1 : 0,
+          });
+        }
+      }
+      
+      final response = await _customerService.addCustomer(
+        userToken: userToken,
+        compID: compID,
+        custName: custName,
+        custPhone: custPhone,
+        custAdrs: addressMaps,
+      );
+      
+      if (response.success && !response.error) {
+        if (response.data != null) {
+          // Eklenen müşterinin bilgilerini seçili müşteri olarak ayarla
+          _selectedCustomer = response.data;
+          // Müşteri listesinin başına yeni müşteriyi ekle
+          _customers.insert(0, response.data!);
+        }
+        _setStatus(CustomerStatus.success);
+        return true;
+      } else {
+        _setError(response.errorCode ?? 'Müşteri eklenemedi');
+        return false;
+      }
+    } catch (e) {
+      _setError('Müşteri eklenirken hata oluştu: $e');
       return false;
     }
   }
