@@ -179,8 +179,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         // Sepetten gelen ürünün eski proID'si
         int oldProID = widget.selectedProID!;
         
-        // Eğer aynı porsiyon seçildiyse sadece notu, ikram durumunu ve fiyatı güncelle
+        // Eğer aynı porsiyon seçildiyse sadece seçilen ürünün notunu, ikram durumunu ve fiyatını güncelle
         if (oldProID == selectedPorsiyon.proID) {
+          // Sadece belirli bir ürünü güncelle (tüm sepeti değil)
           basketViewModel.updateProductNote(oldProID, _noteController.text);
           basketViewModel.toggleGiftStatus(oldProID, isGift: _isGift);
           
@@ -199,14 +200,14 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           return;
         }
         
-        // Eski ürünü sepetten bul
+        // Eski ürünü sepetten bul - sadece o belirli ID'li ürünü değiştir
         final existingItem = basketViewModel.items.firstWhere(
           (item) => item.product.proID == oldProID,
           orElse: () => BasketItem(product: product, proQty: 0),
         );
         
         if (existingItem.proQty > 0) {
-          // Sadece seçili öğeyi güncelle, miktar korunacak ve not eklenecek
+          // Sadece seçili öğeyi güncelle, miktar korunacak ve not eklenecek - diğer aynı ürünler sabit kalacak
           basketViewModel.updateSpecificItem(
             oldProID, 
             product, 
@@ -223,11 +224,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           );
         } else {
           // Ürün bulunamadı, normal ekleme yap
-          basketViewModel.addProduct(
-            product, 
-            proNote: _noteController.text,
-            isGift: _isGift,
-          );
+          _addProductAsNewItem(basketViewModel, product);
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -237,12 +234,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           );
         }
       } else {
-        // Normal ürün ekleme
-        basketViewModel.addProduct(
-          product, 
-          proNote: _noteController.text,
-          isGift: _isGift,
-        );
+        // Normal ürün ekleme - her zaman yeni bir öğe olarak ekle
+        _addProductAsNewItem(basketViewModel, product);
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -255,6 +248,21 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Geri dön
       Navigator.of(context).pop();
     }
+  }
+
+  // Her ürünü yeni bir öğe olarak sepete ekler
+  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product) {
+    // BasketItem oluştur
+    final newItem = BasketItem(
+      product: product,
+      proQty: 1,
+      proNote: _noteController.text,
+      isGift: _isGift,
+    );
+    
+    // Doğrudan items listesine ekle (mevcut öğeleri artırmak yerine)
+    basketViewModel.items.add(newItem);
+    basketViewModel.notifyListeners();
   }
 
   // Porsiyon seçildiğinde fiyat kontrolcüsünü günceller
@@ -323,9 +331,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _productDetail!.postTitle,
-                    style: const TextStyle(
+          Text(
+            _productDetail!.postTitle,
+            style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -345,7 +353,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                           _productDetail!.variants[_selectedPorsiyonIndex].proUnit,
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.bold,
                             color: Color(AppConstants.primaryColorValue),
                           ),
                         ),
@@ -366,13 +374,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                   children: [
                     Icon(Icons.restaurant, size: 14, color: Color(AppConstants.primaryColorValue)),
                     const SizedBox(width: 4),
-                    const Text(
+          const Text(
                       'Porsiyon Seçimi',
-                      style: TextStyle(
+            style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -437,56 +445,56 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
                       Icon(Icons.monetization_on, size: 14, color: Color(AppConstants.primaryColorValue)),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Ürün Fiyatı',
-                        style: TextStyle(
+                       SizedBox(width: 4),
+                       Text(
+            'Ürün Fiyatı',
+            style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+              fontWeight: FontWeight.bold,
+            ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _priceController,
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [NumericTextFormatter()],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [NumericTextFormatter()],
                           style: TextStyle(fontSize: 14),
-                          decoration: InputDecoration(
-                            labelText: 'Fiyat (₺)',
+                  decoration: InputDecoration(
+                    labelText: 'Fiyat (₺)',
                             labelStyle: TextStyle(fontSize: 13),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                             prefixIcon: Icon(Icons.monetization_on, size: 18),
-                            suffixText: '₺',
-                            enabled: _isCustomPrice,
-                            filled: _isCustomPrice,
-                            fillColor: _isCustomPrice ? Colors.yellow.shade50 : null,
-                          ),
-                        ),
-                      ),
+                    suffixText: '₺',
+                    enabled: _isCustomPrice,
+                    filled: _isCustomPrice,
+                    fillColor: _isCustomPrice ? Colors.yellow.shade50 : null,
+                  ),
+                ),
+              ),
                       const SizedBox(width: 10),
                       SizedBox(
                         height: 40,
                         child: TextButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              _isCustomPrice = !_isCustomPrice;
-                              if (!_isCustomPrice) {
-                                // Özel fiyat kaldırılırsa orijinal fiyata geri dön
-                                _updatePriceController();
-                              }
-                            });
-                          },
+                onPressed: () {
+                  setState(() {
+                    _isCustomPrice = !_isCustomPrice;
+                    if (!_isCustomPrice) {
+                      // Özel fiyat kaldırılırsa orijinal fiyata geri dön
+                      _updatePriceController();
+                    }
+                  });
+                },
                           icon: Icon(_isCustomPrice ? Icons.lock_open : Icons.lock, size: 16),
                           label: Text(
                             _isCustomPrice ? 'Kilidi Kaldır' : 'Değiştir',
@@ -499,22 +507,22 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_isCustomPrice)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
+                ),
+              ),
+            ],
+          ),
+          if (_isCustomPrice)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
                         'Özel fiyat girişi aktif.',
-                        style: TextStyle(
+                style: TextStyle(
                           fontSize: 11,
-                          color: Colors.orange.shade800,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
+                  color: Colors.orange.shade800,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
                 ],
               ),
             ),
@@ -536,21 +544,21 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                     children: [
                       Icon(Icons.note, size: 14, color: Color(AppConstants.primaryColorValue)),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Ürün Notu',
-                        style: TextStyle(
+          const Text(
+            'Ürün Notu',
+            style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+              fontWeight: FontWeight.bold,
+            ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _noteController,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _noteController,
                     style: TextStyle(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Ürün ile ilgili eklemek istediğiniz notları yazın',
+              hintText: 'Ürün ile ilgili eklemek istediğiniz notları yazın',
                       hintStyle: TextStyle(fontSize: 12),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       border: OutlineInputBorder(
@@ -576,69 +584,69 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _isGift,
-                        activeColor: Color(AppConstants.primaryColorValue),
+          Row(
+            children: [
+              Checkbox(
+                value: _isGift,
+                activeColor: Color(AppConstants.primaryColorValue),
                         visualDensity: VisualDensity.compact,
-                        onChanged: (value) {
-                          setState(() {
-                            _isGift = value ?? false;
-                          });
-                        },
-                      ),
-                      const Text(
-                        'İkram olarak işaretle',
-                        style: TextStyle(
+                onChanged: (value) {
+                  setState(() {
+                    _isGift = value ?? false;
+                  });
+                },
+              ),
+              const Text(
+                'İkram olarak işaretle',
+                style: TextStyle(
                           fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (_isGift)
+                Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                              Icon(Icons.card_giftcard, color: Colors.red.shade400, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        'İkram',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
                           fontWeight: FontWeight.bold,
+                                  fontSize: 12,
                         ),
                       ),
-                      const Spacer(),
-                      if (_isGift)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.card_giftcard, color: Colors.red.shade400, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                'İkram',
-                                style: TextStyle(
-                                  color: Colors.red.shade700,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
-                  if (_isGift)
-                    Padding(
+                ),
+            ],
+          ),
+          if (_isGift)
+            Padding(
                       padding: const EdgeInsets.only(left: 40, top: 4),
-                      child: Text(
+              child: Text(
                         'Bu ürün ikram olarak işaretlenecek.',
-                        style: TextStyle(
+                style: TextStyle(
                           fontSize: 11,
-                          color: Colors.grey.shade600,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
+      ),
+            ),
                     ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -715,9 +723,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           SizedBox(
             height: 44,
             child: ElevatedButton(
-              onPressed: _addProductToBasket,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(AppConstants.primaryColorValue),
+            onPressed: _addProductToBasket,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(AppConstants.primaryColorValue),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -729,10 +737,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                   const Icon(Icons.shopping_cart, size: 18),
                   const SizedBox(width: 8),
                   const Text(
-                    'Sepete Ekle',
-                    style: TextStyle(
+              'Sepete Ekle',
+              style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
