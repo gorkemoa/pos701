@@ -11,6 +11,7 @@ class AppConstants {
   static const String tableChangeEndpoint = 'service/user/order/tableChange';
   static const String productDetailEndpoint = 'service/product/id/detail';
   static const String customersEndpoint = 'service/user/account/customers';
+  static const String addCustomerEndpoint = 'service/user/account/customers/addCust';
   
   // Storage Keys
   static const String tokenKey = 'token';
