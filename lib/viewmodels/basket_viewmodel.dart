@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
 
@@ -91,8 +92,12 @@ class BasketViewModel extends ChangeNotifier {
     _basket.clear();
     _orderAmount = 0.0;
     
+    // Build sırasında bildirimleri güvenli şekilde yönet
     try {
-      notifyListeners();
+      // SchedulerBinding kullanarak sonraki frame'e bildirimi ertele
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     } catch (e) {
       // Hatayı yut, uygulama çökmemeli
     }

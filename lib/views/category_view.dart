@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/models/user_model.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
@@ -59,6 +60,13 @@ class _CategoryViewState extends State<CategoryView> {
     super.initState();
     _categoryViewModel = CategoryViewModel(ProductService());
     _productViewModel = ProductViewModel(ProductService());
+    
+    // Widget ağacı oluşturulduktan sonra sepeti temizle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+      basketViewModel.clearBasket();
+    });
+    
     _loadCategories();
   }
 
