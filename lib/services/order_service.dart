@@ -490,4 +490,92 @@ class OrderService {
       throw Exception('Sipariş listesi alınırken hata oluştu: $e');
     }
   }
+
+  /// Siparişe ürün ekler
+  ///
+  /// API endpoint: service/user/order/addProduct
+  /// Method: POST
+  Future<ApiResponseModel<AddProductResponse>> addProductToOrder({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    required int productID,
+    required int quantity,
+    String? proNote,
+    int isGift = 0,
+  }) async {
+    try {
+      debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] Başlatılıyor...');
+      final url = '${AppConstants.baseUrl}service/user/order/addProduct';
+      
+      final Map<String, dynamic> requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        'orderID': orderID,
+        'proID': productID,
+        'proQty': quantity,
+        'proNote': proNote ?? '',
+        'isGift': isGift,
+      };
+      
+      // İstek gövdesini logla
+      debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] İstek gövdesi: ${jsonEncode(requestBody)}');
+      
+      // SharedPreferences'tan token veya kimlik bilgilerini alarak header'ları hazırla
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? savedToken = prefs.getString(AppConstants.tokenKey);
+      
+      debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] Token: ${savedToken ?? "Token bulunamadı"}');
+      
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+      };
+      
+      // Eğer token varsa, header'a ekle
+      if (savedToken != null && savedToken.isNotEmpty) {
+        headers['X-Auth-Token'] = savedToken;
+      }
+      
+      debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] Headers: $headers');
+      debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] API isteği gönderiliyor: $url');
+      
+      final httpResponse = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] HTTP yanıt kodu: ${httpResponse.statusCode}');
+      
+      final String responseBody = utf8.decode(httpResponse.bodyBytes);
+      debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] HTTP yanıt gövdesi: $responseBody');
+      
+      final responseData = jsonDecode(responseBody);
+      
+      // HTTP durum kodunu kontrol et
+      if (httpResponse.statusCode == 200 || httpResponse.statusCode == 410) {
+        debugPrint('🟢 [SİPARİŞE ÜRÜN EKLEME] Başarılı: ${jsonEncode(responseData)}');
+        return ApiResponseModel.fromJson(
+          responseData, 
+          (data) => AddProductResponse.fromJson(data),
+        );
+      } else {
+        debugPrint('🔴 [SİPARİŞE ÜRÜN EKLEME] Hata: ${httpResponse.statusCode}, Veri: ${jsonEncode(responseData)}');
+        return ApiResponseModel<AddProductResponse>(
+          error: true,
+          success: false,
+          errorCode: responseData['message'] ?? "İşlem başarısız: HTTP ${httpResponse.statusCode}",
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('🔴 [SİPARİŞE ÜRÜN EKLEME] İSTİSNA: $e');
+      debugPrint('🔴 [SİPARİŞE ÜRÜN EKLEME] STACK TRACE: $stackTrace');
+      return ApiResponseModel<AddProductResponse>(
+        error: true,
+        success: false,
+        errorCode: "Siparişe ürün eklenirken hata: $e",
+      );
+    }
+  }
 } 

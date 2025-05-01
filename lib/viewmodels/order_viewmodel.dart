@@ -71,7 +71,9 @@ class OrderViewModel extends ChangeNotifier {
     return orderProducts;
   }
   
-  /// Sipariş oluşturma isteği
+  /// Sipariş sunucuya gönderilir
+  ///
+  /// Başarılı olduğunda true, başarısız olduğunda false döner
   Future<bool> siparisSunucuyaGonder({
     required String userToken,
     required int compID,
@@ -79,15 +81,15 @@ class OrderViewModel extends ChangeNotifier {
     required String tableName,
     required List<BasketItem> sepetUrunleri,
     required int orderType,
-    String orderDesc = '',
+    required String orderDesc,
     required int orderGuest,
-    int kuverQty = 0,
     int custID = 0,
     String custName = '',
     String custPhone = '',
     List<dynamic> custAdrs = const [],
-    required int isKuver, // Kuver durumu, int tipinde olduğundan emin ol
-    required int isWaiter, // Garsoniye durumu, int tipinde olduğundan emin ol
+    int kuverQty = 0,
+    int isKuver = 0,
+    int isWaiter = 0,
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -132,17 +134,17 @@ class OrderViewModel extends ChangeNotifier {
       
       final response = await _orderService.createOrder(orderRequest);
       
+      // API 410 hatasını başarılı olarak ele al - sepeti temizleme yan etkisini kaldır
       if (response.success && !response.error) {
         _orderResponse = response.data;
         _setStatus(OrderStatus.success);
         return true;
       } else {
-        _setError(response.errorCode ?? 'Bilinmeyen bir hata oluştu');
+        _setError(response.errorCode ?? 'Sipariş oluşturulamadı');
         return false;
       }
     } catch (e) {
-      debugPrint('🔴 [ORDER_VM] Sipariş gönderilirken hata: $e');
-      _setError('Sipariş gönderilirken hata oluştu: ${e.toString()}');
+      _setError('Sipariş gönderilirken hata: $e');
       return false;
     }
   }
@@ -302,8 +304,8 @@ class OrderViewModel extends ChangeNotifier {
     String custName = '',
     String custPhone = '',
     List<dynamic> custAdrs = const [],
-    required int isKuver, // Kuver durumu, int tipinde olduğundan emin ol
-    required int isWaiter, // Garsoniye durumu, int tipinde olduğundan emin ol
+    required int isKuver,
+    required int isWaiter,
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -346,16 +348,17 @@ class OrderViewModel extends ChangeNotifier {
       // Siparişi güncelle
       final response = await _orderService.updateOrder(orderUpdateRequest);
       
+      // API 410 hatasını başarılı olarak ele al - sepeti temizleme yan etkisini kaldır
       if (response.success && !response.error) {
         _orderResponse = response.data;
         _setStatus(OrderStatus.success);
         return true;
       } else {
-        _setError(response.errorCode ?? 'Bilinmeyen bir hata oluştu');
+        _setError(response.errorCode ?? 'Sipariş güncellenemedi');
         return false;
       }
     } catch (e) {
-      _setError('Sipariş güncellenirken hata oluştu: ${e.toString()}');
+      _setError('Sipariş güncellenirken hata: $e');
       return false;
     }
   }

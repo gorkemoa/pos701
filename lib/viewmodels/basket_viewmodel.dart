@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
+import 'package:pos701/services/order_service.dart';
 
 class BasketViewModel extends ChangeNotifier {
   Basket _basket = Basket();
   double _orderAmount = 0;
+  List<int> _newlyAddedProductIds = []; // Yeni eklenen ürün ID'leri
+  String? _errorMessage;
   
   List<BasketItem> get items => _basket.items;
   double get totalAmount => _basket.totalAmount;
@@ -16,6 +19,8 @@ class BasketViewModel extends ChangeNotifier {
   bool get isEmpty => _basket.items.isEmpty;
   int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.proQty);
   int get itemCount => _basket.items.length;
+  List<int> get newlyAddedProductIds => _newlyAddedProductIds;
+  String? get errorMessage => _errorMessage;
   
   void setOrderAmount(double amount) {
     _orderAmount = amount;
@@ -33,6 +38,10 @@ class BasketViewModel extends ChangeNotifier {
         _basket.items[existingIndex].proNote = proNote;
       }
       _basket.items[existingIndex].isGift = isGift;
+      
+      if (!_newlyAddedProductIds.contains(product.proID)) {
+        _newlyAddedProductIds.add(product.proID);
+      }
     } else {
       _basket.items.add(BasketItem(
         product: product,
@@ -41,9 +50,75 @@ class BasketViewModel extends ChangeNotifier {
         proNote: proNote,
         isGift: isGift,
       ));
+      _newlyAddedProductIds.add(product.proID);
     }
     
     notifyListeners();
+  }
+  
+  /// Ürünü sepete ekler ve API ile sunucuya direkt gönderir
+  /// Başarılı olduğunda opID güncellenmiş ürünü sepete ekler
+  Future<bool> addProductToOrder({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    required Product product,
+    int quantity = 1,
+    String? proNote,
+    bool isGift = false,
+  }) async {
+    try {
+      // Önce ürünü sepete geçici olarak ekleyelim (opID=0 ile)
+      addProduct(product, opID: 0, proNote: proNote, isGift: isGift);
+      
+      // Sunucuya ürün ekleme isteği gönder
+      final orderService = OrderService();
+      final response = await orderService.addProductToOrder(
+        userToken: userToken,
+        compID: compID,
+        orderID: orderID,
+        productID: product.proID,
+        quantity: quantity,
+        proNote: proNote,
+        isGift: isGift ? 1 : 0,
+      );
+      
+      if (response.success) {
+        // Başarılı ise, geçici (opID=0) ürünü sepetten çıkarıp, 
+        // sunucudan gelen opID ile yeniden ekleyelim
+        final tempIndex = _basket.items.indexWhere(
+          (item) => item.product.proID == product.proID && item.opID == 0
+        );
+        
+        if (tempIndex != -1) {
+          // Geçici ürünü sil
+          _basket.items.removeAt(tempIndex);
+          
+          // Sunucudan dönen opID ile ekle
+          final int opID = response.data?.opID ?? 0;
+          if (opID > 0) {
+            _basket.items.add(BasketItem(
+              product: product,
+              proQty: quantity,
+              opID: opID,
+              proNote: proNote,
+              isGift: isGift,
+            ));
+            
+            notifyListeners();
+            return true;
+          }
+        }
+      }
+      
+      _errorMessage = response.errorCode ?? "Ürün eklenirken bir hata oluştu";
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = "Ürün eklenirken bir hata oluştu: $e";
+      notifyListeners();
+      return false;
+    }
   }
   
   void addProductWithOpID(Product product, int quantity, int opID, {String? proNote, bool isGift = false}) {
@@ -71,6 +146,7 @@ class BasketViewModel extends ChangeNotifier {
   
   void removeProduct(int productId, {int? opID}) {
     _basket.removeProduct(productId, opID: opID);
+    _newlyAddedProductIds.remove(productId);
     notifyListeners();
   }
   
@@ -91,6 +167,8 @@ class BasketViewModel extends ChangeNotifier {
     
     _basket.clear();
     _orderAmount = 0.0;
+    _newlyAddedProductIds.clear();
+    _errorMessage = null;
     
     // Build sırasında bildirimleri güvenli şekilde yönet
     try {
@@ -101,6 +179,11 @@ class BasketViewModel extends ChangeNotifier {
     } catch (e) {
       // Hatayı yut, uygulama çökmemeli
     }
+  }
+  
+  void clearNewlyAddedMarkers() {
+    _newlyAddedProductIds.clear();
+    notifyListeners();
   }
   
   void applyDiscount(double amount) {
@@ -133,6 +216,7 @@ class BasketViewModel extends ChangeNotifier {
         _basket.items[newProductIndex].proQty--;
       } else {
         _basket.items.removeAt(newProductIndex);
+        _newlyAddedProductIds.remove(product.proID);
       }
       notifyListeners();
       return;
@@ -147,6 +231,7 @@ class BasketViewModel extends ChangeNotifier {
         _basket.items[existingItemIndex].proQty--;
       } else {
         _basket.items.removeAt(existingItemIndex);
+        _newlyAddedProductIds.remove(product.proID);
       }
       notifyListeners();
     }
@@ -165,6 +250,7 @@ class BasketViewModel extends ChangeNotifier {
       );
     } else {
       _basket.addProduct(yeniPorsiyon);
+      _newlyAddedProductIds.add(yeniPorsiyon.proID);
     }
     
     notifyListeners();
@@ -180,6 +266,7 @@ class BasketViewModel extends ChangeNotifier {
     }
     
     _basket.removeProduct(oldProID);
+    _newlyAddedProductIds.remove(oldProID);
     
     _basket.items.add(BasketItem(
       product: newProduct,
@@ -187,6 +274,7 @@ class BasketViewModel extends ChangeNotifier {
       proNote: proNote ?? oldNote ?? newProduct.proNote,
       isGift: isGift ?? oldIsGift,
     ));
+    _newlyAddedProductIds.add(newProduct.proID);
     
     notifyListeners();
   }

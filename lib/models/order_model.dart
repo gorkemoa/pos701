@@ -494,4 +494,25 @@ class Payment {
       payType: json['payType'],
     );
   }
+}
+
+/// Ürün ekleme API çağrısından dönen yanıt
+class AddProductResponse {
+  final int opID; // Sipariş ürün ID
+  final String message;
+  final bool success;
+  
+  AddProductResponse({
+    required this.opID,
+    required this.message,
+    required this.success,
+  });
+  
+  factory AddProductResponse.fromJson(Map<String, dynamic> json) {
+    return AddProductResponse(
+      opID: json['opID'] ?? 0,
+      message: json['message'] ?? '',
+      success: json['success'] ?? false,
+    );
+  }
 } 

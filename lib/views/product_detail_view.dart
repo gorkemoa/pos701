@@ -222,47 +222,73 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               duration: Duration(seconds: 2),
             ),
           );
+          Navigator.of(context).pop();
         } else {
           // Ürün bulunamadı, normal ekleme yap
           _addProductAsNewItem(basketViewModel, product);
-          
+        }
+      } else {
+        // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
+        _addProductAsNewItem(basketViewModel, product);
+      }
+    }
+  }
+
+  // Ürünü sepete eklerken API'ye gönder
+  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product) {
+    // Eğer orderID yoksa, sadece sepete ekle (yeni sipariş oluşturma durumunda)
+    Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    int? orderID = args?['orderID'];
+    
+    if (orderID != null) {
+      // Sipariş varsa, önce API'ye gönder, sonra sepete ekle
+      setState(() => _isLoading = true);
+      
+      basketViewModel.addProductToOrder(
+        userToken: widget.userToken,
+        compID: widget.compID,
+        orderID: orderID,
+        product: product,
+        quantity: 1,
+        proNote: _noteController.text,
+        isGift: _isGift,
+      ).then((success) {
+        setState(() => _isLoading = false);
+        
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Ürün sepete eklendi'),
               duration: Duration(seconds: 2),
             ),
           );
+          Navigator.of(context).pop();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(basketViewModel.errorMessage ?? 'Ürün eklenirken bir hata oluştu'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
-      } else {
-        // Normal ürün ekleme - her zaman yeni bir öğe olarak ekle
-        _addProductAsNewItem(basketViewModel, product);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ürün sepete eklendi'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+      });
+    } else {
+      // Sipariş yoksa, sadece yerel sepete ekle
+      basketViewModel.addProduct(
+        product,
+        proNote: _noteController.text,
+        isGift: _isGift,
+      );
       
-      // Geri dön
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ürün sepete eklendi'),
+          duration: Duration(seconds: 2),
+        ),
+      );
       Navigator.of(context).pop();
     }
-  }
-
-  // Her ürünü yeni bir öğe olarak sepete ekler
-  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product) {
-    // BasketItem oluştur
-    final newItem = BasketItem(
-      product: product,
-      proQty: 1,
-      proNote: _noteController.text,
-      isGift: _isGift,
-    );
-    
-    // Doğrudan items listesine ekle (mevcut öğeleri artırmak yerine)
-    basketViewModel.items.add(newItem);
-    basketViewModel.notifyListeners();
   }
 
   // Porsiyon seçildiğinde fiyat kontrolcüsünü günceller
