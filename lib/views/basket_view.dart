@@ -370,10 +370,10 @@ class _BasketViewState extends State<BasketView> {
             children: [
               Text(
                 widget.tableName.toUpperCase(),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               if (widget.orderID != null)
-                Text("Sipariş #${widget.orderID}", style: const TextStyle(fontSize: 12)),
+                Text("Sipariş #${widget.orderID}", style: const TextStyle(fontSize: 13)),
             ],
           ),
           leading: IconButton(
@@ -396,14 +396,14 @@ class _BasketViewState extends State<BasketView> {
             : Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(8.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           "${widget.tableName} Siparişi",
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black54,
                           ),
@@ -429,7 +429,7 @@ class _BasketViewState extends State<BasketView> {
                                 Text(
                                   "#${widget.orderID}",
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: Color(AppConstants.primaryColorValue),
                                   ),
@@ -443,18 +443,18 @@ class _BasketViewState extends State<BasketView> {
                   
                   if (widget.orderID != null)
                     Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       color: Colors.amber.withOpacity(0.1),
                       child: Row(
                         children: [
                           Icon(Icons.info_outline, color: Colors.amber.shade800, size: 20),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               "Mevcut siparişi düzenliyorsunuz. Güncellemek için tüm ürünleri ekleyin ve Güncelle butonuna basın.",
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9,
                                 color: Colors.amber.shade800,
                               ),
                             ),
@@ -465,18 +465,18 @@ class _BasketViewState extends State<BasketView> {
                   
                   if (_isInactiveTable())
                     Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       color: Colors.blue.withOpacity(0.1),
                       child: Row(
                         children: [
                           Icon(Icons.info_outline, color: Colors.blue.shade800, size: 20),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               "Aktif olmayan bir masa için sipariş oluşturuyorsunuz. Sayfadan çıktığınızda sepet temizlenecektir.",
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 9,
                                 color: Colors.blue.shade800,
                               ),
                             ),
@@ -487,7 +487,7 @@ class _BasketViewState extends State<BasketView> {
                   
                   if (_orderDesc.isNotEmpty)
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
@@ -498,7 +498,7 @@ class _BasketViewState extends State<BasketView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.description, color: Colors.blue.shade700, size: 20),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,15 +508,15 @@ class _BasketViewState extends State<BasketView> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.blue.shade700,
-                                    fontSize: 12,
+                                    fontSize: 10,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 2),
                                 Text(
                                   _orderDesc,
                                   style: TextStyle(
                                     color: Colors.blue.shade800,
-                                    fontSize: 11,
+                                    fontSize: 10,
                                   ),
                                 ),
                               ],
@@ -527,7 +527,7 @@ class _BasketViewState extends State<BasketView> {
                     ),
                   
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
@@ -537,21 +537,21 @@ class _BasketViewState extends State<BasketView> {
                     child: Row(
                       children: [
                         Icon(Icons.people, color: Colors.green.shade700, size: 20),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Text(
                           'Misafir Sayısı:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.green.shade700,
-                            fontSize: 12,
+                            fontSize: 10,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Text(
                           '$_orderGuest',
                           style: TextStyle(
                             color: Colors.green.shade800,
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -566,7 +566,7 @@ class _BasketViewState extends State<BasketView> {
                           return const Center(
                             child: Text(
                               "Sepetiniz boş",
-                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           );
                         }
@@ -584,11 +584,11 @@ class _BasketViewState extends State<BasketView> {
                           children: [
                             if (existingItems.isNotEmpty) ...[
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                                 child: Text(
                                   "Mevcut Sipariş",
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: Color(AppConstants.primaryColorValue),
                                   ),
@@ -599,10 +599,10 @@ class _BasketViewState extends State<BasketView> {
                             
                             if (existingItems.isNotEmpty && newItems.isNotEmpty)
                               Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
                                 child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                                  height: 2,
+                                  margin: const EdgeInsets.symmetric(horizontal: 12.0),
+                                  height: 1,
                                   decoration: BoxDecoration(
                                     color: Colors.orange,
                                     borderRadius: BorderRadius.circular(1),
@@ -612,15 +612,15 @@ class _BasketViewState extends State<BasketView> {
                             
                             if (newItems.isNotEmpty) ...[
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                                 child: Row(
                                   children: [
                                     Icon(Icons.add_circle, size: 16, color: Colors.green.shade700),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Text(
                                       "Yeni Eklenenler",
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.green.shade700,
                                       ),
@@ -654,7 +654,7 @@ class _BasketViewState extends State<BasketView> {
                           if (_isKuver == 1 || _isWaiter == 1)
                             Container(
                               padding: const EdgeInsets.all(12),
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: Colors.amber.shade50,
                                 borderRadius: BorderRadius.circular(8),
@@ -668,18 +668,18 @@ class _BasketViewState extends State<BasketView> {
                                       child: Row(
                                         children: [
                                           Icon(Icons.attach_money, color: Colors.amber.shade800, size: 18),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 6),
                                           Text(
                                             'Kuver Ücreti:',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 12,
+                                              fontSize: 9,
                                               color: Colors.amber.shade800,
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 6),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: Colors.green.shade100,
                                               borderRadius: BorderRadius.circular(4),
@@ -687,7 +687,7 @@ class _BasketViewState extends State<BasketView> {
                                             child: Text(
                                               'AKTİF',
                                               style: TextStyle(
-                                                fontSize: 10,
+                                                fontSize: 9,
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.green.shade800,
                                               ),
@@ -700,18 +700,18 @@ class _BasketViewState extends State<BasketView> {
                                     Row(
                                       children: [
                                         Icon(Icons.monetization_on, color: Colors.amber.shade800, size: 18),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 6),
                                         Text(
                                           'Garsoniye Ücreti:',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 12,
+                                            fontSize: 9,
                                             color: Colors.amber.shade800,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 6),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: Colors.green.shade100,
                                             borderRadius: BorderRadius.circular(4),
@@ -719,7 +719,7 @@ class _BasketViewState extends State<BasketView> {
                                           child: Text(
                                             'AKTİF',
                                             style: TextStyle(
-                                              fontSize: 10,
+                                              fontSize: 9,
                                               fontWeight: FontWeight.bold,
                                               color: Colors.green.shade800,
                                             ),
@@ -732,7 +732,7 @@ class _BasketViewState extends State<BasketView> {
                             ),
                           
                           Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           border: Border(top: BorderSide(color: Colors.grey.shade300)),
                         ),
@@ -764,7 +764,7 @@ class _BasketViewState extends State<BasketView> {
                   ),
                   
                   SizedBox(
-                    height: 90,
+                    height: 70,
                     child: Row(
                       children: [
                         Expanded(
@@ -774,17 +774,17 @@ class _BasketViewState extends State<BasketView> {
                               backgroundColor: Color(AppConstants.primaryColorValue),
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                               elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.check_circle_outline, color: Colors.white),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 6),
                                 Text(
                                   widget.orderID != null ? "Güncelle" : "Kaydet", 
-                                  style: const TextStyle(color: Colors.white, fontSize: 12)
+                                  style: const TextStyle(color: Colors.white, fontSize: 11)
                                 ),
                               ],
                             ),
@@ -848,7 +848,7 @@ class _BasketViewState extends State<BasketView> {
                                   : Colors.grey,
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                               elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                             ),
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -856,7 +856,7 @@ class _BasketViewState extends State<BasketView> {
                               children: [
                                 Icon(Icons.payment, color: Colors.white, size: 18),
                                 SizedBox(width: 4),
-                                Text("Ödeme Al", style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Text("Ödeme Al", style: TextStyle(color: Colors.white, fontSize: 11)),
                               ],
                             ),
                           ),
@@ -873,7 +873,7 @@ class _BasketViewState extends State<BasketView> {
                               backgroundColor: Color(AppConstants.primaryColorValue),
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                               elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                             ),
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -881,7 +881,7 @@ class _BasketViewState extends State<BasketView> {
                               children: [
                                 Icon(Icons.print, color: Colors.white, size: 18),
                                 SizedBox(width: 4),
-                                Text("Yazdır", style: TextStyle(color: Colors.white, fontSize: 12)),
+                                Text("Yazdır", style: TextStyle(color: Colors.white, fontSize: 11)),
                               ],
                             ),
                           ),
@@ -897,7 +897,7 @@ class _BasketViewState extends State<BasketView> {
 
   Widget _buildBasketItem(BuildContext context, BasketItem item, {bool isNewItem = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: InkWell(
         onTap: () {
           if (_userToken != null && _compID != null) {
@@ -929,7 +929,7 @@ class _BasketViewState extends State<BasketView> {
             borderRadius: isNewItem ? BorderRadius.circular(8) : null,
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: Row(
               children: [
                 _buildQuantityButton(
@@ -945,7 +945,7 @@ class _BasketViewState extends State<BasketView> {
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
                     item.proQty.toString(),
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
                 
@@ -960,7 +960,7 @@ class _BasketViewState extends State<BasketView> {
                 
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -969,13 +969,13 @@ class _BasketViewState extends State<BasketView> {
                             Expanded(
                               child: Text(
                                 item.product.proName,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             ),
                             if (item.isGift)
                               Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                 decoration: BoxDecoration(
                                   color: Colors.red.shade100,
                                   borderRadius: BorderRadius.circular(4),
@@ -988,7 +988,7 @@ class _BasketViewState extends State<BasketView> {
                                     Text(
                                       'İkram',
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.red.shade700,
                                       ),
@@ -998,8 +998,8 @@ class _BasketViewState extends State<BasketView> {
                               ),
                             if (isNewItem)
                               Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                                 decoration: BoxDecoration(
                                   color: Colors.green.shade100,
                                   borderRadius: BorderRadius.circular(4),
@@ -1007,7 +1007,7 @@ class _BasketViewState extends State<BasketView> {
                                 child: Text(
                                   'Yeni',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.green.shade700,
                                   ),
@@ -1017,12 +1017,12 @@ class _BasketViewState extends State<BasketView> {
                         ),
                         Text(
                           "Birim Fiyat: ₺${item.product.proPrice}",
-                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                          style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
                         ),
                         if (item.proNote.isNotEmpty)
                           Text(
                             "Not: ${item.proNote}",
-                            style: TextStyle(fontSize: 10, color: Colors.blue.shade600, fontStyle: FontStyle.italic),
+                            style: TextStyle(fontSize: 9, color: Colors.blue.shade600, fontStyle: FontStyle.italic),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1037,7 +1037,7 @@ class _BasketViewState extends State<BasketView> {
                     Text(
                       item.isGift ? "₺0.00" : "₺${item.totalPrice.toStringAsFixed(2)}",
                       style: TextStyle(
-                        fontSize: 14, 
+                        fontSize: 12, 
                         fontWeight: FontWeight.bold,
                         color: item.isGift ? Colors.red.shade700 : Colors.black,
                       ),
@@ -1045,7 +1045,7 @@ class _BasketViewState extends State<BasketView> {
                       if (item.proQty > 1 && !item.isGift)
                       Text(
                         "${item.proQty} x ₺${(item.totalPrice / item.proQty).toStringAsFixed(2)}",
-                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
                       ),
                   ],
                 ),
@@ -1070,11 +1070,11 @@ class _BasketViewState extends State<BasketView> {
     return InkWell(
       onTap: onPressed,
       child: Container(
-        width: 30,
-        height: 30,
+        width: 24,
+        height: 24,
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade400),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, size: 16),
       ),
@@ -1083,21 +1083,21 @@ class _BasketViewState extends State<BasketView> {
 
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 1.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -1166,7 +1166,7 @@ class _BasketViewState extends State<BasketView> {
                       'Menü',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1288,7 +1288,7 @@ class _BasketViewState extends State<BasketView> {
   }) {
     return ListTile(
       leading: Icon(icon),
-      title: Text(title, style: const TextStyle(fontSize: 14)),
+      title: Text(title, style: const TextStyle(fontSize: 12)),
       onTap: onTap,
     );
   }
@@ -1299,7 +1299,7 @@ class _BasketViewState extends State<BasketView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sipariş Notu', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Sipariş Notu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1316,7 +1316,7 @@ class _BasketViewState extends State<BasketView> {
             const Text(
               'Bu not sipariş ile ilişkilendirilecek ve mutfağa iletilecektir.',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9,
                 color: Colors.grey,
                 fontStyle: FontStyle.italic,
               ),
@@ -1362,7 +1362,7 @@ class _BasketViewState extends State<BasketView> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Misafir Sayısı', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          title: const Text('Misafir Sayısı', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1388,7 +1388,7 @@ class _BasketViewState extends State<BasketView> {
                     child: Text(
                       '$tempGuestCount',
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1407,7 +1407,7 @@ class _BasketViewState extends State<BasketView> {
               const Text(
                 'Masadaki misafir sayısını belirleyin',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 10,
                   color: Colors.grey,
                 ),
                 textAlign: TextAlign.center,
@@ -1461,13 +1461,13 @@ class _BasketViewState extends State<BasketView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Siparişi İptal Et', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Siparişi İptal Et', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
               'Bu işlem mevcut siparişi iptal edecektir. Devam etmek istiyor musunuz?',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 16),
             TextField(
