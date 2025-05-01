@@ -3,11 +3,13 @@ import 'package:flutter/scheduler.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
 import 'package:pos701/services/order_service.dart';
+import 'dart:developer' as developer;
 
 class BasketViewModel extends ChangeNotifier {
   Basket _basket = Basket();
   double _orderAmount = 0;
   List<int> _newlyAddedProductIds = []; // Yeni eklenen ürün ID'leri
+  List<int> _newlyAddedLineIds = []; // Yeni eklenen satır ID'leri
   String? _errorMessage;
   
   List<BasketItem> get items => _basket.items;
@@ -20,6 +22,7 @@ class BasketViewModel extends ChangeNotifier {
   int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.proQty);
   int get itemCount => _basket.items.length;
   List<int> get newlyAddedProductIds => _newlyAddedProductIds;
+  List<int> get newlyAddedLineIds => _newlyAddedLineIds;
   String? get errorMessage => _errorMessage;
   
   void setOrderAmount(double amount) {
@@ -27,33 +30,29 @@ class BasketViewModel extends ChangeNotifier {
     notifyListeners();
   }
   
-  void addProduct(Product product, {int opID = 0, String? proNote, bool isGift = false}) {
-    final existingIndex = _basket.items.indexWhere(
-      (item) => item.product.proID == product.proID && item.opID == opID
-    );
+  // Yeni satır ekler ve eklenen satırın lineId'sini döndürür
+  int addProduct(Product product, {int opID = 0, String? proNote, bool isGift = false}) {
+    // Her zaman yeni bir satır oluşturuyoruz
+    int lineId = opID > 0 ? opID : _basket.getNextLineId();
     
-    if (existingIndex != -1) {
-      _basket.items[existingIndex].proQty++;
-      if (proNote != null) {
-        _basket.items[existingIndex].proNote = proNote;
-      }
-      _basket.items[existingIndex].isGift = isGift;
-      
-      if (!_newlyAddedProductIds.contains(product.proID)) {
-        _newlyAddedProductIds.add(product.proID);
-      }
-    } else {
+    // Yeni satır ekle
       _basket.items.add(BasketItem(
         product: product,
         proQty: 1,
         opID: opID,
         proNote: proNote,
         isGift: isGift,
+      lineId: lineId,
       ));
-      _newlyAddedProductIds.add(product.proID);
-    }
     
+    // Yeni eklenen ürünü ve satırı işaretle
+      _newlyAddedProductIds.add(product.proID);
+    _newlyAddedLineIds.add(lineId);
+    
+    developer.log("Sepete yeni satır eklendi. LineID: $lineId, Ürün: ${product.proName}");
     notifyListeners();
+    
+    return lineId; // Eklenen satırın ID'sini döndür
   }
   
   /// Ürünü sepete ekler ve API ile sunucuya direkt gönderir
@@ -68,8 +67,8 @@ class BasketViewModel extends ChangeNotifier {
     bool isGift = false,
   }) async {
     try {
-      // Önce ürünü sepete geçici olarak ekleyelim (opID=0 ile)
-      addProduct(product, opID: 0, proNote: proNote, isGift: isGift);
+      // Önce ürünü sepete geçici olarak ekleyelim (negatif lineId ile)
+      int tempLineId = addProduct(product, opID: 0, proNote: proNote, isGift: isGift);
       
       // Sunucuya ürün ekleme isteği gönder
       final orderService = OrderService();
@@ -84,15 +83,16 @@ class BasketViewModel extends ChangeNotifier {
       );
       
       if (response.success) {
-        // Başarılı ise, geçici (opID=0) ürünü sepetten çıkarıp, 
-        // sunucudan gelen opID ile yeniden ekleyelim
+        // Başarılı ise, geçici lineId'li satırı sepetten çıkarıp, 
+        // sunucudan gelen opID ile yeni satır ekleyelim
         final tempIndex = _basket.items.indexWhere(
-          (item) => item.product.proID == product.proID && item.opID == 0
+          (item) => item.lineId == tempLineId
         );
         
         if (tempIndex != -1) {
-          // Geçici ürünü sil
+          // Geçici satırı sil
           _basket.items.removeAt(tempIndex);
+          _newlyAddedLineIds.remove(tempLineId);
           
           // Sunucudan dönen opID ile ekle
           final int opID = response.data?.opID ?? 0;
@@ -103,8 +103,10 @@ class BasketViewModel extends ChangeNotifier {
               opID: opID,
               proNote: proNote,
               isGift: isGift,
+              lineId: opID, // Sunucudan gelen opID'yi lineId olarak kullan
             ));
             
+            _newlyAddedLineIds.add(opID);
             notifyListeners();
             return true;
           }
@@ -122,41 +124,75 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   void addProductWithOpID(Product product, int quantity, int opID, {String? proNote, bool isGift = false}) {
-    final existingIndex = _basket.items.indexWhere((item) => 
-        item.product.proID == product.proID && item.opID == opID);
-    
-    if (existingIndex != -1) {
-      _basket.items[existingIndex].proQty = quantity;
-      if (proNote != null) {
-        _basket.items[existingIndex].proNote = proNote;
-      }
-      _basket.items[existingIndex].isGift = isGift;
-    } else {
+    // Sunucudan gelen opID'yi hem opID hem de lineId olarak kullan
       _basket.items.add(BasketItem(
         product: product,
         proQty: quantity,
         opID: opID,
         proNote: proNote,
         isGift: isGift,
+      lineId: opID,
       ));
-    }
+    
+    _newlyAddedProductIds.add(product.proID);
+    _newlyAddedLineIds.add(opID);
     
     notifyListeners();
   }
   
-  void removeProduct(int productId, {int? opID}) {
+  void removeProduct(int productId, {int? opID, int? lineId}) {
+    if (lineId != null) {
+      // Belirli bir lineId'ye sahip satırı kaldır (tercih edilen yöntem)
+      _basket.removeProduct(productId, lineId: lineId);
+      _newlyAddedLineIds.remove(lineId);
+    } else if (opID != null) {
+      // Belirli bir opID'ye sahip ürünü kaldır (geriye dönük uyumluluk)
     _basket.removeProduct(productId, opID: opID);
+    } else {
+      // Tüm ürünleri kaldır (proID'ye göre)
+      _basket.removeProduct(productId);
     _newlyAddedProductIds.remove(productId);
+    }
     notifyListeners();
   }
   
-  void incrementQuantity(int productId) {
-    _basket.incrementQuantity(productId);
+  void incrementQuantity(int lineId) {
+    _basket.incrementQuantity(lineId);
     notifyListeners();
   }
   
-  void decrementQuantity(int productId) {
-    _basket.decrementQuantity(productId);
+  void decrementQuantity(int lineId) {
+    // Azaltmadan önce satırı bul (kaldırılırsa bunu takip edebilmek için)
+    var existingItem = _basket.items.firstWhere(
+      (item) => item.lineId == lineId,
+      orElse: () => BasketItem(
+        product: Product(
+          postID: 0, // postID eklendi
+          proID: 0, 
+          proName: '', 
+          proUnit: '', 
+          proStock: '', 
+          proPrice: ''
+        ), 
+        proQty: 0
+      ),
+    );
+    
+    // Satır bulunduysa ve bu son ürünse, yeni eklenen listelerinden kaldır
+    if (existingItem.proQty == 1) {
+      _newlyAddedLineIds.remove(lineId);
+      
+      // Eğer bu ürün ID'sine sahip başka bir satır yoksa, ürün ID'sini de kaldır
+      bool hasMoreOfThisProduct = _basket.items.any(
+        (item) => item.product.proID == existingItem.product.proID && item.lineId != lineId
+      );
+      
+      if (!hasMoreOfThisProduct) {
+        _newlyAddedProductIds.remove(existingItem.product.proID);
+      }
+    }
+    
+    _basket.decrementQuantity(lineId);
     notifyListeners();
   }
   
@@ -168,6 +204,7 @@ class BasketViewModel extends ChangeNotifier {
     _basket.clear();
     _orderAmount = 0.0;
     _newlyAddedProductIds.clear();
+    _newlyAddedLineIds.clear();
     _errorMessage = null;
     
     // Build sırasında bildirimleri güvenli şekilde yönet
@@ -183,6 +220,7 @@ class BasketViewModel extends ChangeNotifier {
   
   void clearNewlyAddedMarkers() {
     _newlyAddedProductIds.clear();
+    _newlyAddedLineIds.clear();
     notifyListeners();
   }
   
@@ -206,92 +244,52 @@ class BasketViewModel extends ChangeNotifier {
     return totalQuantity;
   }
 
+  // Geriye dönük uyumluluk için eski metod
   void decreaseProduct(Product product) {
-    final newProductIndex = _basket.items.indexWhere(
-      (item) => item.product.proID == product.proID && item.opID == 0,
-    );
+    // Belirli bir ProductID'ye sahip en son eklenen satırı bul
+    final itemsWithProduct = _basket.items
+        .where((item) => item.product.proID == product.proID)
+        .toList();
     
-    if (newProductIndex != -1) {
-      if (_basket.items[newProductIndex].proQty > 1) {
-        _basket.items[newProductIndex].proQty--;
-      } else {
-        _basket.items.removeAt(newProductIndex);
-        _newlyAddedProductIds.remove(product.proID);
-      }
-      notifyListeners();
+    if (itemsWithProduct.isEmpty) {
       return;
     }
     
-    final existingItemIndex = _basket.items.indexWhere(
-      (item) => item.product.proID == product.proID,
-    );
+    // Satırları lineId'ye göre sırala, en son eklenen satırı bul (en büyük negatif veya en büyük pozitif ID)
+    itemsWithProduct.sort((a, b) => a.lineId.compareTo(b.lineId));
+    final lastItem = itemsWithProduct.last;
     
-    if (existingItemIndex != -1) {
-      if (_basket.items[existingItemIndex].proQty > 1) {
-        _basket.items[existingItemIndex].proQty--;
-      } else {
-        _basket.items.removeAt(existingItemIndex);
-        _newlyAddedProductIds.remove(product.proID);
-      }
+    // Satırı azalt
+    decrementQuantity(lastItem.lineId);
+  }
+  
+  // Bu metod değişmeli - lineId üzerinden çalışmalı
+  void updateProductNote(int lineId, String note) {
+    try {
+      final item = items.firstWhere((item) => item.lineId == lineId);
+      item.proNote = note;
       notifyListeners();
+    } catch (e) {
+      developer.log("Satır bulunamadı, not güncellenemedi. LineID: $lineId", error: e);
     }
   }
   
-  void updatePorsiyon(int postID, Product yeniPorsiyon) {
-    final existingItemIndex = _basket.items.indexWhere(
-      (item) => item.product.postID == postID && item.product.proID == yeniPorsiyon.proID,
-    );
-    
-    if (existingItemIndex != -1) {
-      final int mevcutMiktar = _basket.items[existingItemIndex].proQty;
-      _basket.items[existingItemIndex] = BasketItem(
-        product: yeniPorsiyon,
-        proQty: mevcutMiktar,
-      );
-    } else {
-      _basket.addProduct(yeniPorsiyon);
-      _newlyAddedProductIds.add(yeniPorsiyon.proID);
-    }
-    
-    notifyListeners();
-  }
-
-  void updateSpecificItem(int oldProID, Product newProduct, int quantity, {String? proNote, bool? isGift}) {
-    String? oldNote;
-    bool oldIsGift = false;
-    final oldItemIndex = _basket.items.indexWhere((item) => item.product.proID == oldProID);
-    if (oldItemIndex != -1) {
-      oldNote = _basket.items[oldItemIndex].proNote;
-      oldIsGift = _basket.items[oldItemIndex].isGift;
-    }
-    
-    _basket.removeProduct(oldProID);
-    _newlyAddedProductIds.remove(oldProID);
-    
-    _basket.items.add(BasketItem(
-      product: newProduct,
-      proQty: quantity,
-      proNote: proNote ?? oldNote ?? newProduct.proNote,
-      isGift: isGift ?? oldIsGift,
-    ));
-    _newlyAddedProductIds.add(newProduct.proID);
-    
-    notifyListeners();
-  }
-
-  void updateProductNote(int productId, String note) {
+  // Not güncellemesi için geriye dönük uyumluluk
+  void updateProductNoteByProductId(int productId, String note) {
     try {
+      // İlk bulunan satırın notunu güncelle
       final item = items.firstWhere((item) => item.product.proID == productId);
       item.proNote = note;
       notifyListeners();
     } catch (e) {
-      // Hata durumunu sessizce geç
+      developer.log("Ürün bulunamadı, not güncellenemedi. ProductID: $productId", error: e);
     }
   }
   
-  void updateProductPrice(int productId, String newPrice) {
+  // Bu metod değişmeli - lineId üzerinden çalışmalı
+  void updateProductPrice(int lineId, String newPrice) {
     try {
-      final itemIndex = items.indexWhere((item) => item.product.proID == productId);
+      final itemIndex = items.indexWhere((item) => item.lineId == lineId);
       if (itemIndex != -1) {
         final item = items[itemIndex];
         
@@ -311,28 +309,96 @@ class BasketViewModel extends ChangeNotifier {
           opID: item.opID,
           proNote: item.proNote,
           isGift: item.isGift,
+          lineId: item.lineId,
         );
         
         items[itemIndex] = updatedItem;
         notifyListeners();
       }
     } catch (e) {
-      // Hata durumunu sessizce geç
+      developer.log("Satır bulunamadı, fiyat güncellenemedi. LineID: $lineId", error: e);
     }
   }
 
-  void toggleGiftStatus(int productId, {int? opID, bool? isGift}) {
-    final existingIndex = opID != null 
-        ? _basket.items.indexWhere((item) => item.product.proID == productId && item.opID == opID)
-        : _basket.items.indexWhere((item) => item.product.proID == productId);
-    
-    if (existingIndex != -1) {
+  // Fiyat güncellemesi için geriye dönük uyumluluk
+  void updateProductPriceByProductId(int productId, String newPrice) {
+    try {
+      final itemIndex = items.indexWhere((item) => item.product.proID == productId);
+      if (itemIndex != -1) {
+        updateProductPrice(items[itemIndex].lineId, newPrice);
+      }
+    } catch (e) {
+      developer.log("Ürün bulunamadı, fiyat güncellenemedi. ProductID: $productId", error: e);
+    }
+  }
+
+  void toggleGiftStatus(int lineId, {bool? isGift}) {
+    try {
+      final item = items.firstWhere((item) => item.lineId == lineId);
       if (isGift != null) {
-        _basket.items[existingIndex].isGift = isGift;
+        item.isGift = isGift;
       } else {
-        _basket.items[existingIndex].isGift = !_basket.items[existingIndex].isGift;
+        item.isGift = !item.isGift;
       }
       notifyListeners();
+    } catch (e) {
+      developer.log("Satır bulunamadı, ikram durumu değiştirilemedi. LineID: $lineId", error: e);
+    }
+  }
+  
+  // İkram durumu güncellemesi için geriye dönük uyumluluk
+  void toggleGiftStatusByProductId(int productId, {int? opID, bool? isGift}) {
+    try {
+      final itemIndex = opID != null 
+          ? items.indexWhere((item) => item.product.proID == productId && item.opID == opID)
+          : items.indexWhere((item) => item.product.proID == productId);
+      
+      if (itemIndex != -1) {
+        toggleGiftStatus(items[itemIndex].lineId, isGift: isGift);
+      }
+    } catch (e) {
+      developer.log("Ürün bulunamadı, ikram durumu değiştirilemedi. ProductID: $productId", error: e);
+    }
+  }
+  
+  // Tek bir satırı belirli bir ürünle değiştir
+  void updateSpecificLine(int lineId, Product newProduct, int quantity, {String? proNote, bool? isGift}) {
+    try {
+      final oldItemIndex = _basket.items.indexWhere((item) => item.lineId == lineId);
+      if (oldItemIndex != -1) {
+        final oldItem = _basket.items[oldItemIndex];
+        
+        // Eski satırı kaldır
+        _basket.items.removeAt(oldItemIndex);
+        
+        // Yeni satır ekle, aynı lineId'yi kullan
+        _basket.items.add(BasketItem(
+          product: newProduct,
+          proQty: quantity,
+          opID: oldItem.opID,
+          proNote: proNote ?? oldItem.proNote,
+          isGift: isGift ?? oldItem.isGift,
+          lineId: lineId,
+        ));
+        
+        notifyListeners();
+      }
+    } catch (e) {
+      developer.log("Satır güncellenirken hata: $e", error: e);
+    }
+  }
+  
+  // Geriye dönük uyumluluk için eski updateSpecificItem metodu
+  void updateSpecificItem(int oldProID, Product newProduct, int quantity, {String? proNote, bool? isGift}) {
+    try {
+      // Ürün ID'sine göre ilk satırı bul
+      final oldItemIndex = _basket.items.indexWhere((item) => item.product.proID == oldProID);
+      if (oldItemIndex != -1) {
+        final oldItem = _basket.items[oldItemIndex];
+        updateSpecificLine(oldItem.lineId, newProduct, quantity, proNote: proNote, isGift: isGift);
+      }
+    } catch (e) {
+      developer.log("Ürün güncellenirken hata: $e", error: e);
     }
   }
 } 

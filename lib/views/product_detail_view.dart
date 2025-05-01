@@ -50,6 +50,7 @@ class ProductDetailView extends StatefulWidget {
   final int postID;
   final String tableName;
   final int? selectedProID;
+  final int? selectedLineId;
   final String? initialNote;
   final bool? initialIsGift;
 
@@ -60,6 +61,7 @@ class ProductDetailView extends StatefulWidget {
     required this.postID,
     required this.tableName,
     this.selectedProID,
+    this.selectedLineId,
     this.initialNote,
     this.initialIsGift,
   }) : super(key: key);
@@ -174,20 +176,74 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
       
-      // Sepetten gelen bir ürün mü?
-      if (widget.selectedProID != null) {
-        // Sepetten gelen ürünün eski proID'si
+      // Sepetten gelen bir ürün mü? (lineId veya proID ile belirlenebilir)
+      if (widget.selectedLineId != null) {
+        // Satır ID'si varsa, belirli bir satırı güncelleme
+        _updateBasketLine(basketViewModel, product);
+      } else if (widget.selectedProID != null) {
+        // Sadece ürün ID'si varsa, geriye dönük uyumluluk için
+        _updateBasketItemByProductId(basketViewModel, product);
+      } else {
+        // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
+        _addProductAsNewItem(basketViewModel, product);
+      }
+    }
+  }
+  
+  // Belirli bir satırı günceller (lineId ile)
+  void _updateBasketLine(BasketViewModel basketViewModel, Product product) {
+    // Sepette var olan lineId'li satırı güncelle
+    int lineId = widget.selectedLineId!;
+    
+    // Geçerli satırın miktarını bul
+    var existingQuantity = 1;
+    try {
+      existingQuantity = basketViewModel.items
+          .firstWhere((item) => item.lineId == lineId).proQty;
+    } catch (e) {
+      // Satır bulunamadıysa 1 adet olarak devam et
+    }
+    
+    // Satırı güncelle - yeni product bilgileriyle
+    basketViewModel.updateSpecificLine(
+      lineId, 
+      product, 
+      existingQuantity,
+      proNote: _noteController.text,
+      isGift: _isGift,
+    );
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ürün bilgileri güncellendi'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    Navigator.of(context).pop();
+  }
+  
+  // Ürün ID'ye göre sepet öğesini günceller (geriye dönük uyumluluk için)
+  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product) {
+    // Eski ürünün ID'si
         int oldProID = widget.selectedProID!;
         
         // Eğer aynı porsiyon seçildiyse sadece seçilen ürünün notunu, ikram durumunu ve fiyatını güncelle
-        if (oldProID == selectedPorsiyon.proID) {
-          // Sadece belirli bir ürünü güncelle (tüm sepeti değil)
-          basketViewModel.updateProductNote(oldProID, _noteController.text);
-          basketViewModel.toggleGiftStatus(oldProID, isGift: _isGift);
+    if (oldProID == product.proID) {
+      // İlk bulunan ürünü güncelle (artık tek bir satır olacak)
+      try {
+        final existingItem = basketViewModel.items.firstWhere(
+          (item) => item.product.proID == oldProID,
+        );
+        
+        // Not güncelle
+        basketViewModel.updateProductNote(existingItem.lineId, _noteController.text);
+        
+        // İkram durumunu güncelle
+        basketViewModel.toggleGiftStatus(existingItem.lineId, isGift: _isGift);
           
           // Eğer özel fiyat seçilmişse fiyatı güncelle
           if (_isCustomPrice) {
-            basketViewModel.updateProductPrice(oldProID, _priceController.text);
+          basketViewModel.updateProductPrice(existingItem.lineId, _priceController.text);
           }
           
           ScaffoldMessenger.of(context).showSnackBar(
@@ -198,18 +254,20 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           );
           Navigator.of(context).pop();
           return;
+      } catch (e) {
+        // Ürün bulunamadıysa, yeni ürün olarak ekle
+        _addProductAsNewItem(basketViewModel, product);
         }
-        
-        // Eski ürünü sepetten bul - sadece o belirli ID'li ürünü değiştir
+    } else {
+      // Farklı porsiyon seçildi, ilk bulunan ürünü güncelle
+      try {
         final existingItem = basketViewModel.items.firstWhere(
           (item) => item.product.proID == oldProID,
-          orElse: () => BasketItem(product: product, proQty: 0),
         );
         
-        if (existingItem.proQty > 0) {
-          // Sadece seçili öğeyi güncelle, miktar korunacak ve not eklenecek - diğer aynı ürünler sabit kalacak
-          basketViewModel.updateSpecificItem(
-            oldProID, 
+        // Satırı güncelle - yeni porsiyon, not ve ikram bilgileriyle
+        basketViewModel.updateSpecificLine(
+          existingItem.lineId, 
             product, 
             existingItem.proQty,
             proNote: _noteController.text,
@@ -223,12 +281,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             ),
           );
           Navigator.of(context).pop();
-        } else {
-          // Ürün bulunamadı, normal ekleme yap
-          _addProductAsNewItem(basketViewModel, product);
-        }
-      } else {
-        // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
+      } catch (e) {
+        // Ürün bulunamadıysa, yeni ürün olarak ekle
         _addProductAsNewItem(basketViewModel, product);
       }
     }

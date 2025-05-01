@@ -7,6 +7,7 @@ class BasketItem {
   final int opID;
   String proNote;
   bool isGift;
+  final int lineId; // Benzersiz satır kimliği
   
   // Birim fiyat hesaplama metodu - proPrice'ı temizleyip işler
   double get birimFiyat {
@@ -69,14 +70,15 @@ class BasketItem {
     this.opID = 0,
     String? proNote,
     this.isGift = false,
+    this.lineId = 0, // Varsayılan değer 0, ama kullanılırken benzersiz değer atanmalı
   }) : proNote = proNote ?? product.proNote {
     // Oluşturulduğunda fiyatı kontrol et
-    developer.log("Yeni sepet öğesi: ${product.proName}, Miktar: $proQty, OpID: $opID, Not: $proNote, İkram: $isGift");
+    developer.log("Yeni sepet öğesi: ${product.proName}, Miktar: $proQty, OpID: $opID, Not: $proNote, İkram: $isGift, Satır ID: $lineId");
   }
   
   @override
   String toString() {
-    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID, proNote: $proNote, isGift: $isGift}';
+    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID, proNote: $proNote, isGift: $isGift, lineId: $lineId}';
   }
 }
 
@@ -84,11 +86,19 @@ class Basket {
   List<BasketItem> items = [];
   double discount = 0.0;
   double orderPayAmount = 0.0;
+  int _nextLineId = -1; // Negatif ID'lerle başlayarak geçici satırlar oluştur (-1, -2, ...)
   
   // Cache için
   double? _cachedTotalAmount;
   List<int>? _cachedItemIds;
   List<int>? _cachedQuantities;
+  
+  // Benzersiz bir lineId üret
+  int getNextLineId() {
+    // opID > 0 olan satırlar sunucudan geliyor, lineId olarak opID kullanılabilir
+    // opID olmayan (geçici) satırlar için negatif benzersiz ID üret
+    return _nextLineId--;
+  }
   
   // Toplam sepet tutarını hesapla (önbellekle)
   double get totalAmount {
@@ -146,80 +156,87 @@ class Basket {
   void addProduct(Product product, {int opID = 0}) {
     developer.log("Sepete ürün ekleniyor: ${product.proName}, ID: ${product.proID}, Fiyat: ${product.proPrice}, OpID: $opID");
     
-    // OpID'yi de dikkate alarak mevcut ürünü ara
-    final existingItemIndex = items.indexWhere(
-      (item) => item.product.proID == product.proID && item.opID == opID
-    );
+    // Benzersiz bir lineId oluştur
+    int lineId = opID > 0 ? opID : getNextLineId();
     
-    if (existingItemIndex != -1) {
-      items[existingItemIndex].proQty++;
-      developer.log("Mevcut ürün miktarı artırıldı: ${items[existingItemIndex].proQty}, OpID: $opID");
-    } else {
-      items.add(BasketItem(product: product, proQty: 1, opID: opID));
-      developer.log("Yeni ürün sepete eklendi. Sepetteki ürün sayısı: ${items.length}, OpID: $opID");
-    }
+    // Her seferinde yeni bir satır ekle, aynı ürünleri birleştirme
+    items.add(BasketItem(
+      product: product, 
+      proQty: 1, 
+      opID: opID,
+      lineId: lineId
+    ));
+    
+    developer.log("Yeni ürün sepete eklendi. Sepetteki ürün sayısı: ${items.length}, LineID: $lineId");
   }
 
-  void removeProduct(int productId, {int? opID}) {
-    developer.log("Sepetten ürün kaldırılıyor. Ürün ID: $productId, OpID: ${opID ?? 'tümü'}");
-    
-    if (opID != null) {
+  void removeProduct(int productId, {int? opID, int? lineId}) {
+    if (lineId != null) {
+      // Belirli bir lineId'ye sahip satırı kaldır
+      developer.log("Sepetten belirli satır kaldırılıyor. LineID: $lineId");
+      items.removeWhere((item) => item.lineId == lineId);
+    }
+    else if (opID != null) {
       // Belirli bir opID'ye sahip ürünü kaldır
+      developer.log("Sepetten ürün kaldırılıyor. Ürün ID: $productId, OpID: $opID");
       items.removeWhere((item) => item.product.proID == productId && item.opID == opID);
     } else {
       // Tüm ürünleri kaldır (proID'ye göre)
+      developer.log("Sepetten ürün kaldırılıyor. Ürün ID: $productId, tüm satırlar");
       items.removeWhere((item) => item.product.proID == productId);
     }
     
-    developer.log("Sepetteki ürün sayısı: ${items.length}");
+    developer.log("Sepetteki satır sayısı: ${items.length}");
   }
 
-  void incrementQuantity(int productId) {
+  void incrementQuantity(int lineId) {
     try {
-      // Önce opID=0 olan ürünleri ara (yeni eklenmiş ürünler)
-      var newItems = items.where((item) => item.product.proID == productId && item.opID == 0).toList();
-      
-      if (newItems.isNotEmpty) {
-        // Yeni eklenmiş ürün varsa ilk onu artır
-        newItems.first.proQty++;
-        developer.log("Yeni eklenen ürün miktarı artırıldı. Ürün: ${newItems.first.product.proName}, Miktar: ${newItems.first.proQty}");
-        return;
-      }
-      
-      // Eğer yeni eklenmiş ürün yoksa, ilk bulunan ürünü artır
-      final item = items.firstWhere((item) => item.product.proID == productId);
+      // Belirli bir lineId'ye sahip satırın miktarını artır
+      final item = items.firstWhere((item) => item.lineId == lineId);
       item.proQty++;
-      developer.log("Ürün miktarı artırıldı. Ürün: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}");
+      developer.log("Ürün miktarı artırıldı. Ürün: ${item.product.proName}, Miktar: ${item.proQty}, LineID: ${item.lineId}");
+    } catch (e) {
+      developer.log("Satır bulunamadı, miktar artırılamadı. LineID: $lineId", error: e);
+    }
+  }
+
+  void decrementQuantity(int lineId) {
+    try {
+      // Belirli bir lineId'ye sahip satırın miktarını azalt
+      final item = items.firstWhere((item) => item.lineId == lineId);
+      if (item.proQty > 1) {
+        item.proQty--;
+        developer.log("Ürün miktarı azaltıldı. Ürün: ${item.product.proName}, Miktar: ${item.proQty}, LineID: ${item.lineId}");
+      } else {
+        items.remove(item);
+        developer.log("Satır sepetten kaldırıldı. Son adet olduğu için. LineID: ${item.lineId}");
+      }
+    } catch (e) {
+      developer.log("Satır bulunamadı, miktar azaltılamadı. LineID: $lineId", error: e);
+    }
+  }
+  
+  // Ürün ID'si ile miktar artırma/azaltma için uyumluluk metodları
+  void incrementProductQuantity(int productId) {
+    try {
+      var productItems = items.where((item) => item.product.proID == productId).toList();
+      if (productItems.isNotEmpty) {
+        // En son eklenen satırı bul
+        productItems.sort((a, b) => b.lineId.compareTo(a.lineId));
+        incrementQuantity(productItems.first.lineId);
+      }
     } catch (e) {
       developer.log("Ürün miktarını artırırken hata: $e", error: e);
     }
   }
 
-  void decrementQuantity(int productId) {
+  void decrementProductQuantity(int productId) {
     try {
-      // Önce opID=0 olan ürünleri ara (yeni eklenmiş ürünler)
-      var newItems = items.where((item) => item.product.proID == productId && item.opID == 0).toList();
-      
-      if (newItems.isNotEmpty) {
-        // Yeni eklenmiş ürün varsa ilk onu azalt
-        if (newItems.first.proQty > 1) {
-          newItems.first.proQty--;
-          developer.log("Yeni eklenen ürün miktarı azaltıldı. Ürün: ${newItems.first.product.proName}, Miktar: ${newItems.first.proQty}");
-        } else {
-          items.remove(newItems.first);
-          developer.log("Yeni eklenen ürün sepetten kaldırıldı. Son ürün olduğu için.");
-        }
-        return;
-      }
-      
-      // Eğer yeni eklenmiş ürün yoksa, ilk bulunan ürünü azalt
-      final item = items.firstWhere((item) => item.product.proID == productId);
-      if (item.proQty > 1) {
-        item.proQty--;
-        developer.log("Ürün miktarı azaltıldı. Ürün: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}");
-      } else {
-        items.remove(item);
-        developer.log("Ürün sepetten kaldırıldı. Son ürün olduğu için. OpID: ${item.opID}");
+      var productItems = items.where((item) => item.product.proID == productId).toList();
+      if (productItems.isNotEmpty) {
+        // En son eklenen satırı bul
+        productItems.sort((a, b) => b.lineId.compareTo(a.lineId));
+        decrementQuantity(productItems.first.lineId);
       }
     } catch (e) {
       developer.log("Ürün miktarını azaltırken hata: $e", error: e);
