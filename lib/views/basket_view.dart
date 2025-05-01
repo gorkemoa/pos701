@@ -1,16 +1,11 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/product_detail_view.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/viewmodels/order_viewmodel.dart';
-import 'package:pos701/models/user_model.dart';
-import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/views/payment_view.dart';
 import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;
@@ -29,7 +24,7 @@ class BasketView extends StatefulWidget {
   final int isWaiter;
   
   const BasketView({
-    Key? key,
+    super.key,
     required this.tableName,
     this.orderID,
     this.orderDesc = '',
@@ -40,7 +35,7 @@ class BasketView extends StatefulWidget {
     this.orderType = 1,
     this.isKuver = 0,
     this.isWaiter = 0,
-  }) : super(key: key);
+  });
 
   @override
   State<BasketView> createState() => _BasketViewState();
@@ -129,8 +124,6 @@ class _BasketViewState extends State<BasketView> {
       final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
       
-      basketViewModel.clearBasket();
-      
       final success = await orderViewModel.getSiparisDetayi(
         userToken: _userToken!,
         compID: _compID!,
@@ -155,11 +148,15 @@ class _BasketViewState extends State<BasketView> {
         final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
         
         for (var item in sepetItems) {
-          basketViewModel.addProductWithOpID(
-            item.product, 
-            item.proQty,
-            item.opID
-          );
+          if (item.opID > 0) {
+            basketViewModel.addProductWithOpID(
+              item.product, 
+              item.proQty,
+              item.opID,
+              proNote: item.proNote,
+              isGift: item.isGift
+            );
+          }
         }
       } else {
         setState(() {
@@ -349,6 +346,10 @@ class _BasketViewState extends State<BasketView> {
   }
 
   Future<bool> _onWillPop() async {
+    if (_isSiparisOlusturuldu) {
+      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+      basketViewModel.clearBasket();
+    }
     return true;
   }
 
@@ -570,13 +571,66 @@ class _BasketViewState extends State<BasketView> {
                           );
                         }
                         
-                        return ListView.separated(
-                          itemCount: basketViewModel.items.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final item = basketViewModel.items[index];
-                            return _buildBasketItem(context, item);
-                          },
+                        // Sepet öğelerini mevcut ve yeni eklenmiş olarak ayır
+                        final existingItems = basketViewModel.items
+                            .where((item) => !basketViewModel.newlyAddedProductIds.contains(item.product.proID))
+                            .toList();
+                            
+                        final newItems = basketViewModel.items
+                            .where((item) => basketViewModel.newlyAddedProductIds.contains(item.product.proID))
+                            .toList();
+                        
+                        return ListView(
+                          children: [
+                            if (existingItems.isNotEmpty) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                child: Text(
+                                  "Mevcut Sipariş",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(AppConstants.primaryColorValue),
+                                  ),
+                                ),
+                              ),
+                              ...existingItems.map((item) => _buildBasketItem(context, item)),
+                            ],
+                            
+                            if (existingItems.isNotEmpty && newItems.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    borderRadius: BorderRadius.circular(1),
+                                  ),
+                                ),
+                              ),
+                            
+                            if (newItems.isNotEmpty) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.add_circle, size: 16, color: Colors.green.shade700),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Yeni Eklenenler",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ...newItems.map((item) => _buildBasketItem(context, item, isNewItem: true)),
+                            ],
+                          ],
                         );
                       },
                     ),
@@ -841,7 +895,7 @@ class _BasketViewState extends State<BasketView> {
     );
   }
 
-  Widget _buildBasketItem(BuildContext context, BasketItem item) {
+  Widget _buildBasketItem(BuildContext context, BasketItem item, {bool isNewItem = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
       child: InkWell(
@@ -866,118 +920,147 @@ class _BasketViewState extends State<BasketView> {
             );
           }
         },
-        child: Row(
-          children: [
-            _buildQuantityButton(
-              icon: Icons.remove,
-              onPressed: () {
-                setState(() => _isProcessing = true);
-                Provider.of<BasketViewModel>(context, listen: false)
-                    .decrementQuantity(item.product.proID);
-              },
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(
-                item.proQty.toString(),
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-            ),
-            
-            _buildQuantityButton(
-              icon: Icons.add,
-              onPressed: () {
-                setState(() => _isProcessing = true);
-                Provider.of<BasketViewModel>(context, listen: false)
-                    .incrementQuantity(item.product.proID);
-              },
-            ),
-            
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+        child: Container(
+          decoration: BoxDecoration(
+            color: isNewItem ? Colors.green.shade50 : null,
+            border: isNewItem 
+                ? Border.all(color: Colors.green.shade200, width: 1)
+                : null,
+            borderRadius: isNewItem ? BorderRadius.circular(8) : null,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              children: [
+                _buildQuantityButton(
+                  icon: Icons.remove,
+                  onPressed: () {
+                    setState(() => _isProcessing = true);
+                    Provider.of<BasketViewModel>(context, listen: false)
+                        .decrementQuantity(item.product.proID);
+                  },
+                ),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    item.proQty.toString(),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                
+                _buildQuantityButton(
+                  icon: Icons.add,
+                  onPressed: () {
+                    setState(() => _isProcessing = true);
+                    Provider.of<BasketViewModel>(context, listen: false)
+                        .incrementQuantity(item.product.proID);
+                  },
+                ),
+                
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.product.proName,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        if (item.isGift)
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade100,
-                              borderRadius: BorderRadius.circular(4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.product.proName,
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.card_giftcard, color: Colors.red.shade700, size: 12),
-                                const SizedBox(width: 2),
-                                Text(
-                                  'İkram',
+                            if (item.isGift)
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.card_giftcard, color: Colors.red.shade700, size: 12),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      'İkram',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (isNewItem)
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'Yeni',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.red.shade700,
+                                    color: Colors.green.shade700,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                          ],
+                        ),
+                        Text(
+                          "Birim Fiyat: ₺${item.product.proPrice}",
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                        ),
+                        if (item.proNote.isNotEmpty)
+                          Text(
+                            "Not: ${item.proNote}",
+                            style: TextStyle(fontSize: 10, color: Colors.blue.shade600, fontStyle: FontStyle.italic),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                       ],
                     ),
+                  ),
+                ),
+                
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
                     Text(
-                      "Birim Fiyat: ₺${item.product.proPrice}",
-                      style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                      item.isGift ? "₺0.00" : "₺${item.totalPrice.toStringAsFixed(2)}",
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.bold,
+                        color: item.isGift ? Colors.red.shade700 : Colors.black,
+                      ),
                     ),
-                    if (item.proNote.isNotEmpty)
+                      if (item.proQty > 1 && !item.isGift)
                       Text(
-                        "Not: ${item.proNote}",
-                        style: TextStyle(fontSize: 10, color: Colors.blue.shade600, fontStyle: FontStyle.italic),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        "${item.proQty} x ₺${(item.totalPrice / item.proQty).toStringAsFixed(2)}",
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
                       ),
                   ],
                 ),
-              ),
-            ),
-            
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  item.isGift ? "₺0.00" : "₺${item.totalPrice.toStringAsFixed(2)}",
-                  style: TextStyle(
-                    fontSize: 14, 
-                    fontWeight: FontWeight.bold,
-                    color: item.isGift ? Colors.red.shade700 : Colors.black,
-                  ),
+                
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
+                    setState(() => _isProcessing = true);
+                    Provider.of<BasketViewModel>(context, listen: false)
+                        .removeProduct(item.product.proID, opID: item.opID);
+                  },
                 ),
-                  if (item.proQty > 1 && !item.isGift)
-                  Text(
-                    "${item.proQty} x ₺${(item.totalPrice / item.proQty).toStringAsFixed(2)}",
-                    style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                  ),
               ],
             ),
-            
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                setState(() => _isProcessing = true);
-                Provider.of<BasketViewModel>(context, listen: false)
-                    .removeProduct(item.product.proID, opID: item.opID);
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );

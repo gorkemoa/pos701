@@ -93,7 +93,6 @@ class TablesViewModel extends ChangeNotifier {
       
       // Dönen veriyi işleyerek JSON formatını ayıkla
       String responseBody = response.body;
-      debugPrint('Ham yanıt: $responseBody');
       
       try {
         // Özel format düzeltmesi
@@ -222,7 +221,6 @@ class TablesViewModel extends ChangeNotifier {
           return await refreshTablesDataSilently(userToken: userToken, compID: compID);
         }
         
-        debugPrint('Masa aktifliği kontrol edildi, değişiklik yok');
         _jsonErrorCount = 0; // Başarılı işlem - hata sayacını sıfırla
         return true;
       } catch (jsonError) {
