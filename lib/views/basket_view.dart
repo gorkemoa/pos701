@@ -583,17 +583,6 @@ class _BasketViewState extends State<BasketView> {
                         return ListView(
                           children: [
                             if (existingItems.isNotEmpty) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                                child: Text(
-                                  "Mevcut Sipariş",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(AppConstants.primaryColorValue),
-                                  ),
-                                ),
-                              ),
                               ...existingItems.map((item) => _buildBasketItem(context, item)),
                             ],
                             
@@ -611,23 +600,6 @@ class _BasketViewState extends State<BasketView> {
                               ),
                             
                             if (newItems.isNotEmpty) ...[
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.add_circle, size: 16, color: Colors.green.shade700),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      "Yeni Eklenenler",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                               ...newItems.map((item) => _buildBasketItem(context, item, isNewItem: true)),
                             ],
                           ],
@@ -913,6 +885,7 @@ class _BasketViewState extends State<BasketView> {
                   postID: item.product.postID,
                   tableName: widget.tableName,
                   selectedProID: item.product.proID,
+                  selectedLineId: item.lineId,
                   initialNote: item.proNote,
                   initialIsGift: item.isGift,
                 ),
@@ -922,11 +895,7 @@ class _BasketViewState extends State<BasketView> {
         },
         child: Container(
           decoration: BoxDecoration(
-            color: isNewItem ? Colors.green.shade50 : null,
-            border: isNewItem 
-                ? Border.all(color: Colors.green.shade200, width: 1)
-                : null,
-            borderRadius: isNewItem ? BorderRadius.circular(8) : null,
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -937,7 +906,7 @@ class _BasketViewState extends State<BasketView> {
                   onPressed: () {
                     setState(() => _isProcessing = true);
                     Provider.of<BasketViewModel>(context, listen: false)
-                        .decrementQuantity(item.product.proID);
+                        .decrementQuantity(item.lineId);
                   },
                 ),
                 
@@ -954,7 +923,7 @@ class _BasketViewState extends State<BasketView> {
                   onPressed: () {
                     setState(() => _isProcessing = true);
                     Provider.of<BasketViewModel>(context, listen: false)
-                        .incrementQuantity(item.product.proID);
+                        .incrementQuantity(item.lineId);
                   },
                 ),
                 
@@ -994,23 +963,6 @@ class _BasketViewState extends State<BasketView> {
                                       ),
                                     ),
                                   ],
-                                ),
-                              ),
-                            if (isNewItem)
-                              Container(
-                                margin: const EdgeInsets.only(left: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Yeni',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green.shade700,
-                                  ),
                                 ),
                               ),
                           ],

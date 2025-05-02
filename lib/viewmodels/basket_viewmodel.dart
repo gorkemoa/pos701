@@ -157,43 +157,63 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   void incrementQuantity(int lineId) {
-    _basket.incrementQuantity(lineId);
-    notifyListeners();
+    try {
+      // Önce satırı bul
+      final index = _basket.items.indexWhere((item) => item.lineId == lineId);
+      
+      if (index != -1) {
+        // Satır bulundu, miktarı artır
+        _basket.items[index].proQty++;
+        developer.log("Miktar artırıldı. LineID: $lineId, Yeni miktar: ${_basket.items[index].proQty}");
+        notifyListeners();
+      } else {
+        // Satır bulunamadı
+        developer.log("Satır bulunamadı, miktar artırılamadı. LineID: $lineId");
+      }
+    } catch (e) {
+      developer.log("Miktar artırılırken hata: $e");
+    }
   }
   
   void decrementQuantity(int lineId) {
-    // Azaltmadan önce satırı bul (kaldırılırsa bunu takip edebilmek için)
-    var existingItem = _basket.items.firstWhere(
-      (item) => item.lineId == lineId,
-      orElse: () => BasketItem(
-        product: Product(
-          postID: 0, // postID eklendi
-          proID: 0, 
-          proName: '', 
-          proUnit: '', 
-          proStock: '', 
-          proPrice: ''
-        ), 
-        proQty: 0
-      ),
-    );
-    
-    // Satır bulunduysa ve bu son ürünse, yeni eklenen listelerinden kaldır
-    if (existingItem.proQty == 1) {
-      _newlyAddedLineIds.remove(lineId);
+    try {
+      // Önce satırı bul
+      final index = _basket.items.indexWhere((item) => item.lineId == lineId);
       
-      // Eğer bu ürün ID'sine sahip başka bir satır yoksa, ürün ID'sini de kaldır
-      bool hasMoreOfThisProduct = _basket.items.any(
-        (item) => item.product.proID == existingItem.product.proID && item.lineId != lineId
-      );
-      
-      if (!hasMoreOfThisProduct) {
-        _newlyAddedProductIds.remove(existingItem.product.proID);
+      if (index == -1) {
+        // Satır bulunamadı
+        developer.log("Satır bulunamadı, miktar azaltılamadı. LineID: $lineId");
+        return;
       }
+      
+      var item = _basket.items[index];
+      
+      // Satır bulunduysa ve bu son ürünse, yeni eklenen listelerinden kaldır
+      if (item.proQty == 1) {
+        _newlyAddedLineIds.remove(lineId);
+        
+        // Eğer bu ürün ID'sine sahip başka bir satır yoksa, ürün ID'sini de kaldır
+        bool hasMoreOfThisProduct = _basket.items.any(
+          (otherItem) => otherItem.product.proID == item.product.proID && otherItem.lineId != lineId
+        );
+        
+        if (!hasMoreOfThisProduct) {
+          _newlyAddedProductIds.remove(item.product.proID);
+        }
+        
+        // Miktarı 1 olan ürünü sepetten kaldır
+        _basket.items.removeAt(index);
+        developer.log("Ürün sepetten kaldırıldı. LineID: $lineId");
+      } else {
+        // Miktarı azalt
+        _basket.items[index].proQty--;
+        developer.log("Miktar azaltıldı. LineID: $lineId, Yeni miktar: ${_basket.items[index].proQty}");
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      developer.log("Miktar azaltılırken hata: $e");
     }
-    
-    _basket.decrementQuantity(lineId);
-    notifyListeners();
   }
   
   void clearBasket() {
