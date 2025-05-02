@@ -90,6 +90,7 @@ class OrderViewModel extends ChangeNotifier {
     int kuverQty = 0,
     int isKuver = 0,
     int isWaiter = 0,
+    int orderPayType = 0, // Paket sipariş ödeme türü
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -109,7 +110,13 @@ class OrderViewModel extends ChangeNotifier {
         }
       }
       
-      debugPrint('🔄 [ORDER_VM] Sipariş oluşturuluyor. Kuver: $isKuver, Garsoniye: $isWaiter değerleri ile gönderiliyor');
+      debugPrint('🔄 [ORDER_VM] Sipariş oluşturuluyor. Kuver: $isKuver, Garsoniye: $isWaiter, Ödeme Türü: $orderPayType değerleri ile gönderiliyor');
+      
+      if (orderType != 1 && orderPayType > 0) {
+        debugPrint('💳 [ORDER_VM] Paket sipariş için ödeme türü ayarlandı: $orderPayType');
+      } else if (orderType != 1 && orderPayType == 0) {
+        debugPrint('⚠️ [ORDER_VM] DİKKAT: Paket sipariş için ödeme türü seçilmedi!');
+      }
       
       final orderRequest = OrderRequest(
         userToken: userToken,
@@ -122,6 +129,7 @@ class OrderViewModel extends ChangeNotifier {
         kuverQty: kuverQty,
         isKuver: isKuver,
         isWaiter: isWaiter,
+        orderPayType: orderPayType, // Ödeme türünü ekle
         products: sepettenSiparisUrunleriOlustur(sepetUrunleri),
         custID: custID, // Müşteri ID'sini ekle
         custName: custName, // Müşteri adını ekle
@@ -130,7 +138,12 @@ class OrderViewModel extends ChangeNotifier {
         isCust: custID > 0 || custName.isNotEmpty || custPhone.isNotEmpty, // Müşteri bilgisi varsa true olarak ayarla
       );
       
-      debugPrint('📤 [ORDER_VM] Sipariş gönderiliyor. Masa: $tableName, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${formattedAddresses.length}');
+      debugPrint('📤 [ORDER_VM] Sipariş gönderiliyor. Masa: $tableName, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${formattedAddresses.length}, Ödeme Türü: $orderPayType');
+      
+      // Servis isteğinden önce tüm değerleri logla
+      final orderJson = orderRequest.toJson();
+      debugPrint('💾 [ORDER_VM] Sipariş JSON: ${orderJson.toString()}');
+      debugPrint('💾 [ORDER_VM] Sipariş JSON orderPayType: ${orderJson['orderPayType']}');
       
       final response = await _orderService.createOrder(orderRequest);
       
@@ -306,6 +319,7 @@ class OrderViewModel extends ChangeNotifier {
     List<dynamic> custAdrs = const [],
     required int isKuver,
     required int isWaiter,
+    int orderPayType = 0, // Paket sipariş ödeme türü
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -315,7 +329,7 @@ class OrderViewModel extends ChangeNotifier {
     try {
       _setStatus(OrderStatus.loading);
       debugPrint('🔄 [ORDER_VM] Sipariş güncelleniyor. OrderID: $orderID, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${custAdrs.length}');
-      debugPrint('🔄 [ORDER_VM] Kuver: $isKuver, Garsoniye: $isWaiter değerleri ile güncelleniyor');
+      debugPrint('🔄 [ORDER_VM] Kuver: $isKuver, Garsoniye: $isWaiter, Ödeme Türü: $orderPayType değerleri ile güncelleniyor');
       
       // CustomerAddress nesnelerini dönüştür
       List<dynamic> formattedAddresses = [];
@@ -343,6 +357,7 @@ class OrderViewModel extends ChangeNotifier {
         isCust: custID > 0 || custName.isNotEmpty || custPhone.isNotEmpty ? 1 : 0, // Müşteri bilgisi varsa 1 olarak ayarla
         isKuver: isKuver, // Kuver durumu
         isWaiter: isWaiter, // Garsoniye durumu
+        orderPayType: orderPayType, // Ödeme türü
       );
       
       // Siparişi güncelle

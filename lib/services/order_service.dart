@@ -25,6 +25,18 @@ class OrderService {
       // İstek gövdesini logla
       debugPrint('🔵 [SİPARİŞ OLUŞTURMA] İstek gövdesi: ${jsonEncode(requestBody)}');
       
+      // Ödeme türü ayrıca logla
+      if (requestBody.containsKey('orderPayType')) {
+        debugPrint('💳 [SİPARİŞ OLUŞTURMA] Ödeme Türü: ${requestBody['orderPayType']} (${requestBody['orderType'] != 1 ? 'Paket Sipariş' : 'Normal Sipariş'})');
+      } else {
+        debugPrint('⚠️ [SİPARİŞ OLUŞTURMA] DİKKAT: orderPayType isteğe eklenmemiş!');
+      }
+      
+      // OrderType kontrolü
+      if (requestBody.containsKey('orderType')) {
+        debugPrint('🔄 [SİPARİŞ OLUŞTURMA] Sipariş Türü: ${requestBody['orderType']} ${requestBody['orderType'] == 2 ? '(Paket Sipariş)' : '(Normal Sipariş)'}');
+      }
+      
       // SharedPreferences'tan token veya kimlik bilgilerini alarak header'ları hazırla
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       final String? savedToken = prefs.getString(AppConstants.tokenKey);
@@ -55,6 +67,21 @@ class OrderService {
       
       final String responseBody = utf8.decode(httpResponse.bodyBytes);
       debugPrint('🔵 [SİPARİŞ OLUŞTURMA] HTTP yanıt gövdesi: $responseBody');
+      
+      // Yanıtta orderPayment kontrolü
+      try {
+        final responseData = jsonDecode(responseBody);
+        if (responseData != null && responseData is Map && responseData.containsKey('data')) {
+          final data = responseData['data'];
+          if (data is Map && data.containsKey('orderPayment')) {
+            debugPrint('💳 [SİPARİŞ OLUŞTURMA] Yanıtta orderPayment: ${data['orderPayment']}');
+          } else {
+            debugPrint('⚠️ [SİPARİŞ OLUŞTURMA] Yanıtta orderPayment bulunamadı!');
+          }
+        }
+      } catch (e) {
+        debugPrint('🔴 [SİPARİŞ OLUŞTURMA] Yanıt işlenirken hata: $e');
+      }
       
       final responseData = jsonDecode(responseBody);
       if (responseData == null) {
@@ -503,6 +530,7 @@ class OrderService {
     required int quantity,
     String? proNote,
     int isGift = 0,
+    int orderPayType = 0,
   }) async {
     try {
       debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] Başlatılıyor...');
@@ -516,6 +544,7 @@ class OrderService {
         'proQty': quantity,
         'proNote': proNote ?? '',
         'isGift': isGift,
+        'orderPayType': orderPayType,
       };
       
       // İstek gövdesini logla

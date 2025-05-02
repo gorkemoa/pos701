@@ -65,8 +65,11 @@ class BasketViewModel extends ChangeNotifier {
     int quantity = 1,
     String? proNote,
     bool isGift = false,
+    int orderPayType = 0, // Paket Sipariş ise Ödeme türü seçilip ilgili ID gönderilmelidir
   }) async {
     try {
+      developer.log("Sunucuya ürün ekleniyor. Ürün: ${product.proName}, Sipariş: $orderID, Ödeme Türü: $orderPayType");
+      
       // Önce ürünü sepete geçici olarak ekleyelim (negatif lineId ile)
       int tempLineId = addProduct(product, opID: 0, proNote: proNote, isGift: isGift);
       
@@ -80,6 +83,7 @@ class BasketViewModel extends ChangeNotifier {
         quantity: quantity,
         proNote: proNote,
         isGift: isGift ? 1 : 0,
+        orderPayType: orderPayType, // Ödeme türü parametresi eklendi
       );
       
       if (response.success) {
@@ -97,6 +101,8 @@ class BasketViewModel extends ChangeNotifier {
           // Sunucudan dönen opID ile ekle
           final int opID = response.data?.opID ?? 0;
           if (opID > 0) {
+            developer.log("Ürün başarıyla sunucuya eklendi. OpID: $opID, Ürün: ${product.proName}");
+            
             _basket.items.add(BasketItem(
               product: product,
               proQty: quantity,
@@ -107,16 +113,26 @@ class BasketViewModel extends ChangeNotifier {
             ));
             
             _newlyAddedLineIds.add(opID);
+            _newlyAddedProductIds.add(product.proID);
             notifyListeners();
             return true;
+          } else {
+            developer.log("Sunucu geçerli bir OpID dönmedi. Ürün: ${product.proName}");
+            _errorMessage = "Sunucu geçerli bir OpID dönmedi";
           }
+        } else {
+          developer.log("Geçici satır bulunamadı. TempLineID: $tempLineId");
+          _errorMessage = "Geçici sepet öğesi bulunamadı";
         }
+      } else {
+        developer.log("Ürün eklenirken sunucu hatası: ${response.errorCode}");
+        _errorMessage = response.errorCode ?? "Ürün eklenirken bir sunucu hatası oluştu";
       }
       
-      _errorMessage = response.errorCode ?? "Ürün eklenirken bir hata oluştu";
       notifyListeners();
       return false;
     } catch (e) {
+      developer.log("Ürün eklenirken istisna: $e");
       _errorMessage = "Ürün eklenirken bir hata oluştu: $e";
       notifyListeners();
       return false;
