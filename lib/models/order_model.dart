@@ -93,6 +93,7 @@ class OrderRequest {
   final String custPhone;
   final List<CustomerAddress> custAdrs;
   final List<OrderProduct> products;
+  final int orderPayType;
 
   OrderRequest({
     required this.userToken,
@@ -111,6 +112,7 @@ class OrderRequest {
     this.custPhone = '',
     this.custAdrs = const [],
     required this.products,
+    this.orderPayType = 0,
   });
 
   Map<String, dynamic> toJson() {
@@ -131,6 +133,7 @@ class OrderRequest {
       'custPhone': custPhone,
       'custAdrs': custAdrs.map((address) => address.toJson()).toList(),
       'products': products.map((product) => product.toJson()).toList(),
+      'orderPayType': orderPayType,
     };
   }
 }
@@ -375,6 +378,7 @@ class OrderUpdateRequest {
   final List<OrderProduct> products;
   final int isKuver;
   final int isWaiter;
+  final int orderPayType;
 
   OrderUpdateRequest({
     required this.userToken,
@@ -391,6 +395,7 @@ class OrderUpdateRequest {
     required this.products,
     required this.isKuver,
     required this.isWaiter,
+    this.orderPayType = 0,
   });
 
   Map<String, dynamic> toJson() {
@@ -409,6 +414,7 @@ class OrderUpdateRequest {
       'products': products.map((product) => product.toJson()).toList(),
       'isKuver': isKuver,
       'isWaiter': isWaiter,
+      'orderPayType': orderPayType,
     };
   }
 }
