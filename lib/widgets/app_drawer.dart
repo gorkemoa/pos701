@@ -29,34 +29,40 @@ class _AppDrawerState extends State<AppDrawer> {
         children: [
           Container(
             color: primaryColor,
-            height: 110,
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text(
-                  'Menü',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+            height: 190,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            alignment: Alignment.center,
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Menü',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 22),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.home, size: 26),
-                    title: const Text('Anasayfa', style: TextStyle(fontSize: 16)),
+                  _buildDrawerItem(
+                    icon: Icons.home,
+                    title: 'Anasayfa',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -67,10 +73,9 @@ class _AppDrawerState extends State<AppDrawer> {
                       );
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.shopping_basket, size: 26),
-                    title: const Text('Siparişler', style: TextStyle(fontSize: 16)),
+                  _buildDrawerItem(
+                    icon: Icons.shopping_basket,
+                    title: 'Siparişler',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -85,10 +90,9 @@ class _AppDrawerState extends State<AppDrawer> {
                       );
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.tv, size: 26),
-                    title: const Text('Mutfak', style: TextStyle(fontSize: 16)),
+                  _buildDrawerItem(
+                    icon: Icons.tv,
+                    title: 'Mutfak',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -103,71 +107,69 @@ class _AppDrawerState extends State<AppDrawer> {
                       );
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.layers, size: 26),
-                    title: const Text('Tanımlamalar', style: TextStyle(fontSize: 16)),
-                    trailing: Icon(
-                      _tanimlamalarExpanded ? Icons.expand_less : Icons.expand_more,
-                      size: 26,
-                    ),
+                  _buildExpandableItem(
+                    icon: Icons.layers,
+                    title: 'Tanımlamalar',
+                    isExpanded: _tanimlamalarExpanded,
                     onTap: () {
                       setState(() {
                         _tanimlamalarExpanded = !_tanimlamalarExpanded;
                       });
                     },
                   ),
-                  const Divider(height: 1),
                   if (_tanimlamalarExpanded)
                     Column(
                       children: [
-                        ListTile(
-                          leading: const SizedBox(width: 26),
-                          title: const Text('Menü Tanımlama', style: TextStyle(fontSize: 16)),
+                        _buildSubDrawerItem(
+                          title: 'Menü Tanımlama',
                           onTap: () {
                             Navigator.pop(context);
                             // Menü Tanımlama sayfasına yönlendirme
                           },
                         ),
-                        const Divider(height: 1),
-                        ListTile(
-                          leading: const SizedBox(width: 26),
-                          title: const Text('Masa Tanımlama', style: TextStyle(fontSize: 16)),
+                        _buildSubDrawerItem(
+                          title: 'Masa Tanımlama',
                           onTap: () {
                             Navigator.pop(context);
                             // Masa Tanımlama sayfasına yönlendirme
                           },
                         ),
-                        const Divider(height: 1),
                       ],
                     ),
-                  ListTile(
-                    leading: const Icon(Icons.print, size: 26),
-                    title: const Text('Yazıcı Tanımlama', style: TextStyle(fontSize: 16)),
+                  _buildDrawerItem(
+                    icon: Icons.print,
+                    title: 'Yazıcı Tanımlama',
                     onTap: () {
                       Navigator.pop(context);
                       // Yazıcı Tanımlama sayfasına yönlendirme
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.ondemand_video, size: 26),
-                    title: const Text('Kullanım Kılavuzu', style: TextStyle(fontSize: 16)),
+                  _buildDrawerItem(
+                    icon: Icons.ondemand_video,
+                    title: 'Kullanım Kılavuzu',
                     onTap: () {
                       Navigator.pop(context);
                       // Kullanım Kılavuzu sayfasına yönlendirme
                     },
                   ),
-                  const Divider(height: 1),
                 ],
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, -1),
+                ),
+              ],
+            ),
             child: Column(
               children: [
-                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -183,17 +185,94 @@ class _AppDrawerState extends State<AppDrawer> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    child: const Text('Çıkış Yap'),
+                    child: const Text(
+                      'Çıkış Yap',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  
                   ),
                 ),
-                const SizedBox(height: 16),
+              SizedBox(height: 30),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+          leading: Icon(icon, size: 20, color: Colors.black87),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+          onTap: onTap,
+        ),
+        const Divider(height: 1, thickness: 0.5),
+      ],
+    );
+  }
+
+  Widget _buildSubDrawerItem({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.only(left: 56, right: 16),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.normal),
+          ),
+          onTap: onTap,
+        ),
+        const Divider(height: 1, thickness: 0.5),
+      ],
+    );
+  }
+
+  Widget _buildExpandableItem({
+    required IconData icon,
+    required String title,
+    required bool isExpanded,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      children: [
+        ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+          leading: Icon(icon, size: 20, color: Colors.black87),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+          trailing: Icon(
+            isExpanded ? Icons.expand_less : Icons.expand_more,
+            size: 20,
+            color: Colors.black54,
+          ),
+          onTap: onTap,
+        ),
+        const Divider(height: 1, thickness: 0.5),
+      ],
     );
   }
 } 
