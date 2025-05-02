@@ -167,7 +167,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       final product = Product(
         postID: _productDetail!.postID,
         proID: selectedPorsiyon.proID,
-        proName: '${_productDetail!.postTitle} ${selectedPorsiyon.proUnit}',
+        proName: _productDetail!.postTitle,
         proUnit: selectedPorsiyon.proUnit,
         proStock: selectedPorsiyon.proStock.toString(),
         proPrice: priceValue, // Özel fiyat veya orijinal fiyat
