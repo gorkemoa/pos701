@@ -60,6 +60,18 @@ class StatisticsViewModel extends ChangeNotifier {
         _logger.d('API veri içeriği: totalGuest=${response.data!.totalGuest}, totalTables=${response.data!.totalTables}, orderTables=${response.data!.orderTables}');
         _logger.d('API veri metin içeriği: totalAmountText=${response.data!.totalAmountText}, totalAmount=${response.data!.totalAmount}');
         _logger.d('Satış verisi sayısı: ${response.data!.nowDaySales.length}, Ödeme verisi sayısı: ${response.data!.nowDayPayments.length}');
+        
+        // Masa doluluk verisi için özel log
+        _logger.i('Masa doluluk verileri: Toplam=${response.data!.totalTables}, Dolu=${response.data!.orderTables}, Boş=${response.data!.totalTables - response.data!.orderTables}');
+        
+        // Masa doluluk verilerini kontrol et
+        if (response.data!.totalTables <= 0) {
+          _logger.w('Masa sayısı geçersiz: totalTables=${response.data!.totalTables}');
+        }
+        
+        if (response.data!.orderTables < 0 || response.data!.orderTables > response.data!.totalTables) {
+          _logger.w('Dolu masa sayısı geçersiz: orderTables=${response.data!.orderTables}, totalTables=${response.data!.totalTables}');
+        }
       }
       
       _isLoading = false;

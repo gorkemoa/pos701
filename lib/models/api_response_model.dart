@@ -5,12 +5,14 @@ class ApiResponseModel<T> {
   final bool success;
   final T? data;
   final String? errorCode;
+  final String? successMessage;
 
   ApiResponseModel({
     required this.error,
     required this.success,
     this.data,
     this.errorCode,
+    this.successMessage,
   });
 
   factory ApiResponseModel.fromJson(Map<String, dynamic> json, T Function(dynamic) fromJsonT) {
@@ -73,6 +75,7 @@ class ApiResponseModel<T> {
       success: isSuccess,
       data: parsedData,
       errorCode: finalErrorCode,
+      successMessage: json.containsKey('success_message') ? json['success_message'].toString() : null,
     );
   }
 } 

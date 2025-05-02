@@ -82,31 +82,31 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _viewModel,
-      child: Consumer<OrderListViewModel>(
-        builder: (context, viewModel, _) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Sipariş Listesi', style: TextStyle(color: Colors.white)),
-              backgroundColor: Color(AppConstants.primaryColorValue),
-              bottom: TabBar(
-                controller: _tabController,
-                tabs: _tabs,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                
-                onTap: (index) {
-                  setState(() {});
+    return ChangeNotifierProvider(
+      create: (_) => _viewModel,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Sipariş Listesi', style: TextStyle(color: Colors.white)),
+          backgroundColor: Color(AppConstants.primaryColorValue),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: _tabs,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            
+            onTap: (index) {
+              setState(() {});
 
-                },
-              ),
-            ),
-            drawer: const AppDrawer(),
-            body: _buildBody(viewModel),
-          );
-        },
+            },
+          ),
+        ),
+        drawer: const AppDrawer(),
+        body: Consumer<OrderListViewModel>(
+          builder: (context, viewModel, _) {
+            return _buildBody(viewModel);
+          },
+        ),
       ),
     );
   }
@@ -251,6 +251,11 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
         statusColor = Colors.orange;
     }
 
+    // Sipariş tipini kontrol et - orderName yerine orderType kullanılabilir
+    // ya da başka bir mantık uygulanabilir
+    // Şimdilik tüm '4' olmayan siparişlere buton ekleyelim
+    final bool canComplete = order.orderStatusID != '4';
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       elevation: 2,
@@ -300,6 +305,11 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                     _buildDetailRow(Icons.person_outline, 'Garson: ${order.orderUserName}'),
                     const SizedBox(height: 8),
                     _buildDetailRow(Icons.access_time, 'Tarih: ${order.orderDate}'),
+                    
+                    if (canComplete) ...[
+                      const SizedBox(height: 16),
+                      _buildCompleteOrderButton(order),
+                    ],
                     
                     const Divider(height: 24, thickness: 0.5, color: Colors.black12),
                     
@@ -422,5 +432,59 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
         ),
       ],
     );
+  }
+
+  // Sipariş tamamlama butonu
+  Widget _buildCompleteOrderButton(Order order) {
+    return Consumer<OrderListViewModel>(
+      builder: (context, viewModel, _) {
+        return ElevatedButton.icon(
+          onPressed: viewModel.isLoading
+              ? null  // Yükleme sırasında devre dışı bırak
+              : () => _completeOrder(order.orderID),
+          icon: const Icon(Icons.check_circle_outline, size: 16),
+          label: const Text('Siparişi Tamamla', style: TextStyle(fontSize: 12)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(AppConstants.primaryColorValue),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Sipariş tamamlama işlevi
+  Future<void> _completeOrder(int orderID) async {
+    final viewModel = Provider.of<OrderListViewModel>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    final result = await viewModel.completeOrder(
+      userToken: widget.userToken,
+      compID: widget.compID,
+      orderID: orderID,
+    );
+    
+    if (result) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(viewModel.successMessage ?? 'Sipariş başarıyla tamamlandı'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage ?? 'İşlem sırasında bir hata oluştu'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 } 

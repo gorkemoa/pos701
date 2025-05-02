@@ -716,14 +716,16 @@ class _HomeViewState extends State<HomeView> {
   
   // Masa doluluk oranını gösteren pasta grafiği 
   Widget _buildOccupancyChart(StatisticsViewModel viewModel) {
+    // Null değerlere karşı güvenli bir şekilde değerleri alalım
     final int totalTables = viewModel.statistics?.totalTables ?? 0;
     final int orderTables = viewModel.statistics?.orderTables ?? 0;
-    final int emptyTables = totalTables - orderTables;
+    final int emptyTables = totalTables > 0 ? totalTables - orderTables : 0;
     
+    // API'den gelen veriler geçersiz olduğunda
     if (totalTables <= 0) {
       return const Center(
         child: Text(
-          'Veri yok',
+          'Veri yok veya masa bilgisi alınamadı',
           style: TextStyle(
             color: Colors.grey,
             fontSize: 14,
@@ -732,6 +734,7 @@ class _HomeViewState extends State<HomeView> {
       );
     }
     
+    // Doluluk oranını hesapla
     final double occupancyPercentage = totalTables > 0 
         ? (orderTables / totalTables * 100)
         : 0.0;
@@ -739,6 +742,11 @@ class _HomeViewState extends State<HomeView> {
     // Dolu ve boş masalar için renkler
     const Color occupiedColor = Color(0xFFFF4560); // Kırmızı tonu
     const Color emptyColor = Color(0xFF13D8AA); // Yeşil/Turkuaz tonu
+    
+    // Her iki değer de sıfır olduğunda grafik çalışmayacağı için
+    // en azından görsel olarak doğru görünmesi için minimum değerler atayalım
+    final double occupiedValue = orderTables > 0 ? orderTables.toDouble() : 0.1;
+    final double emptyValue = emptyTables > 0 ? emptyTables.toDouble() : 0.1;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -750,36 +758,36 @@ class _HomeViewState extends State<HomeView> {
             fontWeight: FontWeight.bold
           ),
         ),
-        const SizedBox(height: 15), // Boşluk azaltıldı
+        const SizedBox(height: 15),
         Expanded(
           child: Column(
             children: [
               // Pasta grafiği ve merkezdeki yüzde
               Expanded(
-                flex: 3, // Grafik alanına daha fazla yer ver
+                flex: 3,
                 child: Row(
                   children: [
                     Expanded(
                       child: PieChart(
                         PieChartData(
                           sectionsSpace: 2,
-                          centerSpaceRadius: 55, // Ortadaki boşluk azaltıldı
+                          centerSpaceRadius: 55,
                           startDegreeOffset: -90,
                           sections: [
                             // Dolu masalar
                             PieChartSectionData(
                               color: occupiedColor,
-                              value: orderTables.toDouble(),
+                              value: occupiedValue, // Minimum değer kullanıyoruz
                               title: '',
-                              radius: 50, // Yarıçap azaltıldı
+                              radius: 50,
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                             // Boş masalar
                             PieChartSectionData(
                               color: emptyColor,
-                              value: emptyTables.toDouble(),
+                              value: emptyValue, // Minimum değer kullanıyoruz
                               title: '',
-                              radius: 50, // Yarıçap azaltıldı
+                              radius: 50,
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                           ],

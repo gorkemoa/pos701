@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos701/viewmodels/order_list_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/services/api_service.dart';
@@ -14,7 +15,6 @@ import 'package:pos701/viewmodels/kitchen_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
-import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/views/basket_view.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/customer_viewmodel.dart';
@@ -87,6 +87,9 @@ void main() async {
         ),
         ChangeNotifierProvider<OrderViewModel>(
           create: (_) => OrderViewModel(),
+        ),
+        ChangeNotifierProvider<OrderListViewModel>(
+          create: (_) => OrderListViewModel(),
         ),
         ChangeNotifierProvider<TablesViewModel>(
           create: (_) => TablesViewModel(),
