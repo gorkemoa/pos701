@@ -572,12 +572,12 @@ class _BasketViewState extends State<BasketView> {
                         }
                         
                         // Sepet öğelerini mevcut ve yeni eklenmiş olarak ayır
-                        final existingItems = basketViewModel.items
-                            .where((item) => !basketViewModel.newlyAddedProductIds.contains(item.product.proID))
-                            .toList();
-                            
                         final newItems = basketViewModel.items
                             .where((item) => basketViewModel.newlyAddedProductIds.contains(item.product.proID))
+                            .toList();
+                            
+                        final existingItems = basketViewModel.items
+                            .where((item) => !basketViewModel.newlyAddedProductIds.contains(item.product.proID))
                             .toList();
                         
                         return ListView(
@@ -1015,9 +1015,31 @@ class _BasketViewState extends State<BasketView> {
                               ),
                           ],
                         ),
-                        Text(
-                          "Birim Fiyat: ₺${item.product.proPrice}",
-                          style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+                        Row(
+                          children: [
+                            Text(
+                              "Birim Fiyat: ₺${item.product.proPrice}",
+                              style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+                            ),
+                            if (item.product.proUnit.isNotEmpty)
+                              Container(
+                                margin: const EdgeInsets.only(left: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.blue.shade100, width: 0.5),
+                                ),
+                                child: Text(
+                                  item.product.proUnit,
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         if (item.proNote.isNotEmpty)
                           Text(
