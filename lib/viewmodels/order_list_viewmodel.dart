@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos701/models/order_model.dart';
 import 'package:pos701/services/order_service.dart';
+import 'package:pos701/models/api_response_model.dart';
 
 class OrderListViewModel extends ChangeNotifier {
   final OrderService _orderService = OrderService();
@@ -8,10 +9,19 @@ class OrderListViewModel extends ChangeNotifier {
   List<Order> _orders = [];
   bool _isLoading = false;
   String? _errorMessage;
+  String? _successMessage;
   
   List<Order> get orders => _orders;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String? get successMessage => _successMessage;
+  
+  // Başarı ve hata mesajlarını temizleme
+  void clearMessages() {
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+  }
   
   Future<void> getOrderList({
     required String userToken,
@@ -20,6 +30,7 @@ class OrderListViewModel extends ChangeNotifier {
     try {
       _isLoading = true;
       _errorMessage = null;
+      _successMessage = null;
       notifyListeners();
       
       final orderModel = await _orderService.getOrderList(
@@ -43,6 +54,50 @@ class OrderListViewModel extends ChangeNotifier {
       return _orders;
     } else {
       return _orders.where((order) => order.orderStatusID == statusID).toList();
+    }
+  }
+  
+  /// Paket ve Gel Al siparişlerinin tamamlanması için
+  Future<bool> completeOrder({
+    required String userToken,
+    required int compID,
+    required int orderID,
+  }) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+      notifyListeners();
+      
+      final response = await _orderService.completeOrder(
+        userToken: userToken,
+        compID: compID,
+        orderID: orderID,
+      );
+      
+      _isLoading = false;
+      
+      if (response.success) {
+        _successMessage = response.successMessage ?? 'Sipariş başarıyla tamamlandı';
+        
+        // Sipariş listesini güncelle
+        await getOrderList(
+          userToken: userToken,
+          compID: compID,
+        );
+        
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response.errorCode ?? 'İşlem sırasında bir hata oluştu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
     }
   }
 } 

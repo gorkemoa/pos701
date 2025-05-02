@@ -106,11 +106,31 @@ class StatisticsModel {
       totalExpenseAmount: statisticsData['totalExpenseAmount']?.toString() ?? '0,00 TL',
       totalOpenAmount: statisticsData['totalOpenAmount']?.toString() ?? '0,00 TL',
       totalGuest: statisticsData['totalGuest'] is int ? statisticsData['totalGuest'] : 0,
-      totalTables: statisticsData['totalTables'] is int ? statisticsData['totalTables'] : 0,
-      orderTables: statisticsData['orderTables'] is int ? statisticsData['orderTables'] : 0,
+      totalTables: _safeIntValue(statisticsData, 'totalTables'),
+      orderTables: _safeIntValue(statisticsData, 'orderTables'),
       nowDaySales: sales,
       nowDayPayments: payments,
     );
+  }
+  
+  // API'den gelen integer değerlerini güvenli bir şekilde işleme
+  static int _safeIntValue(Map<String, dynamic> data, String key) {
+    try {
+      if (data.containsKey(key)) {
+        if (data[key] is int) {
+          int value = data[key];
+          return value >= 0 ? value : 0; // Negatif değerleri sıfır olarak kabul et
+        } else if (data[key] != null) {
+          // String, double vb. değerleri int'e dönüştürmeyi dene
+          var parsedValue = int.tryParse(data[key].toString());
+          return parsedValue != null && parsedValue >= 0 ? parsedValue : 0;
+        }
+      }
+      return 0; // Veri yoksa veya geçersizse sıfır döndür
+    } catch (e) {
+      // Herhangi bir hata durumunda sıfır döndür
+      return 0;
+    }
   }
 }
 

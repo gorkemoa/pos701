@@ -607,4 +607,92 @@ class OrderService {
       );
     }
   }
+
+  /// Sipariş tamamla işlemi (Gel Al ve Paket siparişler için)
+  ///
+  /// API endpoint: service/user/order/complated
+  /// Method: POST
+  Future<ApiResponseModel<dynamic>> completeOrder({
+    required String userToken,
+    required int compID,
+    required int orderID,
+  }) async {
+    try {
+      debugPrint('🔵 [SİPARİŞ TAMAMLAMA] Başlatılıyor...');
+      final url = '${AppConstants.baseUrl}service/user/order/complated';
+      
+      final Map<String, dynamic> requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        'orderID': orderID,
+      };
+      
+      // İstek gövdesini logla
+      debugPrint('🔵 [SİPARİŞ TAMAMLAMA] İstek gövdesi: ${jsonEncode(requestBody)}');
+      
+      // SharedPreferences'tan token veya kimlik bilgilerini alarak header'ları hazırla
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? savedToken = prefs.getString(AppConstants.tokenKey);
+      
+      debugPrint('🔵 [SİPARİŞ TAMAMLAMA] Token: ${savedToken ?? "Token bulunamadı"}');
+      
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+      };
+      
+      // Eğer token varsa, header'a ekle
+      if (savedToken != null && savedToken.isNotEmpty) {
+        headers['X-Auth-Token'] = savedToken;
+      }
+      
+      debugPrint('🔵 [SİPARİŞ TAMAMLAMA] Headers: $headers');
+      debugPrint('🔵 [SİPARİŞ TAMAMLAMA] API isteği gönderiliyor: $url');
+      
+      final httpResponse = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(requestBody),
+      );
+      
+      debugPrint('🔵 [SİPARİŞ TAMAMLAMA] HTTP yanıt kodu: ${httpResponse.statusCode}');
+      
+      final String responseBody = utf8.decode(httpResponse.bodyBytes);
+      debugPrint('🔵 [SİPARİŞ TAMAMLAMA] HTTP yanıt gövdesi: $responseBody');
+      
+      final responseData = jsonDecode(responseBody);
+      
+      // "410": "Gone" alanını temizle - bu alan Map'in List olarak yorumlanmasına neden oluyor
+      if (responseData.containsKey('410')) {
+        responseData.remove('410');
+        debugPrint('🔵 [SİPARİŞ TAMAMLAMA] "410" anahtarı yanıttan temizlendi');
+      }
+      
+      // HTTP durum kodunu kontrol et
+      if (httpResponse.statusCode == 200 || httpResponse.statusCode == 410) {
+        debugPrint('🟢 [SİPARİŞ TAMAMLAMA] Başarılı: ${jsonEncode(responseData)}');
+        return ApiResponseModel<dynamic>(
+          error: false,
+          success: true,
+          errorCode: null,
+          successMessage: responseData['success_message'] ?? 'Sipariş başarıyla tamamlandı',
+        );
+      } else {
+        debugPrint('🔴 [SİPARİŞ TAMAMLAMA] Hata: ${httpResponse.statusCode}, Veri: ${jsonEncode(responseData)}');
+        return ApiResponseModel<dynamic>(
+          error: true,
+          success: false,
+          errorCode: responseData['message'] ?? "İşlem başarısız: HTTP ${httpResponse.statusCode}",
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('🔴 [SİPARİŞ TAMAMLAMA] İSTİSNA: $e');
+      debugPrint('🔴 [SİPARİŞ TAMAMLAMA] STACK TRACE: $stackTrace');
+      return ApiResponseModel<dynamic>(
+        error: true,
+        success: false,
+        errorCode: "Sipariş tamamlanırken hata oluştu: $e",
+      );
+    }
+  }
 } 
