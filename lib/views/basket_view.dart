@@ -1548,7 +1548,13 @@ class _BasketViewState extends State<BasketView> {
     final paymentTypes = userViewModel.userInfo?.company?.compPayTypes ?? [];
     
     if (paymentTypes.isEmpty) {
-      _showDefaultPaymentTypeDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ödeme türleri bulunamadı'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
       return;
     }
     
@@ -1582,10 +1588,15 @@ class _BasketViewState extends State<BasketView> {
               }
               
               return ListTile(
-                leading: Icon(
-                  _getPaymentIcon(paymentType.typeName),
-                  color: isSelected ? typeColor : Colors.grey,
-                ),
+                leading: paymentType.typeImg.isNotEmpty 
+                  ? Image.network(
+                      paymentType.typeImg,
+                      width: 24,
+                      height: 24,
+                      errorBuilder: (context, error, stackTrace) => 
+                          Icon(Icons.payment, color: isSelected ? typeColor : Colors.grey),
+                    )
+                  : Icon(Icons.payment, color: isSelected ? typeColor : Colors.grey),
                 title: Text(
                   paymentType.typeName,
                   style: TextStyle(
@@ -1622,96 +1633,6 @@ class _BasketViewState extends State<BasketView> {
         ],
       ),
     );
-  }
-  
-  void _showDefaultPaymentTypeDialog() {
-    final List<Map<String, dynamic>> defaultPaymentTypes = [
-      {'id': 1, 'name': 'Nakit', 'icon': Icons.attach_money, 'color': Colors.green},
-      {'id': 2, 'name': 'Kredi Kartı', 'icon': Icons.credit_card, 'color': Colors.blue},
-      {'id': 3, 'name': 'Havale/EFT', 'icon': Icons.account_balance, 'color': Colors.purple},
-      {'id': 4, 'name': 'Yemek Kartı', 'icon': Icons.card_membership, 'color': Colors.orange},
-      {'id': 5, 'name': 'Online Ödeme', 'icon': Icons.phone_android, 'color': Colors.teal},
-    ];
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.payment, color: Color(AppConstants.primaryColorValue)),
-            const SizedBox(width: 10),
-            const Text('Ödeme Türü Seçin', style: TextStyle(fontSize: 14)),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: defaultPaymentTypes.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final paymentType = defaultPaymentTypes[index];
-              final bool isSelected = _orderPayType == paymentType['id'];
-              
-              return ListTile(
-                leading: Icon(
-                  paymentType['icon'] as IconData,
-                  color: isSelected ? paymentType['color'] : Colors.grey,
-                ),
-                title: Text(
-                  paymentType['name'] as String,
-                  style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? paymentType['color'] : Colors.black,
-                  ),
-                ),
-                trailing: isSelected 
-                    ? Icon(Icons.check_circle, color: paymentType['color'])
-                    : null,
-                onTap: () {
-                  setState(() {
-                    _orderPayType = paymentType['id'] as int;
-                  });
-                  Navigator.of(context).pop();
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Ödeme türü: ${paymentType['name']} seçildi'),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('İptal'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  IconData _getPaymentIcon(String typeName) {
-    final String name = typeName.toLowerCase();
-    
-    if (name.contains('nakit') || name.contains('cash')) {
-      return Icons.attach_money;
-    } else if (name.contains('kart') || name.contains('card')) {
-      return Icons.credit_card;
-    } else if (name.contains('havale') || name.contains('eft') || name.contains('banka')) {
-      return Icons.account_balance;
-    } else if (name.contains('yemek') || name.contains('food')) {
-      return Icons.card_membership;
-    } else if (name.contains('online') || name.contains('mobil')) {
-      return Icons.phone_android;
-    } else {
-      return Icons.payment;
-    }
   }
 
 }

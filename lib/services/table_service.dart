@@ -96,13 +96,16 @@ class TableService {
       final url = '${AppConstants.baseUrl}${AppConstants.tableOrderMergeEndpoint}';
       debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} API isteği: $url');
       
+      // Integer masaları stringe çevir (API'nin beklediği format)
+      final List<String> mergeTablesAsString = mergeTables.map((id) => id.toString()).toList();
+      
       final requestBody = {
         'userToken': userToken,
         'compID': compID,
         'tableID': tableID,
         'orderID': orderID,
         'step': step,
-        'mergeTables': mergeTables,
+        'mergeTables': mergeTablesAsString, // String listesi olarak gönder
       };
       debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} istek verileri: $requestBody');
       

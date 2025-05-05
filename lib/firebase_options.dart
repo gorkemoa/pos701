@@ -70,6 +70,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '398706348477',
     projectId: 'pos701-c070d',
     storageBucket: 'pos701-c070d.firebasestorage.app',
-    iosBundleId: 'com.office701.pos701',
+    iosBundleId: 'com.office701.pos701app',
   );
 }

@@ -459,12 +459,14 @@ class TableCard extends StatelessWidget {
     );
 
     try {
-      // Masa ayırma API çağrısı
-      final success = await viewModel.unMergeTables(
+      // Masa ayırma API çağrısı - doğrudan mergeTables fonksiyonunu kullanıyoruz
+      final success = await viewModel.mergeTables(
         userToken: userToken,
         compID: compID,
-        tableID: table.tableID,
+        mainTableID: table.tableID,
         orderID: table.orderID,
+        tablesToMerge: [], // Ayırma işlemi için boş liste yeterlidir
+        step: 'unmerged', // Burada unmerged olarak belirtiyoruz
       );
       
       // Yükleniyor diyaloğunu kapat
@@ -951,6 +953,7 @@ class TableCard extends StatelessWidget {
               mainTableID: table.tableID,
               orderID: table.orderID,
               tablesToMerge: selectedTableIds,
+              step: 'merged',
             );
             
             // Yükleniyor diyaloğunu kapat
