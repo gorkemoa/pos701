@@ -85,27 +85,27 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     return ChangeNotifierProvider(
       create: (_) => _viewModel,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Sipariş Listesi', style: TextStyle(color: Colors.white)),
-          backgroundColor: Color(AppConstants.primaryColorValue),
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: _tabs,
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            
-            onTap: (index) {
-              setState(() {});
+            appBar: AppBar(
+              title: const Text('Sipariş Listesi', style: TextStyle(color: Colors.white)),
+              backgroundColor: Color(AppConstants.primaryColorValue),
+              bottom: TabBar(
+                controller: _tabController,
+                tabs: _tabs,
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                
+                onTap: (index) {
+                  setState(() {});
 
-            },
-          ),
-        ),
-        drawer: const AppDrawer(),
+                },
+              ),
+            ),
+            drawer: const AppDrawer(),
         body: Consumer<OrderListViewModel>(
           builder: (context, viewModel, _) {
             return _buildBody(viewModel);
-          },
+        },
         ),
       ),
     );
