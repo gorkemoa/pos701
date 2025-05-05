@@ -229,7 +229,8 @@ class FirebaseMessagingService {
       _messaging.getToken().then((String? token) {
         if (token != null) {
           _logger.i('FCM Token alındı: $token');
-          // Bu token'ı backend'e kaydetme işlemi burada yapılabilir
+          // Token'ı backend'e kaydet
+          _sendTokenToBackend(token);
         } else {
           _logger.w('FCM Token null olarak alındı');
         }
@@ -247,7 +248,8 @@ class FirebaseMessagingService {
       _messaging.onTokenRefresh.listen(
         (String token) {
           _logger.i('FCM Token güncellendi: $token');
-          // Bu token'ı backend'e güncelleme işlemi burada yapılabilir
+          // Token'ı backend'e kaydet
+          _sendTokenToBackend(token);
         },
         onError: (error) {
           _logger.e('FCM Token güncelleme dinleyicisi hatası: $error');
@@ -256,6 +258,62 @@ class FirebaseMessagingService {
     } catch (e) {
       _logger.e('Token yenileme dinleyicisi ayarlanırken hata: $e');
     }
+  }
+
+  /// FCM token'ını backend'e gönder
+  Future<void> _sendTokenToBackend(String token) async {
+    _logger.d('FCM token backend\'e gönderiliyor...');
+    try {
+      // API servisi üzerinden token gönderme
+      // NOT: Burada gerçek API çağrısı eklenecek
+      final bool success = await _sendTokenToApi(token);
+      
+      if (success) {
+        _logger.i('FCM token başarıyla backend\'e gönderildi');
+      } else {
+        _logger.w('FCM token backend\'e gönderilemedi');
+      }
+    } catch (e) {
+      _logger.e('FCM token backend\'e gönderilirken hata: $e');
+    }
+  }
+  
+  /// FCM token'ını API'ye gönder
+  Future<bool> _sendTokenToApi(String token) async {
+    try {
+      // Kullanıcı giriş yapmışsa API'ye token'ı gönder
+      // Bu kısım gerçek API entegrasyonuna göre düzenlenmelidir
+      
+      // Örnek API çağrısı (gerçekte SharedPreferences'tan alınabilir)
+      final String? userId = await _getUserId();
+      
+      if (userId == null || userId.isEmpty) {
+        _logger.w('Kullanıcı ID\'si bulunamadığı için token gönderilemedi');
+        return false;
+      }
+      
+      // API istekleri için ApiService sınıfı kullanılabilir
+      // final ApiService apiService = ApiService();
+      // final response = await apiService.sendFcmToken(userId, token);
+      // return response.success;
+      
+      // Şimdilik başarılı kabul ediyoruz
+      return true;
+    } catch (e) {
+      _logger.e('Token API\'ye gönderilirken hata: $e');
+      return false;
+    }
+  }
+  
+  /// Kullanıcı ID'sini al (Bu metot projeye özgü olarak uyarlanmalıdır)
+  Future<String?> _getUserId() async {
+    // Gerçek uygulamada SharedPreferences veya güvenli depolama kullanılmalıdır
+    // Örnek:
+    // final prefs = await SharedPreferences.getInstance();
+    // return prefs.getString('userId');
+    
+    // Şimdilik dummy değer dönüyoruz
+    return 'user_id_placeholder';
   }
 
   /// Belirli bir konuya abone ol

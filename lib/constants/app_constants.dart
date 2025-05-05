@@ -21,7 +21,7 @@ class AppConstants {
   static const String companyIdKey = 'companyId';
   
   // Colors
-  static const int primaryColorValue = 0xFF77c178; // Yeşil renk
+  static const int primaryColorValue = 0xFF1aa7e0; // Yeşil renk
   static const int incomeCardColor = 0xFFE76767; // Gelir kart rengi
   static const int expenseCardColor = 0xFF9C27B0; // Gider kart rengi
   static const int orderCardColor = 0xFF3F51B5; // Sipariş kart rengi

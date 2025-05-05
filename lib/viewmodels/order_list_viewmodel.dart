@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pos701/models/order_model.dart';
 import 'package:pos701/services/order_service.dart';
-import 'package:pos701/models/api_response_model.dart';
+import 'package:pos701/services/table_service.dart';
 
 class OrderListViewModel extends ChangeNotifier {
   final OrderService _orderService = OrderService();
-  
+  final TableService _tableService = TableService();
   List<Order> _orders = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -90,6 +90,52 @@ class OrderListViewModel extends ChangeNotifier {
         return true;
       } else {
         _errorMessage = response.errorCode ?? 'İşlem sırasında bir hata oluştu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  /// Sipariş iptal etme
+  Future<bool> cancelOrder({
+    required String userToken,
+    required int compID,
+    required int orderID,
+    String? cancelDesc,
+  }) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+      notifyListeners();
+      
+      final response = await _tableService.cancelOrder(
+        userToken: userToken,
+        compID: compID,
+        orderID: orderID,
+        cancelDesc: cancelDesc,
+      );
+      
+      _isLoading = false;
+      
+      if (response['success']) {
+        _successMessage = response['success_message'] ?? 'Sipariş başarıyla iptal edildi';
+        
+        // Sipariş listesini güncelle
+        await getOrderList(
+          userToken: userToken,
+          compID: compID,
+        );
+        
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'İşlem sırasında bir hata oluştu';
         notifyListeners();
         return false;
       }

@@ -255,6 +255,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     // ya da başka bir mantık uygulanabilir
     // Şimdilik tüm '4' olmayan siparişlere buton ekleyelim
     final bool canComplete = order.orderStatusID != '4';
+    final bool canCancel = order.orderStatusID != '4'; // İptal edilebilir durumlar
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -308,7 +309,15 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                     
                     if (canComplete) ...[
                       const SizedBox(height: 16),
-                      _buildCompleteOrderButton(order),
+                      Row(
+                        children: [
+                          Expanded(child: _buildCompleteOrderButton(order)),
+                          if (canCancel) ...[
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildCancelOrderButton(order)),
+                          ],
+                        ],
+                      ),
                     ],
                     
                     const Divider(height: 24, thickness: 0.5, color: Colors.black12),
@@ -473,6 +482,130 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text(viewModel.successMessage ?? 'Sipariş başarıyla tamamlandı'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage ?? 'İşlem sırasında bir hata oluştu'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  // Sipariş iptal butonu
+  Widget _buildCancelOrderButton(Order order) {
+    return Consumer<OrderListViewModel>(
+      builder: (context, viewModel, _) {
+        return ElevatedButton.icon(
+          onPressed: viewModel.isLoading 
+              ? null 
+              : () => _showCancelOrderDialog(order.orderID),
+          icon: const Icon(Icons.cancel_outlined, size: 16),
+          label: const Text('İptal Et', style: TextStyle(fontSize: 12)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade600,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Sipariş iptal diyaloğu
+  Future<void> _showCancelOrderDialog(int orderID) async {
+    final TextEditingController _cancelReasonController = TextEditingController();
+    
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sipariş İptali'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Siparişi iptal etmek istediğinize emin misiniz?',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                const Text('İptal Gerekçesi (İsteğe Bağlı):'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _cancelReasonController,
+                  decoration: const InputDecoration(
+                    hintText: 'İptal nedeni girin',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Vazgeç'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            Consumer<OrderListViewModel>(
+              builder: (context, viewModel, _) {
+                return TextButton(
+                  child: viewModel.isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('İptal Et'),
+                  onPressed: viewModel.isLoading
+                      ? null
+                      : () {
+                          _cancelOrder(
+                            orderID, 
+                            _cancelReasonController.text
+                          );
+                          Navigator.of(context).pop();
+                        },
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Sipariş iptal işlevi
+  Future<void> _cancelOrder(int orderID, String? cancelReason) async {
+    final viewModel = Provider.of<OrderListViewModel>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    final result = await viewModel.cancelOrder(
+      userToken: widget.userToken,
+      compID: widget.compID,
+      orderID: orderID,
+      cancelDesc: cancelReason,
+    );
+    
+    if (result) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(viewModel.successMessage ?? 'Sipariş başarıyla iptal edildi'),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 2),
         ),
