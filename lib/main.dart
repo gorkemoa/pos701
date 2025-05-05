@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:pos701/viewmodels/order_list_viewmodel.dart';
 import 'package:provider/provider.dart';
@@ -49,6 +50,9 @@ void main() async {
     logger.e('Firebase Messaging servisi başlatılamadı: $e');
   }
   
+  final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+  debugPrint("📲 APNs Token: $apnsToken");
+
   runApp(
     MultiProvider(
       providers: [

@@ -279,6 +279,7 @@ class TablesViewModel extends ChangeNotifier {
     required int mainTableID,
     required int orderID,
     required List<int> tablesToMerge,
+    String step = 'merged', // İsteğe bağlı, varsayılan değer 'merged'
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -292,17 +293,21 @@ class TablesViewModel extends ChangeNotifier {
         tableID: mainTableID,
         orderID: orderID,
         mergeTables: tablesToMerge,
-        step: 'merged',
+        step: step, // Metoda gönderilen step değerini kullan
       );
       
       _isLoading = false;
       
       if (response['success'] == true) {
-        _successMessage = response['success_message'] ?? 'Masalar başarıyla birleştirildi';
+        _successMessage = step == 'merged' 
+            ? (response['success_message'] ?? 'Masalar başarıyla birleştirildi')
+            : (response['success_message'] ?? 'Masalar başarıyla ayrıldı');
         notifyListeners();
         return true;
       } else {
-        _errorMessage = response['error_message'] ?? 'Masa birleştirme işlemi başarısız oldu';
+        _errorMessage = step == 'merged'
+            ? (response['error_message'] ?? 'Masa birleştirme işlemi başarısız oldu')
+            : (response['error_message'] ?? 'Masa ayırma işlemi başarısız oldu');
         notifyListeners();
         return false;
       }
@@ -360,38 +365,15 @@ class TablesViewModel extends ChangeNotifier {
     required int tableID,
     required int orderID,
   }) async {
-    _isLoading = true;
-    _errorMessage = null;
-    _successMessage = null;
-    notifyListeners();
-    
-    try {
-      final response = await _tableService.mergeTables(
-        userToken: userToken,
-        compID: compID,
-        tableID: tableID,
-        orderID: orderID,
-        mergeTables: [], // Boş liste göndermek yeterli
-        step: 'unmerged', // Ayırma işlemi
-      );
-      
-      _isLoading = false;
-      
-      if (response['success'] == true) {
-        _successMessage = response['success_message'] ?? 'Masalar başarıyla ayrıldı';
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = response['error_message'] ?? 'Masa ayırma işlemi başarısız oldu';
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _isLoading = false;
-      _errorMessage = e.toString();
-      notifyListeners();
-      return false;
-    }
+    // Güncellenmiş mergeTables fonksiyonunu 'unmerged' step değeriyle çağır
+    return mergeTables(
+      userToken: userToken,
+      compID: compID,
+      mainTableID: tableID,
+      orderID: orderID,
+      tablesToMerge: [], // Boş liste göndermek yeterli
+      step: 'unmerged', // Ayırma işlemi için
+    );
   }
   
   // Belirli bir bölgenin masalarını döndürür
