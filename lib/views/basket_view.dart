@@ -915,6 +915,9 @@ class _BasketViewState extends State<BasketView> {
   }
 
   Widget _buildBasketItem(BuildContext context, BasketItem item, {bool isNewItem = false}) {
+    // Ürün siparişten çıkarılacak olarak işaretlenmişse görsel özellikleri ayarla
+    final bool isMarkedForRemoval = item.isRemove == 1;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: InkWell(
@@ -943,7 +946,7 @@ class _BasketViewState extends State<BasketView> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-          
+            color: isMarkedForRemoval ? Colors.red.shade50 : null,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 14.0),
@@ -951,28 +954,36 @@ class _BasketViewState extends State<BasketView> {
               children: [
                 _buildQuantityButton(
                   icon: Icons.remove,
-                  onPressed: () {
-                    setState(() => _isProcessing = true);
-                    Provider.of<BasketViewModel>(context, listen: false)
-                        .decrementQuantity(item.lineId);
-                  },
+                  onPressed: isMarkedForRemoval 
+                      ? () {} // Siparişten çıkarılacak ürünler için devre dışı bırakılmış buton
+                      : () {
+                          setState(() => _isProcessing = true);
+                          Provider.of<BasketViewModel>(context, listen: false)
+                              .decrementQuantity(item.lineId);
+                        },
                 ),
                 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
                     item.proQty.toString(),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 12, 
+                      fontWeight: FontWeight.bold,
+                      color: isMarkedForRemoval ? Colors.red.shade300 : null,
+                    ),
                   ),
                 ),
                 
                 _buildQuantityButton(
                   icon: Icons.add,
-                  onPressed: () {
-                    setState(() => _isProcessing = true);
-                    Provider.of<BasketViewModel>(context, listen: false)
-                        .incrementQuantity(item.lineId);
-                  },
+                  onPressed: isMarkedForRemoval 
+                      ? () {} // Siparişten çıkarılacak ürünler için devre dışı bırakılmış buton
+                      : () {
+                          setState(() => _isProcessing = true);
+                          Provider.of<BasketViewModel>(context, listen: false)
+                              .incrementQuantity(item.lineId);
+                        },
                 ),
                 
                 Expanded(
@@ -986,9 +997,31 @@ class _BasketViewState extends State<BasketView> {
                             Expanded(
                               child: Text(
                                 item.product.proName,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 12, 
+                                  fontWeight: FontWeight.bold,
+                                  decoration: isMarkedForRemoval ? TextDecoration.lineThrough : null,
+                                  color: isMarkedForRemoval ? Colors.red.shade300 : null,
+                                ),
                               ),
                             ),
+                            if (isMarkedForRemoval)
+                              Container(
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'Çıkarılacak',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ),
                             if (item.isGift)
                               Container(
                                 margin: const EdgeInsets.only(left: 4),
@@ -1019,7 +1052,11 @@ class _BasketViewState extends State<BasketView> {
                           children: [
                             Text(
                               "Birim Fiyat: ₺${item.product.proPrice}",
-                              style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+                              style: TextStyle(
+                                fontSize: 9, 
+                                color: isMarkedForRemoval ? Colors.red.shade200 : Colors.grey.shade600,
+                                decoration: isMarkedForRemoval ? TextDecoration.lineThrough : null,
+                              ),
                             ),
                             if (item.product.proUnit.isNotEmpty)
                               Container(
@@ -1044,7 +1081,12 @@ class _BasketViewState extends State<BasketView> {
                         if (item.proNote.isNotEmpty)
                           Text(
                             "Not: ${item.proNote}",
-                            style: TextStyle(fontSize: 9, color: Colors.blue.shade600, fontStyle: FontStyle.italic),
+                            style: TextStyle(
+                              fontSize: 9, 
+                              color: isMarkedForRemoval ? Colors.red.shade200 : Colors.blue.shade600, 
+                              fontStyle: FontStyle.italic,
+                              decoration: isMarkedForRemoval ? TextDecoration.lineThrough : null,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1061,23 +1103,62 @@ class _BasketViewState extends State<BasketView> {
                       style: TextStyle(
                         fontSize: 12, 
                         fontWeight: FontWeight.bold,
-                        color: item.isGift ? Colors.red.shade700 : Colors.black,
+                        color: isMarkedForRemoval 
+                            ? Colors.red.shade300
+                            : (item.isGift ? Colors.red.shade700 : Colors.black),
+                        decoration: isMarkedForRemoval ? TextDecoration.lineThrough : null,
                       ),
                     ),
                       if (item.proQty > 1 && !item.isGift)
                       Text(
                         "${item.proQty} x ₺${(item.totalPrice / item.proQty).toStringAsFixed(2)}",
-                        style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 9, 
+                          color: isMarkedForRemoval ? Colors.red.shade200 : Colors.grey.shade600,
+                          decoration: isMarkedForRemoval ? TextDecoration.lineThrough : null,
+                        ),
                       ),
                   ],
                 ),
                 
                 IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
+                  icon: Icon(
+                    isMarkedForRemoval ? Icons.restore : Icons.delete, 
+                    color: isMarkedForRemoval ? Colors.green : Colors.red,
+                  ),
                   onPressed: () {
                     setState(() => _isProcessing = true);
-                    Provider.of<BasketViewModel>(context, listen: false)
-                        .removeProduct(item.product.proID, opID: item.opID);
+                    
+                    // Eğer mevcut bir sipariş güncelleniyorsa ürünler API'ye isRemove=1 ile gönderilmeli
+                    if (widget.orderID != null && item.opID > 0) {
+                      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+                      
+                      if (isMarkedForRemoval) {
+                        // Zaten işaretliyse, işareti kaldır
+                        item.isRemove = 0;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("${item.product.proName} siparişte kalacak"),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      } else {
+                        // İşaretli değilse, siparişten çıkarılacak olarak işaretle
+                        basketViewModel.markProductForRemoval(item.product.proID, opID: item.opID);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("${item.product.proName} siparişten çıkarılacak"),
+                            backgroundColor: Colors.orange,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } else {
+                      // Yeni bir sipariş veya mevcut bir siparişe yeni eklenen ürün ise sepetten kaldır
+                      Provider.of<BasketViewModel>(context, listen: false)
+                          .removeProduct(item.product.proID, opID: item.opID);
+                    }
                   },
                 ),
               ],

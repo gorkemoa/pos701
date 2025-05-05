@@ -90,22 +90,19 @@ class TableService {
     required int tableID,
     required int orderID,
     required List<int> mergeTables,
-    required String step, // "merged" veya "unmerged" değeri alabilir
+    required String step,
   }) async {
     try {
       final url = '${AppConstants.baseUrl}${AppConstants.tableOrderMergeEndpoint}';
       debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} API isteği: $url');
-      
-      // Integer masaları stringe çevir (API'nin beklediği format)
-      final List<String> mergeTablesAsString = mergeTables.map((id) => id.toString()).toList();
       
       final requestBody = {
         'userToken': userToken,
         'compID': compID,
         'tableID': tableID,
         'orderID': orderID,
-        'step': step,
-        'mergeTables': mergeTablesAsString, // String listesi olarak gönder
+        'step': step, // "merged" veya "unmerged"
+        'mergeTables': mergeTables.map((id) => id.toString()).toList(),
       };
       debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} istek verileri: $requestBody');
       
@@ -123,22 +120,17 @@ class TableService {
       
       if (response.statusCode == 410 || response.statusCode == 200) {
         return jsonDecode(response.body);
-      } else if (response.statusCode == 401) {
-        return {
-          'success': false,
-          'error_message': 'Yetkilendirme hatası: Lütfen tekrar giriş yapın.',
-        };
       } else {
         return {
           'success': false,
-          'error_message': 'Sunucu hatası: ${response.statusCode}',
+          'error_message': 'HTTP error: ${response.statusCode}',
         };
       }
     } catch (e) {
       debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} işlemi sırasında hata: $e');
       return {
         'success': false,
-        'error_message': 'İşlem sırasında bir hata oluştu: $e',
+        'error_message': e.toString(),
       };
     }
   }

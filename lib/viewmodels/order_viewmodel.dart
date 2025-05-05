@@ -49,7 +49,7 @@ class OrderViewModel extends ChangeNotifier {
 
     for (var item in items) {
       // Debug için ürün bilgilerini logla
-      debugPrint('🔄 [ORDER_VM] Sipariş ürünü hazırlanıyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}, Not: ${item.proNote}, İkram: ${item.isGift}');
+      debugPrint('🔄 [ORDER_VM] Sipariş ürünü hazırlanıyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}, Not: ${item.proNote}, İkram: ${item.isGift}, Çıkarılacak: ${item.isRemove}');
       
       // OrderProduct oluştur
       orderProducts.add(OrderProduct(
@@ -60,6 +60,7 @@ class OrderViewModel extends ChangeNotifier {
         proPrice: item.product.proPrice,
         proNote: item.proNote, // Sepetteki notu kullan
         isGift: item.isGift, // İkram bilgisini kullan
+        isRemove: item.isRemove, // Çıkarılacak işaretini aktar
       ));
     }
     
@@ -320,6 +321,7 @@ class OrderViewModel extends ChangeNotifier {
     required int isKuver,
     required int isWaiter,
     int orderPayType = 0, // Paket sipariş ödeme türü
+    int isRemove = 0, // Ürün siparişten çıkartılacaksa 1 olarak gönderilmelidir
   }) async {
     if (sepetUrunleri.isEmpty) {
       _setError('Sepette ürün bulunamadı');
@@ -330,6 +332,7 @@ class OrderViewModel extends ChangeNotifier {
       _setStatus(OrderStatus.loading);
       debugPrint('🔄 [ORDER_VM] Sipariş güncelleniyor. OrderID: $orderID, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${custAdrs.length}');
       debugPrint('🔄 [ORDER_VM] Kuver: $isKuver, Garsoniye: $isWaiter, Ödeme Türü: $orderPayType değerleri ile güncelleniyor');
+      debugPrint('🔄 [ORDER_VM] Ürün çıkarma durumu: ${isRemove == 1 ? "Evet" : "Hayır"}');
       
       // CustomerAddress nesnelerini dönüştür
       List<dynamic> formattedAddresses = [];
@@ -358,6 +361,7 @@ class OrderViewModel extends ChangeNotifier {
         isKuver: isKuver, // Kuver durumu
         isWaiter: isWaiter, // Garsoniye durumu
         orderPayType: orderPayType, // Ödeme türü
+        isRemove: isRemove, // Ürün çıkarma durumu
       );
       
       // Siparişi güncelle

@@ -115,7 +115,15 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                 }).toList(),
               ),
             ),
-         
+            const SizedBox(height: 10),
+            const Text(
+              'Not: Birleştirilen masalar, sol üst köşedeki insan simgesiyle işaretlenir.',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
           ],
         ),
         actions: [

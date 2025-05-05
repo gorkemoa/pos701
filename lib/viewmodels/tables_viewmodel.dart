@@ -94,25 +94,33 @@ class TablesViewModel extends ChangeNotifier {
       // Dönen veriyi işleyerek JSON formatını ayıkla
       String responseBody = response.body;
       
+      // Debug: Ham yanıtı kaydet
+      debugPrint('JSON Yanıt (Ham): $responseBody');
+      
       try {
         // Özel format düzeltmesi
         if (responseBody.startsWith("order_counts_data='") && responseBody.endsWith("'")) {
           responseBody = responseBody.substring(18, responseBody.length - 1);
+          debugPrint('JSON Yanıt (Temizlendi-1): $responseBody');
         }
         
         // Başında ve sonunda tek tırnak varsa temizle
         if (responseBody.startsWith("'") && responseBody.endsWith("'")) {
           responseBody = responseBody.substring(1, responseBody.length - 1);
+          debugPrint('JSON Yanıt (Temizlendi-2): $responseBody');
         } else if (responseBody.startsWith("'")) {
           responseBody = responseBody.substring(1);
+          debugPrint('JSON Yanıt (Temizlendi-3): $responseBody');
         } else if (responseBody.endsWith("'")) {
           responseBody = responseBody.substring(0, responseBody.length - 1);
+          debugPrint('JSON Yanıt (Temizlendi-4): $responseBody');
         }
         
         // Güvenli JSON parse etme
         Map<String, dynamic> jsonData;
         try {
           jsonData = jsonDecode(responseBody);
+          debugPrint('JSON Parse başarılı');
         } catch (jsonDecodeError) {
           debugPrint('İlk JSON decode hatası: $jsonDecodeError, farklı bir format denenecek');
           
@@ -120,6 +128,7 @@ class TablesViewModel extends ChangeNotifier {
           String cleanedJson = responseBody.replaceAll("'", "");
           try {
             jsonData = jsonDecode(cleanedJson);
+            debugPrint('JSON Parse ikinci denemede başarılı');
           } catch (secondError) {
             debugPrint('İkinci JSON decode denemesi de başarısız: $secondError');
             return false; // JSON parse edilemiyorsa başarısız olarak dön
@@ -163,6 +172,9 @@ class TablesViewModel extends ChangeNotifier {
         
         final List<dynamic>? ordersData = jsonData['data'] as List<dynamic>?;
         
+        // Debug: Sipariş verilerini görüntüle
+        debugPrint('Sipariş verileri: $ordersData');
+        
         // Eğer veri yoksa veya boşsa, tüm masaları pasif yap
         if (ordersData == null || ordersData.isEmpty) {
           debugPrint('Sipariş listesi boş - tüm masalar pasif olarak işaretlenecek');
@@ -196,6 +208,51 @@ class TablesViewModel extends ChangeNotifier {
         final activeOrderIds = ordersData.map((order) => int.parse(order['order_id'].toString())).toSet();
         debugPrint('Aktif sipariş ID\'leri: $activeOrderIds');
         
+        // Aktif sipariş tabloları ve birleştirilmiş masaları takip et
+        final Map<int, List<int>> mergedTablesMap = {};
+        
+        // Birleştirilmiş masaları işle
+        for (var order in ordersData) {
+          int orderID = int.parse(order['order_id'].toString());
+          int tableID = int.parse(order['table_id'].toString());
+          
+          // Debug: Her siparişin detaylarını göster
+          debugPrint('Sipariş bilgisi: ID=$orderID, Masa ID=$tableID');
+          
+          // mergeTables alanını kontrol et (yeni API formatı)
+          if (order['mergeTables'] != null) {
+            debugPrint('MergeTables alanı bulundu: ${order['mergeTables']}');
+            List<dynamic> mergeTables = order['mergeTables'] as List<dynamic>;
+            if (mergeTables.isNotEmpty) {
+              List<int> mergedTableIds = [];
+              for (var mergeTable in mergeTables) {
+                if (mergeTable is int) {
+                  mergedTableIds.add(mergeTable);
+                } else if (mergeTable is String) {
+                  try {
+                    mergedTableIds.add(int.parse(mergeTable));
+                  } catch (e) {
+                    debugPrint('Geçersiz birleştirilmiş masa ID: $mergeTable');
+                  }
+                } else if (mergeTable is Map) {
+                  // Eğer mergeTables içinde farklı bir obje yapısı varsa
+                  if (mergeTable.containsKey('table_id')) {
+                    try {
+                      mergedTableIds.add(int.parse(mergeTable['table_id'].toString()));
+                    } catch (e) {
+                      debugPrint('Geçersiz birleştirilmiş masa ID: ${mergeTable['table_id']}');
+                    }
+                  }
+                }
+              }
+              mergedTablesMap[tableID] = mergedTableIds;
+              debugPrint('Masa $tableID için birleştirilmiş masalar: $mergedTableIds');
+            }
+          } else {
+            debugPrint('Masa $tableID için mergeTables alanı bulunamadı veya boş');
+          }
+        }
+        
         // Mevcut masa verilerini kontrol et
         bool anyChanges = false;
         
@@ -204,9 +261,21 @@ class TablesViewModel extends ChangeNotifier {
             // Masa ID'si aktif sipariş listesinde var mı kontrol et
             bool shouldBeActive = activeOrderIds.contains(table.orderID) && table.orderID > 0;
             
-            // Eğer aktiflik durumu farklıysa
-            if (table.isActive != shouldBeActive) {
-              debugPrint('Masa ${table.tableName} (ID: ${table.tableID}) - OrderID: ${table.orderID} - Mevcut durum: ${table.isActive}, Olması gereken: $shouldBeActive');
+            // Birleştirilmiş masa kontrolü
+            bool shouldBeMerged = mergedTablesMap.containsKey(table.tableID) && 
+                               mergedTablesMap[table.tableID]!.isNotEmpty;
+            
+            // Debug: Masa durumlarını göster
+            debugPrint('Masa ${table.tableName} (ID: ${table.tableID}) durum kontrolü:');
+            debugPrint('  - OrderID: ${table.orderID}');
+            debugPrint('  - Mevcut aktiflik: ${table.isActive}, Olması gereken: $shouldBeActive');
+            debugPrint('  - Mevcut birleşik: ${table.isMerged}, Olması gereken: $shouldBeMerged');
+            
+            // Eğer aktiflik veya birleştirilmiş durumu farklıysa
+            if (table.isActive != shouldBeActive || table.isMerged != shouldBeMerged) {
+              debugPrint('Masa ${table.tableName} (ID: ${table.tableID}) - ' +
+                       'Mevcut aktiflik: ${table.isActive}, Olması gereken: $shouldBeActive - ' +
+                       'Mevcut birleştirilmiş: ${table.isMerged}, Olması gereken: $shouldBeMerged');
               anyChanges = true;
               break;
             }
@@ -216,7 +285,7 @@ class TablesViewModel extends ChangeNotifier {
         
         // Eğer değişiklik varsa, bunu sadece bildir ama tam veri güncellemesi yapma
         if (anyChanges) {
-          debugPrint('Masa aktifliğinde değişiklik tespit edildi, tam veri yenileniyor...');
+          debugPrint('Masa aktifliğinde veya birleştirilmiş durumda değişiklik tespit edildi, tam veri yenileniyor...');
           // Tam veri güncellemesi yap
           return await refreshTablesDataSilently(userToken: userToken, compID: compID);
         }
@@ -365,15 +434,38 @@ class TablesViewModel extends ChangeNotifier {
     required int tableID,
     required int orderID,
   }) async {
-    // Güncellenmiş mergeTables fonksiyonunu 'unmerged' step değeriyle çağır
-    return mergeTables(
-      userToken: userToken,
-      compID: compID,
-      mainTableID: tableID,
-      orderID: orderID,
-      tablesToMerge: [], // Boş liste göndermek yeterli
-      step: 'unmerged', // Ayırma işlemi için
-    );
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    
+    try {
+      final response = await _tableService.mergeTables(
+        userToken: userToken,
+        compID: compID,
+        tableID: tableID,
+        orderID: orderID,
+        mergeTables: [], // Ayırma işlemi için boş liste göndermek yeterli
+        step: 'unmerged', // Ayırma işlemi için "unmerged" adımı kullanılıyor
+      );
+      
+      _isLoading = false;
+      
+      if (response['success'] == true) {
+        _successMessage = response['success_message'] ?? 'Masalar başarıyla ayrıldı';
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'Masa ayırma işlemi başarısız oldu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
   
   // Belirli bir bölgenin masalarını döndürür

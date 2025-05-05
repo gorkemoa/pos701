@@ -172,6 +172,29 @@ class BasketViewModel extends ChangeNotifier {
     notifyListeners();
   }
   
+  // Ürünü siparişten çıkarılacak olarak işaretle (isRemove = 1)
+  void markProductForRemoval(int productId, {required int opID}) {
+    try {
+      // opID ile eşleşen sepet öğesini bul
+      final index = _basket.items.indexWhere(
+        (item) => item.product.proID == productId && item.opID == opID
+      );
+      
+      if (index != -1) {
+        // Sepet öğesini bulduk, isRemove değerini 1 olarak ayarla
+        _basket.items[index].isRemove = 1;
+        developer.log("Ürün siparişten çıkarılacak olarak işaretlendi. Ürün: ${_basket.items[index].product.proName}, OpID: $opID, isRemove: ${_basket.items[index].isRemove}");
+        
+        // UI'da ürünün durumunu göster (örn. gri veya kırmızı renk)
+        notifyListeners();
+      } else {
+        developer.log("markProductForRemoval: Sepette belirtilen ürün bulunamadı. Ürün ID: $productId, OpID: $opID");
+      }
+    } catch (e) {
+      developer.log("Ürün işaretlenirken hata oluştu: $e");
+    }
+  }
+  
   void incrementQuantity(int lineId) {
     try {
       // Önce satırı bul
