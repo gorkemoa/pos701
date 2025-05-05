@@ -23,14 +23,11 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
   final TextEditingController _searchController = TextEditingController();
   final List<TableItem> _selectedTables = [];
   // Masa birleştirme endpoint'i
-  final String _mergeEndpoint = AppConstants.tableOrderMergeEndpoint;
 
   @override
   void initState() {
     super.initState();
     filteredTables = List.from(widget.availableTables);
-    // Endpoint'i logla
-    debugPrint('Masa birleştirme endpoint: $_mergeEndpoint');
   }
 
   void _filterTables(String query) {
@@ -200,15 +197,6 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Endpoint: $_mergeEndpoint',
-                        style: const TextStyle(
-                          color: Colors.white60,
-                          fontSize: 10,
-                          fontStyle: FontStyle.italic,
                         ),
                       ),
                       const SizedBox(height: 2),

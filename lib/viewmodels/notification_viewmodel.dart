@@ -50,6 +50,7 @@ class NotificationViewModel extends ChangeNotifier {
   String? _errorMessage;
   List<NotificationData> _notifications = [];
   bool _hasPermission = false;
+  String? _fcmToken;
 
   NotificationViewModel(this._messagingService) {
     _logger.i('NotificationViewModel başlatıldı');
@@ -61,6 +62,7 @@ class NotificationViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   List<NotificationData> get notifications => List.unmodifiable(_notifications);
   bool get hasPermission => _hasPermission;
+  String? get fcmToken => _fcmToken;
 
   /// ViewModel'i başlat
   Future<void> _initialize() async {
@@ -76,12 +78,31 @@ class NotificationViewModel extends ChangeNotifier {
       _hasPermission = settings.authorizationStatus == AuthorizationStatus.authorized;
       _logger.d('Bildirim izni: $_hasPermission');
       
+      // FCM token'ı al
+      await fetchFcmToken();
+      
       // Başarılı
       _setState(NotificationState.success);
     } catch (e) {
       _logger.e('Bildirim servisi başlatılamadı: $e');
       _setError('Bildirim servisi başlatılamadı: $e');
     }
+  }
+
+  /// FCM token'ını al
+  Future<void> fetchFcmToken() async {
+    try {
+      _fcmToken = await FirebaseMessaging.instance.getToken();
+      _logger.i('FCM Token alındı: $_fcmToken');
+      notifyListeners();
+    } catch (e) {
+      _logger.e('FCM Token alınamadı: $e');
+    }
+  }
+
+  /// FCM token'ını kopyalamak için
+  String getFcmToken() {
+    return _fcmToken ?? 'Token bulunamadı';
   }
 
   /// Bildirim tıklanma olayını işle
@@ -99,6 +120,17 @@ class NotificationViewModel extends ChangeNotifier {
     _logger.d('Bildirim ekleniyor: ${notification.title}');
     _notifications.insert(0, notification);
     notifyListeners();
+  }
+
+  /// Belirli bir bildirimi kaldır
+  void removeNotification(int index) {
+    _logger.d('$index indeksindeki bildirim kaldırılıyor');
+    if (index >= 0 && index < _notifications.length) {
+      _notifications.removeAt(index);
+      notifyListeners();
+    } else {
+      _logger.w('Geçersiz bildirim indeksi: $index');
+    }
   }
 
   /// Bildirimleri temizle

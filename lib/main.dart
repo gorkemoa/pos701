@@ -16,6 +16,7 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:pos701/views/basket_view.dart';
+import 'package:pos701/views/notifications_view.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/customer_viewmodel.dart';
 import 'package:pos701/services/customer_service.dart';
@@ -133,6 +134,7 @@ void main() async {
               orderID: args['orderID'],
             );
           },
+          '/notifications': (context) => const NotificationsView(),
         },
         home: FutureBuilder<bool>(
           future: _checkIfLoggedIn(AuthService(ApiService())),
