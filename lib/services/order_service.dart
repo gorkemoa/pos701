@@ -356,6 +356,13 @@ class OrderService {
       // İstek gövdesini logla
       debugPrint('🔵 [SİPARİŞ GÜNCELLEME] İstek gövdesi: ${jsonEncode(requestBody)}');
       
+      // isRemove değerini logla
+      if (requestBody.containsKey('isRemove')) {
+        debugPrint('🔵 [SİPARİŞ GÜNCELLEME] Ürün çıkarma durumu: ${requestBody['isRemove'] == 1 ? "Evet" : "Hayır"}');
+      } else {
+        debugPrint('⚠️ [SİPARİŞ GÜNCELLEME] DİKKAT: isRemove parametresi isteğe eklenmemiş!');
+      }
+      
       // SharedPreferences'tan token veya kimlik bilgilerini alarak header'ları hazırla
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       final String? savedToken = prefs.getString(AppConstants.tokenKey);

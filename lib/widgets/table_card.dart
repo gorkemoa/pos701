@@ -27,6 +27,13 @@ class TableCard extends StatelessWidget {
   void _showTableOptions(BuildContext context) {
     final TablesViewModel viewModel = Provider.of<TablesViewModel>(context, listen: false);
     
+    // Debug: Birleştirilmiş masa bilgisini konsola yazdir
+    debugPrint('Masa bilgisi: ID=${table.tableID}, İsim=${table.tableName}');
+    debugPrint('Birleştirilmiş mi: ${table.isMerged}');
+    if (table.isMerged) {
+      debugPrint('Birleştirilmiş masalar: ${table.mergedTableIDs}');
+    }
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -95,35 +102,44 @@ class TableCard extends StatelessWidget {
                 ),
                 const Divider(),
                 // Masa birleştirilmiş ise "Masaları Ayır" düğmesi, değilse "Masaları Birleştir" düğmesi göster
-                table.isMerged 
-                ? _optionButton(
-                  bottomSheetContext,
-                  icon: Icons.call_split,
-                  iconColor: Colors.orange,
-                  text: 'Masaları Ayır',
-                  onTap: () {
-                    // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
-                    Navigator.pop(bottomSheetContext);
-                    // Context kapandıktan sonraki işlem için Future.microtask kullan
-                    Future.microtask(() {
-                      _handleTableUnmerge(context, viewModel);
-                    });
-                  },
-                )
-                : _optionButton(
-                  bottomSheetContext,
-                  icon: Icons.merge_type,
-                  iconColor: Colors.blue,
-                  text: 'Masaları Birleştir',
-                  onTap: () {
-                    // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
-                    Navigator.pop(bottomSheetContext);
-                    // Context kapandıktan sonraki işlem için Future.microtask kullan
-                    Future.microtask(() {
-                      _handleTableMerge(context, viewModel);
-                    });
-                  },
-                ),
+                if (table.isMerged)
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
+                    ),
+                    child: _optionButton(
+                      bottomSheetContext,
+                      icon: Icons.call_split,
+                      iconColor: Colors.orange,
+                      text: 'Masaları Ayır',
+                      onTap: () {
+                        // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
+                        Navigator.pop(bottomSheetContext);
+                        // Context kapandıktan sonraki işlem için Future.microtask kullan
+                        Future.microtask(() {
+                          _handleTableUnmerge(context, viewModel);
+                        });
+                      },
+                    ),
+                  )
+                else
+                  _optionButton(
+                    bottomSheetContext,
+                    icon: Icons.merge_type,
+                    iconColor: Colors.blue,
+                    text: 'Masaları Birleştir',
+                    onTap: () {
+                      // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
+                      Navigator.pop(bottomSheetContext);
+                      // Context kapandıktan sonraki işlem için Future.microtask kullan
+                      Future.microtask(() {
+                        _handleTableMerge(context, viewModel);
+                      });
+                    },
+                  ),
                 const Divider(),
                 _optionButton(
                   bottomSheetContext,
@@ -459,14 +475,12 @@ class TableCard extends StatelessWidget {
     );
 
     try {
-      // Masa ayırma API çağrısı - doğrudan mergeTables fonksiyonunu kullanıyoruz
-      final success = await viewModel.mergeTables(
+      // Masa ayırma API çağrısı - unMergeTables fonksiyonunu kullan
+      final success = await viewModel.unMergeTables(
         userToken: userToken,
         compID: compID,
-        mainTableID: table.tableID,
+        tableID: table.tableID,
         orderID: table.orderID,
-        tablesToMerge: [], // Ayırma işlemi için boş liste yeterlidir
-        step: 'unmerged', // Burada unmerged olarak belirtiyoruz
       );
       
       // Yükleniyor diyaloğunu kapat

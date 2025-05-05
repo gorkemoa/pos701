@@ -40,6 +40,7 @@ class OrderProduct {
   final String proPrice;
   final String proNote;
   final bool isGift;
+  final int isRemove;
 
   OrderProduct({
     required this.opID,
@@ -49,6 +50,7 @@ class OrderProduct {
     required this.proPrice,
     this.proNote = '',
     this.isGift = false,
+    this.isRemove = 0,
   });
 
   Map<String, dynamic> toJson() {
@@ -60,6 +62,7 @@ class OrderProduct {
       'proPrice': proPrice,
       'proNote': proNote,
       'isGift': isGift ? 1 : 0,
+      'isRemove': isRemove,
     };
   }
 
@@ -72,6 +75,7 @@ class OrderProduct {
       proPrice: json['proPrice'] ?? '0',
       proNote: json['proNote'] ?? '',
       isGift: json['isGift'] == 1,
+      isRemove: json['isRemove'] ?? 0,
     );
   }
 }
@@ -379,6 +383,7 @@ class OrderUpdateRequest {
   final int isKuver;
   final int isWaiter;
   final int orderPayType;
+  final int isRemove;
 
   OrderUpdateRequest({
     required this.userToken,
@@ -396,6 +401,7 @@ class OrderUpdateRequest {
     required this.isKuver,
     required this.isWaiter,
     this.orderPayType = 0,
+    this.isRemove = 0,
   });
 
   Map<String, dynamic> toJson() {
@@ -415,6 +421,7 @@ class OrderUpdateRequest {
       'isKuver': isKuver,
       'isWaiter': isWaiter,
       'orderPayType': orderPayType,
+      'isRemove': isRemove,
     };
   }
 }
