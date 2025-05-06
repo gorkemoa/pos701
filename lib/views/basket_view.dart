@@ -200,52 +200,61 @@ class _BasketViewState extends State<BasketView> {
     }
   }
 
-  Future<void> _createOrder(BasketViewModel basketViewModel) async {
+  Future<void> _submitOrder() async {
+    setState(() {
+      _isProcessing = true;
+      _isLoading = true;
+      _errorMessage = '';
+    });
+    
     if (_userToken == null || _compID == null) {
       setState(() {
         _isProcessing = false;
-        _errorMessage = 'Kullanıcı bilgileri alınamadı';
+        _isLoading = false;
+        _errorMessage = 'Kullanıcı bilgileri alınamadı.';
       });
-      return;
-    }
-    
-    if (basketViewModel.isEmpty) {
-      setState(() {
-        _isProcessing = false;
-        _errorMessage = 'Sepet boş';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sipariş oluşturmak için sepete ürün ekleyin'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-    
-    if (widget.orderType != 1 && _orderPayType == 0) {
-      setState(() {
-        _isProcessing = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Paket sipariş için ödeme türü seçilmelidir'),
-          backgroundColor: Colors.red,
-        ),
-      );
       
-      _showPaymentTypeDialog();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    if (basketViewModel.items.isEmpty) {
+      setState(() {
+        _isProcessing = false;
+        _isLoading = false;
+        _errorMessage = 'Sepette ürün bulunmuyor.';
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       return;
     }
     
     try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = '';
-      });
+      int tableID = widget.tableID ?? _tableID ?? 0;
       
-      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+      // Eğer Gel-Al siparişiyse masa ID'si 0 olmalı
+      if (widget.orderType == 3) {
+        tableID = 0;
+      }
       
+      // Kuver ve Garsoniye durumlarını API'ye uygun formata dönüştür
+      final int kuverDurumu = _isKuver;
+      final int garsoniyeDurumu = _isWaiter;
+      
+      // Müşteri bilgilerini hazırla
       int custID = 0;
       String custName = '';
       String custPhone = '';
@@ -261,25 +270,21 @@ class _BasketViewState extends State<BasketView> {
         }
       }
       
-      int tableID = widget.tableID ?? 0;
-      int kuverDurumu = _isKuver;
-      int garsoniyeDurumu = _isWaiter;
+      // OrderViewModel ile sipariş gönder
+      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
       
-      // Seçilen ödeme türünü logla
-      debugPrint('💳 [BASKET_VIEW] Seçilen Ödeme Türü ID: $_orderPayType');
+      String paymentTypeName = "Ödeme seçilmedi";
       
-      // Kullanıcının ödeme türü bilgisini al
-      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-      final paymentTypes = userViewModel.userInfo?.company?.compPayTypes ?? [];
-      String paymentTypeName = "Bilinmeyen Ödeme Türü";
+      // Gel-Al siparişi için ödeme türü kontrolü (başta ödeme türü sorulmayacak)
+      bool isGelAl = widget.orderType == 3;
       
       if (_orderPayType > 0) {
-        // Seçilen ödeme türünü bul
-        final selectedPaymentType = paymentTypes.firstWhere(
-          (type) => type.typeID == _orderPayType, 
+        final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+        final selectedPaymentType = userViewModel.userInfo?.company?.compPayTypes.firstWhere(
+          (p) => p.typeID == _orderPayType,
           orElse: () => PaymentType(typeID: _orderPayType, typeName: "Bilinmeyen", typeColor: "#000000", typeImg: "")
         );
-        paymentTypeName = selectedPaymentType.typeName;
+        paymentTypeName = selectedPaymentType?.typeName ?? "Bilinmeyen";
         debugPrint('💳 [BASKET_VIEW] Seçilen Ödeme Türü Adı: $paymentTypeName');
       } else {
         debugPrint('⚠️ [BASKET_VIEW] DİKKAT: Ödeme türü seçilmedi (ID: 0)');
@@ -306,7 +311,8 @@ class _BasketViewState extends State<BasketView> {
         
         _handleOrderResult(success, orderViewModel, true);
       } else {
-        debugPrint('➕ [BASKET_VIEW] Yeni sipariş oluşturulacak - Masa: ${widget.tableName}, ÖdemeTürü: $_orderPayType ($paymentTypeName)');
+        debugPrint('➕ [BASKET_VIEW] Yeni sipariş oluşturulacak - Masa: ${widget.tableName}, Tür: ${widget.orderType}, ÖdemeTürü: $_orderPayType ($paymentTypeName)');
+        debugPrint('📍 [BASKET_VIEW] TableID: $tableID, Gel-Al: $isGelAl');
         
         final success = await orderViewModel.siparisSunucuyaGonder(
           userToken: _userToken!,
@@ -788,7 +794,7 @@ class _BasketViewState extends State<BasketView> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => _createOrder(_basketViewModel!),
+                            onPressed: _submitOrder,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Color(AppConstants.primaryColorValue),
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
