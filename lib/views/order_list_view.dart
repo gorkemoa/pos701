@@ -7,6 +7,8 @@ import 'package:pos701/widgets/app_drawer.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:pos701/main.dart' as app;
+import 'package:pos701/views/payment_view.dart';
+import 'package:pos701/viewmodels/order_viewmodel.dart';
 
 class OrderListView extends StatefulWidget {
   final String userToken;
@@ -251,11 +253,13 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
         statusColor = Colors.orange;
     }
 
-    // Sipariş tipini kontrol et - orderName yerine orderType kullanılabilir
-    // ya da başka bir mantık uygulanabilir
-    // Şimdilik tüm '4' olmayan siparişlere buton ekleyelim
+    // Sipariş tipini kontrol et
     final bool canComplete = order.orderStatusID != '4';
     final bool canCancel = order.orderStatusID != '4'; // İptal edilebilir durumlar
+    final bool canPay = order.orderStatusID != '4'; // Ödeme alınabilir durumlar
+    
+    // Gel-Al siparişlerini kontrol et - Sipariş adına göre
+    final bool isGelAl = order.orderName.contains('Gel-Al');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -307,15 +311,18 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                     const SizedBox(height: 8),
                     _buildDetailRow(Icons.access_time, 'Tarih: ${order.orderDate}'),
                     
-                    if (canComplete) ...[
+                    if (canPay || canComplete || canCancel) ...[
                       const SizedBox(height: 16),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          Expanded(child: _buildCompleteOrderButton(order)),
-                          if (canCancel) ...[
-                            const SizedBox(width: 8),
-                            Expanded(child: _buildCancelOrderButton(order)),
+                          if (canPay) ...[
+                            _buildPaymentButton(order, isQuickPay: true),
+                            _buildPaymentButton(order, isQuickPay: false),
                           ],
+                          if (canComplete) _buildCompleteOrderButton(order),
+                          if (canCancel) _buildCancelOrderButton(order),
                         ],
                       ),
                     ],
@@ -385,6 +392,101 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     );
   }
 
+  // Ödeme butonu
+  Widget _buildPaymentButton(Order order, {required bool isQuickPay}) {
+    return SizedBox(
+      height: 36,
+      child: ElevatedButton.icon(
+        onPressed: () => _showPaymentView(order, isQuickPay),
+        icon: Icon(isQuickPay ? Icons.flash_on : Icons.payment, size: 16),
+        label: Text(isQuickPay ? 'Hızlı Öde' : 'Parçalı Öde', style: const TextStyle(fontSize: 12)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isQuickPay ? Colors.green.shade600 : const Color(AppConstants.primaryColorValue),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Ödeme sayfasını aç
+  void _showPaymentView(Order order, bool isQuickPay) async {
+    // Sipariş detayını al
+    final orderViewModel = OrderViewModel();
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sipariş detayları alınıyor...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      final success = await orderViewModel.getSiparisDetayi(
+        userToken: widget.userToken,
+        compID: widget.compID,
+        orderID: order.orderID,
+      );
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(orderViewModel.errorMessage ?? 'Sipariş detayları alınamadı'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Ödenecek sepet öğelerini oluştur
+      final basketItems = orderViewModel.siparisUrunleriniSepeteAktar();
+      
+      if (basketItems.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ödenecek ürün bulunamadı. Sipariş zaten tamamlanmış olabilir.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Toplam tutarı hesapla
+      double totalAmount = 0;
+      for (var item in basketItems) {
+        totalAmount += item.birimFiyat * item.proQty;
+      }
+
+      // Ödeme sayfasını aç
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaymentView(
+            userToken: widget.userToken,
+            compID: widget.compID,
+            orderID: order.orderID,
+            totalAmount: totalAmount,
+            basketItems: basketItems,
+            onPaymentSuccess: () {
+              _loadData(); // Ödeme başarılı olduğunda listeyi yenile
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hata: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildStatusBadge(String status, Color color) {
     IconData iconData;
     switch (status.toLowerCase()) {
@@ -445,25 +547,28 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
 
   // Sipariş tamamlama butonu
   Widget _buildCompleteOrderButton(Order order) {
-    return Consumer<OrderListViewModel>(
-      builder: (context, viewModel, _) {
-        return ElevatedButton.icon(
-          onPressed: viewModel.isLoading
-              ? null  // Yükleme sırasında devre dışı bırak
-              : () => _completeOrder(order.orderID),
-          icon: const Icon(Icons.check_circle_outline, size: 16),
-          label: const Text('Siparişi Tamamla', style: TextStyle(fontSize: 12)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(AppConstants.primaryColorValue),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
+    return SizedBox(
+      height: 36,
+      child: Consumer<OrderListViewModel>(
+        builder: (context, viewModel, _) {
+          return ElevatedButton.icon(
+            onPressed: viewModel.isLoading
+                ? null  // Yükleme sırasında devre dışı bırak
+                : () => _completeOrder(order.orderID),
+            icon: const Icon(Icons.check_circle_outline, size: 16),
+            label: const Text('Tamamla', style: TextStyle(fontSize: 12)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(AppConstants.primaryColorValue),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -499,25 +604,28 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
 
   // Sipariş iptal butonu
   Widget _buildCancelOrderButton(Order order) {
-    return Consumer<OrderListViewModel>(
-      builder: (context, viewModel, _) {
-        return ElevatedButton.icon(
-          onPressed: viewModel.isLoading 
-              ? null 
-              : () => _showCancelOrderDialog(order.orderID),
-          icon: const Icon(Icons.cancel_outlined, size: 16),
-          label: const Text('İptal Et', style: TextStyle(fontSize: 12)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.shade600,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
+    return SizedBox(
+      height: 36,
+      child: Consumer<OrderListViewModel>(
+        builder: (context, viewModel, _) {
+          return ElevatedButton.icon(
+            onPressed: viewModel.isLoading 
+                ? null 
+                : () => _showCancelOrderDialog(order.orderID),
+            icon: const Icon(Icons.cancel_outlined, size: 16),
+            label: const Text('İptal', style: TextStyle(fontSize: 12)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 

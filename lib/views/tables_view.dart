@@ -468,19 +468,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                 subtitle: const Text('Müşterinin gelip alacağı siparişleri oluşturun'),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CategoryView(
-                        compID: widget.compID,
-                        userToken: widget.userToken,
-                        tableID: 0, // Masa ID'si 0 olmalı
-                        orderID: null,
-                        tableName: "Gel-Al Sipariş", // Sipariş türü adı
-                        orderType: 3, // 3: Gel-Al Sipariş
-                      ),
-                    ),
-                  );
+                  _handleGelAlOrder();
                 },
               ),
               const SizedBox(height: 28),
@@ -488,6 +476,23 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           ),
         );
       },
+    );
+  }
+
+  void _handleGelAlOrder() {
+    // Gel-Al siparişler için kategori sayfasını aç
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CategoryView(
+          compID: widget.compID,
+          userToken: widget.userToken,
+          tableID: 0, // Masa ID'si 0 olmalı
+          orderID: null,
+          tableName: "Gel-Al Sipariş", // Sipariş türü adı
+          orderType: 3, // 3: Gel-Al Sipariş
+        ),
+      ),
     );
   }
 } 
