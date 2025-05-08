@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:pos701/main.dart';
-import 'package:pos701/firebase_options.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
+import 'package:pos701/constants/app_constants.dart';
 
 /// Arka planda mesaj alındığında çalışacak fonksiyon
 @pragma('vm:entry-point')
@@ -58,6 +57,12 @@ class FirebaseMessagingService {
     
     // Token alma ve güncelleme dinleyicilerini ayarla
     _setupTokenHandlers();
+    
+    // Topic aboneliği debug kodu
+    await debugTopics();
+    
+    // Topic abonelik durumunu kontrol et
+    await checkTopicSubscription();
     
     _logger.i('Firebase Messaging servisi başlatıldı');
   }
@@ -252,11 +257,11 @@ class FirebaseMessagingService {
           _sendTokenToBackend(token);
         },
         onError: (error) {
-          _logger.e('FCM Token güncelleme dinleyicisi hatası: $error');
+          _logger.e('Token yenileme dinleme hatası: $error');
         },
       );
     } catch (e) {
-      _logger.e('Token yenileme dinleyicisi ayarlanırken hata: $e');
+      _logger.e('Token yenileme dinleyicisi ayarlanamadı: $e');
     }
   }
 
@@ -307,13 +312,29 @@ class FirebaseMessagingService {
   
   /// Kullanıcı ID'sini al (Bu metot projeye özgü olarak uyarlanmalıdır)
   Future<String?> _getUserId() async {
-    // Gerçek uygulamada SharedPreferences veya güvenli depolama kullanılmalıdır
-    // Örnek:
-    // final prefs = await SharedPreferences.getInstance();
-    // return prefs.getString('userId');
-    
-    // Şimdilik dummy değer dönüyoruz
-    return 'user_id_placeholder';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // AppConstants.userIdKey kullanarak önce int olarak kayıtlı userId'yi kontrol et
+      final int? userIdInt = prefs.getInt(AppConstants.userIdKey);
+      if (userIdInt != null) {
+        _logger.d('Kullanıcı ID (int): $userIdInt');
+        return userIdInt.toString();
+      }
+      
+      // AppConstants.userIdKey kullanarak string olarak kayıtlı userId'yi kontrol et
+      final String? userIdStr = prefs.getString(AppConstants.userIdKey);
+      if (userIdStr != null && userIdStr.isNotEmpty) {
+        _logger.d('Kullanıcı ID (string): $userIdStr');
+        return userIdStr;
+      }
+      
+      _logger.w('SharedPreferences\'ta kullanıcı ID\'si bulunamadı');
+      return null;
+    } catch (e) {
+      _logger.e('Kullanıcı ID\'si alınırken hata: $e');
+      return null;
+    }
   }
 
   /// Belirli bir konuya abone ol
@@ -328,9 +349,138 @@ class FirebaseMessagingService {
     _logger.i('$topic konusundan abonelikten çıkıldı');
   }
 
+  /// Kullanıcının kendi ID'sine göre topic'e abone olmasını sağlar
+  Future<void> subscribeToUserTopic(String userId) async {
+    if (userId.isEmpty) {
+      _logger.e('Kullanıcı ID boş, topic aboneliği yapılamadı');
+      return;
+    }
+
+    try {
+      _logger.d('$userId ID\'li kullanıcı için topic aboneliği başlatılıyor');
+      await _messaging.subscribeToTopic(userId);
+      _logger.i('$userId ID\'li kullanıcı için topic aboneliği başarıyla tamamlandı');
+    } catch (e) {
+      _logger.e('Topic aboneliği sırasında hata: $e');
+      rethrow;
+    }
+  }
+
+  /// Kullanıcının topic aboneliğini kaldırır
+  Future<void> unsubscribeFromUserTopic(String userId) async {
+    if (userId.isEmpty) {
+      _logger.e('Kullanıcı ID boş, topic aboneliği kaldırılamadı');
+      return;
+    }
+
+    try {
+      _logger.d('$userId ID\'li kullanıcı için topic aboneliği kaldırılıyor');
+      await _messaging.unsubscribeFromTopic(userId);
+      _logger.i('$userId ID\'li kullanıcı için topic aboneliği başarıyla kaldırıldı');
+    } catch (e) {
+      _logger.e('Topic aboneliğini kaldırma sırasında hata: $e');
+      rethrow;
+    }
+  }
+
   /// Servis kapatıldığında kaynakları temizle
   void dispose() {
     _onMessageOpenedAppController.close();
     _logger.i('Firebase Messaging servisi kapatıldı');
+  }
+
+  // Mevcut topic aboneliklerini kontrol etmek için kod ekleyin
+  Future<void> checkTopicSubscription() async {
+    try {
+      final userId = await _getUserId(); 
+      if (userId == null || userId.isEmpty) {
+        _logger.w('Topic aboneliği kontrol edilemiyor: Kullanıcı ID bulunamadı');
+        return;
+      }
+      
+      _logger.i('Topic "$userId" için abonelik kontrol ediliyor...');
+      
+      // FCM token bilgisini loglayın
+      final token = await FirebaseMessaging.instance.getToken();
+      _logger.i('Mevcut FCM Token: $token');
+      
+      // iOS cihazlar için APNs token bilgisini de loglayalım
+      if (Platform.isIOS) {
+        final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+        _logger.i('APNs Token: $apnsToken');
+      }
+    } catch (e) {
+      _logger.e('Topic aboneliği kontrol edilirken hata: $e');
+    }
+  }
+
+  /// Kullanıcı ID'sine göre bildirim göndermek için örnek bir Postman JSON formatı yazdırır
+  void printSamplePostmanJson(String? userId) {
+    if (userId == null || userId.isEmpty) {
+      _logger.w('Örnek Postman JSON formatı yazdırılamadı: Kullanıcı ID bulunamadı');
+      return;
+    }
+
+    final sampleJson = '''
+{
+  "message": {
+    "topic": "$userId",
+    "notification": {
+      "title": "Sipariş Hazır!",
+      "body": "Siparişiniz hazırlanmıştır."
+    },
+    "data": {
+      "type": "order_ready",
+      "id": "$userId",
+      "order_id": "12345"
+    },
+    "android": {
+      "priority": "high"
+    },
+    "apns": {
+      "headers": {
+        "apns-priority": "10"
+      },
+      "payload": {
+        "aps": {
+          "sound": "default"
+        }
+      }
+    }
+  }
+}''';
+
+    _logger.i('$userId için örnek Postman JSON formatı:\n$sampleJson');
+  }
+
+  // Topic aboneliği debug kodu
+  Future<void> debugTopics() async {
+    try {
+      // Mevcut token'ı log'la
+      final token = await _messaging.getToken();
+      _logger.i('Mevcut FCM Token: $token');
+      
+      // Kullanıcı ID'sini SharedPreferences'tan al
+      final String? userId = await _getUserId();
+      
+      if (userId != null && userId.isNotEmpty) {
+        // Kullanıcının kendi ID'sine göre topic'e abone ol
+        await _messaging.subscribeToTopic(userId);
+        _logger.i('Topic "$userId" aboneliği yapıldı');
+        
+        // APNs token bilgisini log'la (iOS için)
+        if (Platform.isIOS) {
+          final apnsToken = await _messaging.getAPNSToken();
+          _logger.i('APNs Token: $apnsToken');
+        }
+        
+        // Örnek Postman JSON formatını yazdır
+        printSamplePostmanJson(userId);
+      } else {
+        _logger.w('Kullanıcı ID\'si bulunamadı, otomatik topic aboneliği yapılamadı');
+      }
+    } catch (e) {
+      _logger.e('Topic debug hatası: $e');
+    }
   }
 } 

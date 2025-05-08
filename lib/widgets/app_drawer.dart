@@ -7,6 +7,7 @@ import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/constants/app_constants.dart';
+import 'package:pos701/services/firebase_messaging_service.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -174,7 +175,26 @@ class _AppDrawerState extends State<AppDrawer> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
+                      final userViewModel = Provider.of<UserViewModel>(
+                        context, 
+                        listen: false
+                      );
+                      
+                      // Topic aboneliğinden çık
+                      try {
+                        final messagingService = Provider.of<FirebaseMessagingService>(
+                          context,
+                          listen: false,
+                        );
+                        await userViewModel.unsubscribeFromUserTopic(messagingService);
+                      } catch (e) {
+                        // Hata durumunda işlemi engellemeyin, sadece loglayın
+                        debugPrint('Topic aboneliğinden çıkarken hata: $e');
+                      }
+                      
+                      // Oturumu kapat
                       await authService.logout();
+                      
                       if (context.mounted) {
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(builder: (context) => const LoginView()),

@@ -4,6 +4,7 @@ import 'package:pos701/viewmodels/login_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/views/home_view.dart';
+import 'package:pos701/services/firebase_messaging_service.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -179,6 +180,13 @@ class _LoginViewState extends State<LoginView> {
                                       listen: false,
                                     );
                                     await userViewModel.loadUserInfo();
+                                    
+                                    // FCM topic aboneliği yap
+                                    final messagingService = Provider.of<FirebaseMessagingService>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    await viewModel.subscribeToUserTopic(messagingService);
                                     
                                     // Ana sayfaya yönlendir
                                     if (mounted) {

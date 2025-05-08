@@ -50,6 +50,7 @@ void main() async {
     logger.e('Firebase Messaging servisi başlatılamadı: $e');
   }
   
+  
   final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
   debugPrint("📲 APNs Token: $apnsToken");
 

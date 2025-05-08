@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:pos701/services/firebase_messaging_service.dart';
 
 class UserViewModel extends ChangeNotifier {
   final AuthService _authService;
@@ -43,6 +44,40 @@ class UserViewModel extends ChangeNotifier {
       }
     } else {
       _logger.w('UserViewModel dispose edilmiş durumda, bildirim gönderilemiyor');
+    }
+  }
+  
+  /// Kullanıcının kendi ID'sine karşılık gelen FCM topic'ine abone ol
+  Future<void> subscribeToUserTopic(FirebaseMessagingService messagingService) async {
+    if (_userInfo == null || _userInfo!.userID <= 0) {
+      _logger.w('Kullanıcı ID bulunamadı, FCM topic aboneliği yapılamıyor');
+      return;
+    }
+    
+    try {
+      final String userIdStr = _userInfo!.userID.toString();
+      _logger.d('Kullanıcı ID\'si $userIdStr için FCM topic aboneliği yapılıyor');
+      await messagingService.subscribeToUserTopic(userIdStr);
+      _logger.i('Kullanıcı ID\'si $userIdStr için FCM topic aboneliği başarılı');
+    } catch (e) {
+      _logger.e('FCM topic aboneliği sırasında hata: $e');
+    }
+  }
+  
+  /// Kullanıcının kendi ID'sine karşılık gelen FCM topic aboneliğinden çık
+  Future<void> unsubscribeFromUserTopic(FirebaseMessagingService messagingService) async {
+    if (_userInfo == null || _userInfo!.userID <= 0) {
+      _logger.w('Kullanıcı ID bulunamadı, FCM topic aboneliğinden çıkılamıyor');
+      return;
+    }
+    
+    try {
+      final String userIdStr = _userInfo!.userID.toString();
+      _logger.d('Kullanıcı ID\'si $userIdStr için FCM topic aboneliğinden çıkılıyor');
+      await messagingService.unsubscribeFromUserTopic(userIdStr);
+      _logger.i('Kullanıcı ID\'si $userIdStr için FCM topic aboneliğinden çıkma başarılı');
+    } catch (e) {
+      _logger.e('FCM topic aboneliğinden çıkma sırasında hata: $e');
     }
   }
   
