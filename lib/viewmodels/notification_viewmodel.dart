@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
@@ -176,6 +177,139 @@ class NotificationViewModel extends ChangeNotifier {
     );
     
     _addNotification(notification);
+  }
+
+  /// Bildirim verisi modeli
+  /// API'den bildirimleri getir
+  Future<void> fetchNotificationsFromApi(String userToken, int companyId) async {
+    _logger.d('API\'den bildirimler getiriliyor. CompID: $companyId');
+    _setState(NotificationState.loading);
+    
+    try {
+      // TODO: API'ye istek gönder ve bildirimleri al
+      // Bu sadece örnek, gerçek bir API çağrısına dönüştürülmelidir
+      
+      // Örnek veriler
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Bildirimler
+      _notifications = [
+        NotificationData(
+          title: 'Yeni Sipariş Alındı',
+          body: 'Masa 5 için yeni sipariş alındı.',
+          data: {
+            'id': '123',
+            'type': 'order_ready',
+            'order_id': '456',
+            'created_at': DateTime.now().toString(),
+          },
+          receivedAt: DateTime.now().subtract(const Duration(minutes: 5)),
+        ),
+        NotificationData(
+          title: 'Sipariş Hazır',
+          body: 'Masa 3 için sipariş hazır.',
+          data: {
+            'id': '124',
+            'type': 'food_ready',
+            'order_id': '457',
+            'created_at': DateTime.now().subtract(const Duration(hours: 1)).toString(),
+          },
+          receivedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ];
+      
+      _setState(NotificationState.success);
+    } catch (e) {
+      _logger.e('API\'den bildirimler getirilirken hata: $e');
+      _setError('Bildirimler yüklenemedi: $e');
+    }
+  }
+
+  /// Test bildirimini manuel olarak ekler
+  void addNotification(NotificationData notification) {
+    _notifications.insert(0, notification);
+    notifyListeners();
+  }
+
+  /// Firebase Cloud Messaging (FCM) API'sini kullanarak HTTP ile bildirim gönder
+  Future<bool> sendFcmNotification({
+    required String token,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+    String? imageUrl,
+    required String authToken,
+  }) async {
+    _logger.d('FCM bildirimi gönderiliyor... Token: $token');
+    
+    const String fcmApiUrl = 'https://fcm.googleapis.com/v1/projects/pos701-c070d/messages:send';
+    
+    try {
+      // HTTP istemcisi oluştur
+      final client = HttpClient();
+      
+      // HTTP isteği oluştur
+      final request = await client.postUrl(Uri.parse(fcmApiUrl));
+      
+      // İstek başlıklarını ayarla
+      request.headers.set('Content-Type', 'application/json');
+      request.headers.set('Authorization', 'Bearer $authToken');
+      
+      // Bildirim mesajını oluştur
+      final message = {
+        'message': {
+          'token': token,
+          'notification': {
+            'title': title,
+            'body': body,
+            if (imageUrl != null && imageUrl.isNotEmpty) 'image': imageUrl,
+          },
+          'data': data ?? {},
+          'android': {
+            'priority': 'high',
+            'notification': {
+              'channel_id': 'high_importance_channel',
+              'default_sound': true,
+              'default_vibrate_timings': true,
+            },
+          },
+          'apns': {
+            'payload': {
+              'aps': {
+                'alert': {
+                  'title': title,
+                  'body': body,
+                },
+                'sound': 'default',
+                'badge': 1,
+                'content-available': 1,
+              },
+            },
+          },
+        }
+      };
+      
+      // İstek gövdesini ayarla
+      request.write(jsonEncode(message));
+      
+      // İsteği gönder ve yanıtı al
+      final response = await request.close();
+      
+      // Yanıt gövdesini oku
+      final responseBody = await response.transform(utf8.decoder).join();
+      
+      // Yanıt durumunu kontrol et
+      if (response.statusCode == 200) {
+        _logger.i('FCM bildirimi başarıyla gönderildi. Yanıt: $responseBody');
+        return true;
+      } else {
+        _logger.e('FCM bildirimi gönderilemedi. Status: ${response.statusCode}, Yanıt: $responseBody');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('FCM bildirimi gönderilirken hata: $e');
+      return false;
+    }
   }
 
   /// Durumu güncelle

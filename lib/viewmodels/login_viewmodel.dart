@@ -7,6 +7,7 @@ import 'package:pos701/services/api_service.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos701/services/firebase_messaging_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final AuthService _authService;
@@ -18,6 +19,7 @@ class LoginViewModel extends ChangeNotifier {
   String? _errorMessage;
   String? _savedUsername;
   bool _isPasswordVisible = false;
+  int? _lastLoggedInUserId;
   
   LoginViewModel(this._authService, this._apiService) {
     _logger.i('LoginViewModel başlatıldı');
@@ -29,6 +31,7 @@ class LoginViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get savedUsername => _savedUsername;
   bool get isPasswordVisible => _isPasswordVisible;
+  int? get lastLoggedInUserId => _lastLoggedInUserId;
   
   Future<void> _loadSavedUsername() async {
     _logger.d('Kayıtlı kullanıcı adı yükleniyor');
@@ -79,12 +82,12 @@ class LoginViewModel extends ChangeNotifier {
       if (response.success && response.data != null) {
         _logger.i('Giriş başarılı');
         
-        // Şirket ID'sini kaydet (eğer varsa)
+        _lastLoggedInUserId = response.data!.userID;
+        
         if (response.data!.compID != null) {
           await _apiService.saveCompanyId(response.data!.compID!);
           _logger.i('Şirket ID kaydedildi: ${response.data!.compID}');
           
-          // SharedPreferences'a doğrudan da kaydedelim (alternatif yöntem)
           final prefs = await SharedPreferences.getInstance();
           await prefs.setInt(AppConstants.companyIdKey, response.data!.compID!);
         } else {
@@ -104,6 +107,24 @@ class LoginViewModel extends ChangeNotifier {
       _logger.e('Giriş işleminde hata oluştu', e);
       notifyListeners();
       return false;
+    }
+  }
+  
+  Future<void> subscribeToUserTopic(FirebaseMessagingService messagingService) async {
+    if (_lastLoggedInUserId == null || _lastLoggedInUserId! <= 0) {
+      _logger.w('Geçerli bir kullanıcı ID\'si bulunamadığı için FCM topic aboneliği yapılamadı');
+      return;
+    }
+    
+    try {
+      final String userIdStr = _lastLoggedInUserId.toString();
+      _logger.d('Kullanıcı ID\'si $userIdStr için FCM topic aboneliği yapılıyor');
+      
+      await messagingService.subscribeToUserTopic(userIdStr);
+      
+      _logger.i('Kullanıcı ID\'si $userIdStr için FCM topic aboneliği başarılı');
+    } catch (e) {
+      _logger.e('FCM topic aboneliği sırasında hata: $e');
     }
   }
 } 

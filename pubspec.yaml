@@ -11,17 +11,19 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
-  shared_preferences: ^2.5.3
   http: ^1.2.1
   dio: ^5.4.2+1
   logger: ^2.0.2+1
   fl_chart: ^0.66.1
+  shared_preferences: ^2.0.15
+
+
   
   # Firebase paketleri - uyumlu sürümler
   firebase_core: ^2.25.4
   firebase_messaging: ^14.7.15
   
-  flutter_local_notifications: ^16.3.2
+  flutter_local_notifications: 16.3.0
   intl: ^0.19.0
 
 dev_dependencies:
