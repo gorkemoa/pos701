@@ -619,6 +619,15 @@ class _CategoryViewState extends State<CategoryView> {
                         color: Colors.black87, // Görseldeki gibi siyah tonu
                       ),
                     ),
+                    // Stok bilgisini küçük yazı olarak ekle
+                    if (product.proStock != null && product.proStock.isNotEmpty && int.tryParse(product.proStock) != null && int.parse(product.proStock) > 0)
+                      Text(
+                        'Stok: ${product.proStock}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.green,
+                        ),
+                      ),
                   ],
                 ),
               ),
