@@ -130,53 +130,87 @@ class _BasketViewState extends State<BasketView> {
       final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
       
-      final success = await orderViewModel.getSiparisDetayi(
-        userToken: _userToken!,
-        compID: _compID!,
-        orderID: orderID,
-      );
+      // Sepeti temizlemeden önce sepette kaç ürün olduğunu kontrol et
+      final hasItemsInBasket = basketViewModel.items.isNotEmpty;
       
-      if (success && orderViewModel.orderDetail != null) {
-        final orderDetail = orderViewModel.orderDetail!;
+      // Sepette ürün yoksa veya ilk kez yükleniyorsa sipariş detaylarını yükle
+      if (!hasItemsInBasket) {
+        debugPrint('🧾 [BASKET_VIEW] Sepet boş, sipariş detayları yüklenecek. OrderID: $orderID');
         
-        setState(() {
-          _isKuver = orderDetail.isKuver;
-          _isWaiter = orderDetail.isWaiter;
-        });
+        final success = await orderViewModel.getSiparisDetayi(
+          userToken: _userToken!,
+          compID: _compID!,
+          orderID: orderID,
+        );
         
-        basketViewModel.setOrderAmount(orderDetail.orderAmount);
-        basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
-        
-        if (orderDetail.orderDiscount > 0) {
-          basketViewModel.applyDiscount(orderDetail.orderDiscount);
-        }
-        
-        final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
-        
-        for (var item in sepetItems) {
-          if (item.opID > 0) {
-            basketViewModel.addProductWithOpID(
-              item.product, 
-              item.proQty,
-              item.opID,
-              proNote: item.proNote,
-              isGift: item.isGift
+        if (success && orderViewModel.orderDetail != null) {
+          final orderDetail = orderViewModel.orderDetail!;
+          
+          setState(() {
+            _isKuver = orderDetail.isKuver;
+            _isWaiter = orderDetail.isWaiter;
+          });
+          
+          basketViewModel.setOrderAmount(orderDetail.orderAmount);
+          basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
+          
+          if (orderDetail.orderDiscount > 0) {
+            basketViewModel.applyDiscount(orderDetail.orderDiscount);
+          }
+          
+          final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
+          debugPrint('📦 [BASKET_VIEW] Sipariş detaylarından ${sepetItems.length} ürün sepete ekleniyor.');
+          
+          for (var item in sepetItems) {
+            if (item.opID > 0) {
+              basketViewModel.addProductWithOpID(
+                item.product, 
+                item.proQty,
+                item.opID,
+                proNote: item.proNote,
+                isGift: item.isGift
+              );
+            }
+          }
+        } else {
+          setState(() {
+            _errorMessage = orderViewModel.errorMessage ?? 'Sipariş detayları alınamadı.';
+          });
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_errorMessage),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
             );
           }
         }
       } else {
-        setState(() {
-          _errorMessage = orderViewModel.errorMessage ?? 'Sipariş detayları alınamadı.';
-        });
+        // Sepette ürün varsa sipariş bilgilerini al ama ürünleri ekleme
+        debugPrint('🛒 [BASKET_VIEW] Sepette zaten ürün var, sipariş detayları yüklenmedi. Ürün sayısı: ${basketViewModel.items.length}');
         
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_errorMessage),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+        final success = await orderViewModel.getSiparisDetayi(
+          userToken: _userToken!,
+          compID: _compID!,
+          orderID: orderID,
+        );
+        
+        if (success && orderViewModel.orderDetail != null) {
+          final orderDetail = orderViewModel.orderDetail!;
+          
+          setState(() {
+            _isKuver = orderDetail.isKuver;
+            _isWaiter = orderDetail.isWaiter;
+          });
+          
+          basketViewModel.setOrderAmount(orderDetail.orderAmount);
+          basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
+          
+          if (orderDetail.orderDiscount > 0) {
+            basketViewModel.applyDiscount(orderDetail.orderDiscount);
+          }
         }
       }
     } catch (e) {

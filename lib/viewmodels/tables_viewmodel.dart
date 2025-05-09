@@ -206,7 +206,6 @@ class TablesViewModel extends ChangeNotifier {
         
         // Aktif sipariş ID'lerini al
         final activeOrderIds = ordersData.map((order) => int.parse(order['order_id'].toString())).toSet();
-        debugPrint('Aktif sipariş ID\'leri: $activeOrderIds');
         
         // Aktif sipariş tabloları ve birleştirilmiş masaları takip et
         final Map<int, List<int>> mergedTablesMap = {};
@@ -217,11 +216,9 @@ class TablesViewModel extends ChangeNotifier {
           int tableID = int.parse(order['table_id'].toString());
           
           // Debug: Her siparişin detaylarını göster
-          debugPrint('Sipariş bilgisi: ID=$orderID, Masa ID=$tableID');
           
           // mergeTables alanını kontrol et (yeni API formatı)
           if (order['mergeTables'] != null) {
-            debugPrint('MergeTables alanı bulundu: ${order['mergeTables']}');
             List<dynamic> mergeTables = order['mergeTables'] as List<dynamic>;
             if (mergeTables.isNotEmpty) {
               List<int> mergedTableIds = [];
@@ -240,7 +237,6 @@ class TablesViewModel extends ChangeNotifier {
                     try {
                       mergedTableIds.add(int.parse(mergeTable['table_id'].toString()));
                     } catch (e) {
-                      debugPrint('Geçersiz birleştirilmiş masa ID: ${mergeTable['table_id']}');
                     }
                   }
                 }
