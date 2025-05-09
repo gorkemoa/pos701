@@ -689,7 +689,7 @@ class _HomeViewState extends State<HomeView> {
           const SizedBox(width: 3),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   payment.type ?? 'Bilinmeyen',
@@ -844,9 +844,8 @@ class _HomeViewState extends State<HomeView> {
                       Expanded(
                         child: _buildTableInfoRow(
                           color: occupiedColor,
-                         
                           title: 'Dolu Masalar',
-
+                          titleStyle: const TextStyle(fontSize: 8),
                           count: orderTables,
                           percentage: occupancyPercentage,
                         ),
@@ -859,6 +858,8 @@ class _HomeViewState extends State<HomeView> {
                         child: _buildTableInfoRow(
                           color: emptyColor,
                           title: 'Boş Masalar',
+                           titleStyle: const TextStyle(fontSize: 8),
+
                           count: emptyTables,
                           percentage: 100 - occupancyPercentage,
                         ),
@@ -872,7 +873,7 @@ class _HomeViewState extends State<HomeView> {
                           children: [
                             const Icon(
                               Icons.table_restaurant,
-                              size: 20,
+                              size: 10,
                               color: Color(0xFF666666),
                             ),
                             const SizedBox(width: 10),
@@ -884,7 +885,7 @@ class _HomeViewState extends State<HomeView> {
                                   const Text(
                                     'Toplam Masalar',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 8,
                                       color: Color(0xFF666666),
                                     ),
                                   ),
@@ -892,7 +893,7 @@ class _HomeViewState extends State<HomeView> {
                                   Text(
                                     '$totalTables masa',
                                     style: const TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF333333),
                                     ),
@@ -920,6 +921,7 @@ class _HomeViewState extends State<HomeView> {
     required String title,
     required int count,
     required double percentage,
+    TextStyle? titleStyle,
   }) {
     return Row(
       children: [
@@ -939,14 +941,14 @@ class _HomeViewState extends State<HomeView> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: titleStyle ?? const TextStyle(
                   fontSize: 12,
                   color: Color(0xFF666666),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                '$count masa (${percentage.toStringAsFixed(1)}%)',
+                '$count masa',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
