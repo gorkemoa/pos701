@@ -7,8 +7,6 @@ import 'package:pos701/viewmodels/statistics_viewmodel.dart';
 import 'package:pos701/widgets/app_drawer.dart';
 import 'package:pos701/widgets/dashboard_card.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:pos701/widgets/notification_badge.dart';
-import 'package:pos701/views/notifications_view.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/services/api_service.dart';
 
@@ -73,19 +71,6 @@ class _HomeViewState extends State<HomeView> {
           IconButton(
             icon: const Icon(Icons.receipt_long, color: Colors.white),
             onPressed: () {},
-          ),
-          // Bildirim butonu
-          NotificationBadge(
-            child: IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const NotificationsView()),
-                );
-              },
-              tooltip: 'Bildirimler',
-            ),
           ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
