@@ -97,21 +97,48 @@ class TableItem {
     required this.tableName,
     required this.orderAmount,
     required this.isActive,
-    this.isMerged = false,
+    bool? isMerged,
     this.mergedTableIDs = const [],
-  });
+  }) : isMerged = isMerged ?? mergedTableIDs.isNotEmpty;
 
   factory TableItem.fromJson(Map<String, dynamic> json) {
+    List<int> mergedIds = [];
+    
+    if (json['mergeTables'] != null) {
+      List<dynamic> mergeTables = json['mergeTables'] as List<dynamic>;
+      for (var item in mergeTables) {
+        if (item is int) {
+          mergedIds.add(item);
+        } else if (item is String) {
+          try {
+            mergedIds.add(int.parse(item));
+          } catch (e) {
+            // Sayısal olmayan string değerleri atla
+          }
+        } else if (item is Map) {
+          if (item.containsKey('table_id')) {
+            try {
+              mergedIds.add(int.parse(item['table_id'].toString()));
+            } catch (e) {
+              // Dönüştürme hatası durumunda atla
+            }
+          }
+        }
+      }
+    }
+    
+    bool? providedIsMerged = json['isMerged'] != null ? json['isMerged'] as bool : null;
+    
+    bool mergedStatus = providedIsMerged ?? mergedIds.isNotEmpty;
+    
     return TableItem(
       tableID: json['tableID'] ?? 0,
       orderID: json['orderID'] ?? 0,
       tableName: json['tableName'] ?? '',
       orderAmount: json['orderAmount'] ?? '',
       isActive: json['isActive'] ?? false,
-      isMerged: json['isMerged'] ?? false,
-      mergedTableIDs: json['mergedTableIDs'] != null 
-          ? List<int>.from(json['mergedTableIDs'])
-          : [],
+      isMerged: mergedStatus,
+      mergedTableIDs: mergedIds,
     );
   }
 

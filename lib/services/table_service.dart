@@ -119,7 +119,39 @@ class TableService {
       debugPrint('Masa ${step == "merged" ? "birleştirme" : "ayırma"} yanıt içeriği: ${response.body}');
       
       if (response.statusCode == 410 || response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        
+        // Loglamayı genişlet - başarılı veya başarısız yanıtları detaylı göster
+        final success = responseData['success'] ?? false;
+        debugPrint('🔄 ${step == "merged" ? "Birleştirme" : "Ayırma"} işlemi: ${success ? "Başarılı ✅" : "Başarısız ❌"}');
+        
+        // Hata durumunda hata mesajını detaylı göster
+        if (!success) {
+          final errorMessage = responseData['error_message'] ?? 'Bilinmeyen hata';
+          debugPrint('❌ Hata detayı: $errorMessage');
+        }
+        
+        // Başarılı yanıtta dönen veriyi incele - veri yapısını anlamak için
+        if (success && responseData.containsKey('data')) {
+          final data = responseData['data'];
+          debugPrint('📊 Dönen veri yapısı: ${data.runtimeType}');
+          
+          if (data is Map) {
+            // Mevcut sipariş verilerini göster
+            if (data.containsKey('order')) {
+              final order = data['order'];
+              debugPrint('📝 Sipariş verisi: $order');
+              
+              // Birleştirilmiş masa bilgilerini ara
+              if (order is Map && order.containsKey('mergeTables')) {
+                final mergeTables = order['mergeTables'];
+                debugPrint('🔗 Birleştirilmiş masalar: $mergeTables');
+              }
+            }
+          }
+        }
+        
+        return responseData;
       } else {
         return {
           'success': false,
