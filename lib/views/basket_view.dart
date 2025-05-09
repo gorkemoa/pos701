@@ -146,11 +146,6 @@ class _BasketViewState extends State<BasketView> {
         if (success && orderViewModel.orderDetail != null) {
           final orderDetail = orderViewModel.orderDetail!;
           
-          setState(() {
-            _isKuver = orderDetail.isKuver;
-            _isWaiter = orderDetail.isWaiter;
-          });
-          
           basketViewModel.setOrderAmount(orderDetail.orderAmount);
           basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
           
@@ -199,11 +194,6 @@ class _BasketViewState extends State<BasketView> {
         
         if (success && orderViewModel.orderDetail != null) {
           final orderDetail = orderViewModel.orderDetail!;
-          
-          setState(() {
-            _isKuver = orderDetail.isKuver;
-            _isWaiter = orderDetail.isWaiter;
-          });
           
           basketViewModel.setOrderAmount(orderDetail.orderAmount);
           basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
