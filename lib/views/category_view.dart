@@ -67,11 +67,15 @@ class _CategoryViewState extends State<CategoryView> {
       basketViewModel.clearBasket();
     });
     
+    // Arama alanını dinlemeye başla
+    _searchController.addListener(_filterProducts);
+    
     _loadCategories();
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_filterProducts);
     _searchController.dispose();
     _orderDescController.dispose();
     _customerSearchController.dispose();
@@ -105,6 +109,12 @@ class _CategoryViewState extends State<CategoryView> {
       widget.compID,
       catID,
     );
+  }
+
+  // Ürünleri arama metni ile filtrele
+  void _filterProducts() {
+    final String searchText = _searchController.text.trim().toLowerCase();
+    _productViewModel.filterProductsByName(searchText);
   }
 
   @override
@@ -179,24 +189,63 @@ class _CategoryViewState extends State<CategoryView> {
                 // Arama Çubuğu
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Ürün arayın...',
-                      prefixIcon: const Icon(Icons.search),
-                      hintStyle: const TextStyle(fontSize: 14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Ürün arayın...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    // Arama temizlendiğinde tüm ürünleri görüntüle
+                                    _filterProducts();
+                                  },
+                                )
+                              : null,
+                          hintStyle: const TextStyle(fontSize: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        onChanged: (value) {
+                          // Her değişiklikte değil, setState çağırarak UI'yı güncelle
+                          setState(() {});
+                          // Listener zaten _filterProducts'ı çağıracak
+                        },
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
+                      
+                      // Arama sonucu bilgisi
+                      if (_searchController.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                          child: Consumer<ProductViewModel>(
+                            builder: (context, productViewModel, child) {
+                              final int productCount = productViewModel.products.length;
+                              return Text(
+                                'Bulunan ürün: $productCount',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 
