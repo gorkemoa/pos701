@@ -379,7 +379,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          childAspectRatio: 1.2,
+          childAspectRatio: 1.4,
         ),
         itemCount: region.tables.length,
         itemBuilder: (context, index) {
