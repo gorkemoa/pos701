@@ -694,41 +694,40 @@ class _CategoryViewState extends State<CategoryView> {
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     // Eksi Butonu
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          basketViewModel.decreaseProduct(product);
-                          debugPrint('➖ [CATEGORY_VIEW] Ürün miktarı azaltıldı: ${product.proName}, miktar: ${basketViewModel.getProductQuantity(product)}');
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                          ),
-                          child: Icon(
-                            Icons.remove,
-                            size: 16,
-                            color: Color(AppConstants.primaryColorValue),
+                    Container(
+                      width: 26,
+                      height: 26,
+                      margin: const EdgeInsets.only(right: 4),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            basketViewModel.decreaseProduct(product);
+                            debugPrint('➖ [CATEGORY_VIEW] Ürün miktarı azaltıldı: ${product.proName}, miktar: ${basketViewModel.getProductQuantity(product)}');
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                            ),
+                            child: Icon(
+                              Icons.remove,
+                              size: 14,
+                              color: Color(AppConstants.primaryColorValue),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                      const SizedBox(width: 4),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      child: Text('${product.proStock}'),
-                    ),
+                    
                     // Miktar
-                    Container(
-                      constraints: const BoxConstraints(minWidth: 32),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Text(
                         '$quantity',
                         style: TextStyle(
@@ -740,27 +739,29 @@ class _CategoryViewState extends State<CategoryView> {
                       ),
                     ),
                   
-                    const SizedBox(width: 4),
                     // Artı Butonu
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          basketViewModel.addProduct(product, opID: 0);
-                          debugPrint('➕ [CATEGORY_VIEW] Ürün miktarı artırıldı: ${product.proName}, miktar: ${basketViewModel.getProductQuantity(product)}');
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                          ),
-                          child: Icon(
-                            Icons.add,
-                            size: 16,
-                            color: Color(AppConstants.primaryColorValue),
+                    Container(
+                      width: 26,
+                      height: 26,
+                      margin: const EdgeInsets.only(left: 4),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            basketViewModel.addProduct(product, opID: 0);
+                            debugPrint('➕ [CATEGORY_VIEW] Ürün miktarı artırıldı: ${product.proName}, miktar: ${basketViewModel.getProductQuantity(product)}');
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                            ),
+                            child: Icon(
+                              Icons.add,
+                              size: 14,
+                              color: Color(AppConstants.primaryColorValue),
+                            ),
                           ),
                         ),
                       ),
