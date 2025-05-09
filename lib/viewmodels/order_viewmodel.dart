@@ -88,7 +88,7 @@ class OrderViewModel extends ChangeNotifier {
     String custName = '',
     String custPhone = '',
     List<dynamic> custAdrs = const [],
-    int kuverQty = 0,
+    int kuverQty = 1,
     int isKuver = 0,
     int isWaiter = 0,
     int orderPayType = 0, // Paket sipariş ödeme türü
@@ -313,7 +313,7 @@ class OrderViewModel extends ChangeNotifier {
     required List<BasketItem> sepetUrunleri,
     String orderDesc = '',
     int orderGuest = 1,
-    int kuverQty = 0,
+    int kuverQty = 1,
     int custID = 0,
     String custName = '',
     String custPhone = '',
