@@ -17,9 +17,11 @@ class KitchenViewModel extends ChangeNotifier {
   List<KitchenOrder> _orders = [];
   String _errorMessage = '';
   Timer? _refreshTimer;
+  Timer? _serverTimeTimer;
   
   // Sunucu saati
   int _serverTime = 0;
+  int _currentServerTime = 0; // Canlı olarak artan sunucu zamanı
   DateTime? _serverDateTime;
 
   KitchenViewModel({required KitchenService kitchenService}) 
@@ -41,14 +43,20 @@ class KitchenViewModel extends ChangeNotifier {
         final newServerTime = int.parse(serverTimeString);
         if (_serverTime != newServerTime) {
           _serverTime = newServerTime;
+          _currentServerTime = newServerTime; // Canlı zaman için başlangıç değeri
+          
           // _serverTime (UTC timestamp) kullanarak _serverDateTime'ı (local DateTime) ayarla
           _serverDateTime = DateTime.fromMillisecondsSinceEpoch(_serverTime * 1000, isUtc: true).toLocal();
           changed = true;
           debugPrint('🔵 [Mutfak VM] Sunucu saati güncellendi: _serverTime=$_serverTime, _serverDateTime=$_serverDateTime (local)');
+          
+          // Timer'ı başlat veya güncelle
+          _startOrUpdateServerTimeTimer();
         }
       } catch (e) {
         if (_serverTime != 0 || _serverDateTime != null) {
           _serverTime = 0; // Hata durumunda fallback'i tetikle
+          _currentServerTime = 0; // Canlı zamanı da sıfırla
           _serverDateTime = null;
           changed = true;
         }
@@ -57,6 +65,7 @@ class KitchenViewModel extends ChangeNotifier {
     } else {
       if (_serverTime != 0 || _serverDateTime != null) {
         _serverTime = 0; // serverTimeString boşsa fallback'i tetikle
+        _currentServerTime = 0; // Canlı zamanı da sıfırla
         _serverDateTime = null;
         changed = true;
       }
@@ -68,14 +77,22 @@ class KitchenViewModel extends ChangeNotifier {
     }
   }
   
+  // Server time timer'ı başlat veya güncelle
+  void _startOrUpdateServerTimeTimer() {
+    // Varolan timer'ı iptal et
+    _serverTimeTimer?.cancel();
+    
+    // Her saniye _currentServerTime değerini bir arttır
+    _serverTimeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _currentServerTime += 1;
+      // Ekranı yenilemeye gerek yok, UI kendi timer'ı ile güncellenecek
+    });
+  }
+  
   // Şu anki sunucu saatini hesapla (sürekli güncellenir)
   int getCurrentServerTime() {
-    if (_serverTime > 0) {
-      // İlk aldığımız sunucu saati ile şu anki zaman arasındaki farkı hesapla
-      final timeElapsed = DateTime.now().difference(_serverDateTime ?? DateTime.now()).inSeconds;
-      return _serverTime + timeElapsed;
-    }
-    return DateTime.now().millisecondsSinceEpoch ~/ 1000; // Fallback
+    // Artık timer ile güncel tutulan _currentServerTime değerini kullan
+    return _currentServerTime;
   }
   
   // Bir ürünün sipariş edildiği zamandan bu yana geçen süre (saniye)
@@ -84,8 +101,11 @@ class KitchenViewModel extends ChangeNotifier {
     
     try {
       final int productTimeInt = int.parse(productTime);
-      final int currentServerTime = getCurrentServerTime();
-      return currentServerTime - productTimeInt;
+      // Timer ile güncellenen sunucu zamanını kullan
+      final int elapsedTime = _currentServerTime - productTimeInt;
+      
+      // Negatif değerlere karşı koruma
+      return elapsedTime > 0 ? elapsedTime : 0;
     } catch (e) {
       debugPrint('🔴 [Mutfak VM] Geçen süre hesaplama hatası: $e');
       return 0;
@@ -95,6 +115,7 @@ class KitchenViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _serverTimeTimer?.cancel(); // Server time timer'ı da iptal et
     super.dispose();
   }
 

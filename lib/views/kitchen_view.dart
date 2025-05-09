@@ -112,9 +112,12 @@ class _KitchenViewState extends State<KitchenView> {
     try {
       final int elapsedSeconds = _kitchenViewModel.getElapsedTime(timestamp);
       
+      // Negatif değerlere karşı koruma
+      final int positiveElapsedSeconds = elapsedSeconds < 0 ? 0 : elapsedSeconds;
+      
       // Saniyeyi dakika:saniye formatına dönüştür
-      final int minutes = (elapsedSeconds ~/ 60);
-      final int seconds = elapsedSeconds % 60;
+      final int minutes = (positiveElapsedSeconds ~/ 60);
+      final int seconds = positiveElapsedSeconds % 60;
       
       // İki basamaklı olarak göster
       final String minutesStr = minutes.toString().padLeft(2, '0');
@@ -384,11 +387,14 @@ class _KitchenViewState extends State<KitchenView> {
     try {
       final int elapsedSeconds = _kitchenViewModel.getElapsedTime(product.proTime);
       
-      if (elapsedSeconds >= 300) { // 5 dakika ve üzeri
+      // Negatif değerlere karşı koruma
+      final int positiveElapsedSeconds = elapsedSeconds < 0 ? 0 : elapsedSeconds;
+      
+      if (positiveElapsedSeconds >= 300) { // 5 dakika ve üzeri
         timeColor = Colors.red;
-      } else if (elapsedSeconds >= 180) { // 3 dakika ve üzeri
+      } else if (positiveElapsedSeconds >= 180) { // 3 dakika ve üzeri
         timeColor = Colors.orange;
-      } else if (elapsedSeconds >= 60) { // 1 dakika ve üzeri
+      } else if (positiveElapsedSeconds >= 60) { // 1 dakika ve üzeri
         timeColor = Colors.yellow.shade700;
       }
     } catch (e) {
