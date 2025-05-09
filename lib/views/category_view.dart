@@ -135,209 +135,91 @@ class _CategoryViewState extends State<CategoryView> {
             ],
           ),
           leading: IconButton(
-            icon: Icon(Icons.chevron_left, size: 30),
+            icon: const Icon(Icons.chevron_left, size: 30),
             onPressed: () => Navigator.of(context).pop(),
           ),
           actions: [
             IconButton(
-              icon: Icon(Icons.menu),
-              onPressed: () {
-                _showMenuDialog();
-              },
+              icon: const Icon(Icons.menu),
+              onPressed: _showMenuDialog,
             ),
           ],
         ),
-        body: Column(
-          children: [
-            // Arama Çubuğu
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Ürün arayın...',
-                  prefixIcon: Icon(Icons.search),
-                  hintStyle: TextStyle(fontSize: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(vertical: 0),
-                  filled: true,
-                  fillColor: Colors.white,
+        body: Consumer<CategoryViewModel>(
+          builder: (context, categoryViewModel, child) {
+            if (categoryViewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (categoryViewModel.errorMessage != null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                    const SizedBox(height: 16),
+                    Text(categoryViewModel.errorMessage!, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadCategories,
+                      style: ElevatedButton.styleFrom(backgroundColor: Color(AppConstants.primaryColorValue)),
+                      child: const Text('Yeniden Dene'),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            
-            // İçerik
-            Expanded(
-              child: Consumer<CategoryViewModel>(
-                builder: (context, categoryViewModel, child) {
-                  if (categoryViewModel.isLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
+              );
+            }
 
-                  if (categoryViewModel.errorMessage != null) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: Colors.red.shade300,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            categoryViewModel.errorMessage!,
-                            style: const TextStyle(fontSize: 16),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _loadCategories,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(AppConstants.primaryColorValue),
-                            ),
-                            child: const Text('Yeniden Dene'),
-                          ),
-                        ],
+            if (!categoryViewModel.hasCategories) {
+              return const Center(child: Text('Kategori bulunamadı'));
+            }
+
+            return Column(
+              children: [
+                // Arama Çubuğu
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Ürün arayın...',
+                      prefixIcon: const Icon(Icons.search),
+                      hintStyle: const TextStyle(fontSize: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
-                    );
-                  }
-
-                  if (!categoryViewModel.hasCategories) {
-                    return const Center(
-                      child: Text('Kategori bulunamadı'),
-                    );
-                  }
-
-                  return Column(
-                    children: [
-                      // Kategoriler Bölümü
-                      Container(
-                        height: MediaQuery.of(context).size.height * 0.28,
-                        child: GridView.builder(
-                          padding: const EdgeInsets.all(2),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 2,
-                            mainAxisSpacing: 3,
-                            childAspectRatio: 2,
-                          ),
-                          itemCount: categoryViewModel.categories.length,
-                          itemBuilder: (context, index) {
-                            final category = categoryViewModel.categories[index];
-                            Color categoryColor;
-                            try {
-                              categoryColor = Color(
-                                int.parse(category.catColor.replaceFirst('#', '0xFF')),
-                              );
-                            } catch (e) {
-                              categoryColor = Colors.grey;
-                            }
-                            
-                            return _buildCategoryButton(category, categoryColor);
-                          },
-                        ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
-                      
-                      // Ürünler Bölümü
-                      Expanded(
-                        child: Consumer<ProductViewModel>(
-                          builder: (context, productViewModel, child) {
-                            if (productViewModel.isLoading) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
-
-                            if (productViewModel.errorMessage != null) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      size: 48,
-                                      color: Colors.red.shade300,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      productViewModel.errorMessage!,
-                                      style: const TextStyle(fontSize: 16),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton(
-                                      onPressed: () => _loadProducts(_selectedCategory!.catID, _selectedCategory!.catName),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Color(
-                                          int.parse(_selectedCategory!.catColor.replaceFirst('#', '0xFF')),
-                                        ),
-                                      ),
-                                      child: const Text('Yeniden Dene'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            if (!productViewModel.hasProducts) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      size: 48,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      'Bu kategoride henüz ürün bulunmuyor',
-                                      style: TextStyle(fontSize: 16),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            return GridView.builder(
-                              padding: const EdgeInsets.all(8),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                                childAspectRatio: 0.8,
-                              ),
-                              itemCount: productViewModel.products.length,
-                              itemBuilder: (context, index) {
-                                final product = productViewModel.products[index];
-                                return _buildProductCard(product);
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ),
+                
+                // Kategoriler ve Ürünler tek bir ScrollView içinde
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // Kategoriler Bölümü
+                        _buildCategoriesSection(categoryViewModel),
+                        
+                        // Ürünler Bölümü
+                        _buildProductsSection(context),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            _goToBasket();
-          },
+          onPressed: _goToBasket,
           backgroundColor: Color(AppConstants.primaryColorValue),
           child: Stack(
             children: [
@@ -375,82 +257,78 @@ class _CategoryViewState extends State<CategoryView> {
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: Colors.grey.shade300)),
           ),
-          child: Stack(
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        color: Color(AppConstants.primaryColorValue),
-                        child: const Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.chevron_left, color: Colors.white),
-                              Text(
-                                'Geri',
-                                style: TextStyle(color: Colors.white, fontSize: 14),
-                              ),
-                            ],
+              Expanded(
+                child: InkWell(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    color: Color(AppConstants.primaryColorValue),
+                    child: const Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chevron_left, color: Colors.white),
+                          Text(
+                            'Geri',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: InkWell(
-                      onTap: widget.orderID != null ? _showPaymentDialog : null,
-                      child: Container(
-                        color: Color(AppConstants.primaryColorValue),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.payment, 
-                                color: widget.orderID != null ? Colors.white : Colors.white.withOpacity(0.5), 
-                                size: 18
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Ödeme Al',
-                                style: TextStyle(
-                                  color: widget.orderID != null ? Colors.white : Colors.white.withOpacity(0.5), 
-                                  fontSize: 14
-                                ),
-                              ),
-                            ],
+                ),
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: widget.orderID != null ? _showPaymentDialog : null,
+                  child: Container(
+                    color: Color(AppConstants.primaryColorValue),
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.payment, 
+                            color: widget.orderID != null ? Colors.white : Colors.white.withOpacity(0.5), 
+                            size: 18
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Ödeme Al',
+                            style: TextStyle(
+                              color: widget.orderID != null ? Colors.white : Colors.white.withOpacity(0.5), 
+                              fontSize: 14
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {},
-                      child: Container(
-                        color: Color(AppConstants.primaryColorValue),
-                        child: const Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.print, color: Colors.white, size: 18),
-                              SizedBox(width: 4),
-                              Text(
-                                'Yazdır',
-                                style: TextStyle(color: Colors.white, fontSize: 14),
-                              ),
-                            ],
+                ),
+              ),
+              Expanded(
+                child: InkWell(
+                  onTap: () {},
+                  child: Container(
+                    color: Color(AppConstants.primaryColorValue),
+                    child: const Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.print, color: Colors.white, size: 18),
+                          SizedBox(width: 4),
+                          Text(
+                            'Yazdır',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -459,10 +337,148 @@ class _CategoryViewState extends State<CategoryView> {
     );
   }
 
+  // Kategoriler bölümünü oluştur
+  Widget _buildCategoriesSection(CategoryViewModel categoryViewModel) {
+    List<Category> categories = categoryViewModel.categories;
+    if (categories.isEmpty) return const SizedBox.shrink();
+    
+    // Sabit yükseklik hesapla (görseldeki 6 satırlık kategori alanı)
+    final double categoryBlockHeight = MediaQuery.of(context).size.height * 0.28;
+    final double rowHeight = categoryBlockHeight / 6.0;
+    
+    List<Widget> categoryRows = [];
+    int itemsProcessed = 0;
+
+    // İlk 5 satır, her satırda 3 kategori
+    for (int i = 0; i < 5 && itemsProcessed < categories.length; i++) {
+      List<Widget> rowButtons = [];
+      for (int j = 0; j < 3; j++) {
+        if (itemsProcessed < categories.length) {
+          Category category = categories[itemsProcessed];
+          Color categoryColor = _getCategoryColor(category);
+          rowButtons.add(Expanded(child: _buildConfigurableCategoryButton(category, categoryColor, rowHeight)));
+          itemsProcessed++;
+        } else {
+          rowButtons.add(const Expanded(child: SizedBox.shrink()));
+        }
+      }
+      categoryRows.add(SizedBox(
+        height: rowHeight, 
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: rowButtons)
+      ));
+    }
+
+    // Son satırda kalan kategoriler (en fazla 2 kategori)
+    if (itemsProcessed < categories.length) {
+      List<Widget> lastRowButtons = [];
+      int remainingItems = categories.length - itemsProcessed;
+      for (int k = 0; k < remainingItems && k < 2; k++) {
+        Category category = categories[itemsProcessed];
+        Color categoryColor = _getCategoryColor(category);
+        lastRowButtons.add(Expanded(child: _buildConfigurableCategoryButton(category, categoryColor, rowHeight)));
+        itemsProcessed++;
+      }
+      
+      // Son satırda en az bir kategori varsa ekle
+      if (lastRowButtons.isNotEmpty) {
+        categoryRows.add(SizedBox(
+          height: rowHeight, 
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: lastRowButtons)
+        ));
+      }
+    }
+
+    return Column(children: categoryRows);
+  }
+
+  // Ürünler bölümünü oluştur
+  Widget _buildProductsSection(BuildContext context) {
+    return Consumer<ProductViewModel>(
+      builder: (context, productViewModel, child) {
+        if (productViewModel.isLoading) {
+          return Container(
+            height: 300,
+            alignment: Alignment.center,
+            child: const CircularProgressIndicator(),
+          );
+        }
+
+        if (productViewModel.errorMessage != null) {
+          return Container(
+            height: 300,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+                const SizedBox(height: 16),
+                Text(productViewModel.errorMessage!, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _selectedCategory != null ? 
+                    _loadProducts(_selectedCategory!.catID, _selectedCategory!.catName) : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _selectedCategory != null ? 
+                      _getCategoryColor(_selectedCategory!) : Colors.grey,
+                  ),
+                  child: const Text('Yeniden Dene'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (!productViewModel.hasProducts) {
+          return Container(
+            height: 300,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 48, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                const Text(
+                  'Bu kategoride henüz ürün bulunmuyor',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Ürün sayısına göre dinamik yükseklik hesapla (her satırda 3 ürün)
+        final int productCount = productViewModel.products.length;
+        final int rowCount = (productCount / 3).ceil();
+        final double estimatedGridHeight = rowCount * 180.0; // 180 piksel ortalama kart yüksekliği
+        
+        return Container(
+          height: estimatedGridHeight,
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(), // Ana kaydırma içinde olduğu için bu grid kaydırılmayacak
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 6,
+              childAspectRatio: 0.9,
+            ),
+            itemCount: productViewModel.products.length,
+            itemBuilder: (context, index) {
+              final product = productViewModel.products[index];
+              return _buildProductCard(product);
+            },
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCategoryButton(Category category, Color categoryColor) {
     
     return Card(
-      margin: const EdgeInsets.all(2),
+      margin: const EdgeInsets.all(1.0), // Adjusted margin for tighter fit
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(0),
@@ -476,18 +492,69 @@ class _CategoryViewState extends State<CategoryView> {
           _loadProducts(category.catID, category.catName);
         },
         child: Center(
-          child: Text(
-            category.catName.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Text(
+              category.catName.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
-            textAlign: TextAlign.center,
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildConfigurableCategoryButton(Category category, Color categoryColor, double buttonHeight) {
+    return SizedBox(
+      height: buttonHeight,
+      child: Card(
+        margin: const EdgeInsets.all(1.0), // Görseldeki sıkı yerleşim için kenar boşluğunu azalttım
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(0), // Köşeleri olmayan düz butonlar
+        ),
+        color: categoryColor,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedCategory = category;
+            });
+            _loadProducts(category.catID, category.catName);
+          },
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0), // Metin için iç dolgu
+              child: Text(
+                category.catName.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14, 
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis, // Uzun metinler için
+                maxLines: 2, // En fazla iki satır
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(Category category) {
+    try {
+      return Color(int.parse(category.catColor.replaceFirst('#', '0xFF')));
+    } catch (e) {
+      return Colors.grey; // Renk kodu geçersizse varsayılan renk
+    }
   }
 
   Widget _buildProductCard(Product product) {
@@ -506,15 +573,28 @@ class _CategoryViewState extends State<CategoryView> {
         ),
       ),
       child: InkWell(
-        onTap: () => basketViewModel.addProduct(product, opID: 0),
+        onTap: () {
+          // Sepete eklenmemişse tıklandığında ekle
+          // Sepetteyse ve kontrol butonları görünüyorsa, ana tıklama bir şey yapmayabilir
+          // veya ürün detayına gidebilir (şu anki davranış ekleme)
+          if (!isInBasket) {
+            basketViewModel.addProduct(product, opID: 0);
+          } else {
+            // İsteğe bağlı: Sepetteyken karta tıklamak bir şey yapmasın
+            // Veya miktar artırma gibi birincil eylem olabilir.
+            // Mevcut +/- butonları zaten bu işlevi görüyor.
+            // basketViewModel.addProduct(product, opID: 0); // Bu satır tekrar eklemeyi sağlar, istenirse kalabilir.
+          }
+        },
         child: Column(
           children: [
             // Ürün Adı ve Fiyat Bölümü
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Center(
@@ -531,101 +611,89 @@ class _CategoryViewState extends State<CategoryView> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '₺${product.proPrice.replaceAll(" TL", "")}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(AppConstants.primaryColorValue),
-                        ),
+                    Text(
+                      '₺${product.proPrice.replaceAll(" TL", "")}',
+                      style: const TextStyle(
+                        fontSize: 14, // Görselle uyum için punto biraz büyütüldü
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87, // Görseldeki gibi siyah tonu
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            // Alt Kontrol Bölümü
-            Container(
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(
-                  top: BorderSide(color: Colors.grey.shade200),
+            // Alt Kontrol Bölümü (Sadece sepetteyse gösterilir)
+            if (isInBasket)
+              Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.shade200),
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Eksi Butonu
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: isInBasket ? () => basketViewModel.decreaseProduct(product) : null,
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isInBasket 
-                              ? Color(AppConstants.primaryColorValue).withOpacity(0.1)
-                              : Colors.grey.shade200,
-                        ),
-                        child: Icon(
-                          Icons.remove,
-                          size: 16,
-                          color: isInBasket 
-                              ? Color(AppConstants.primaryColorValue)
-                              : Colors.grey.shade400,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Eksi Butonu
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => basketViewModel.decreaseProduct(product),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                          ),
+                          child: Icon(
+                            Icons.remove,
+                            size: 16,
+                            color: Color(AppConstants.primaryColorValue),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // Miktar
-                  Container(
-                    constraints: BoxConstraints(minWidth: 32),
-                    child: Text(
-                      '$quantity',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isInBasket 
-                            ? Color(AppConstants.primaryColorValue)
-                            : Colors.grey.shade400,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  // Artı Butonu
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => basketViewModel.addProduct(product, opID: 0),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                        ),
-                        child: Icon(
-                          Icons.add,
-                          size: 16,
+                    // Miktar
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 32),
+                      child: Text(
+                        '$quantity',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                           color: Color(AppConstants.primaryColorValue),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-                ],
+                    // Artı Butonu
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => basketViewModel.addProduct(product, opID: 0),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            size: 16,
+                            color: Color(AppConstants.primaryColorValue),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
