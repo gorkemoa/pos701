@@ -9,6 +9,8 @@ import 'package:pos701/widgets/dashboard_card.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pos701/widgets/notification_badge.dart';
 import 'package:pos701/views/notifications_view.dart';
+import 'package:pos701/views/login_view.dart';
+import 'package:pos701/services/api_service.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -42,6 +44,23 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     final userViewModel = Provider.of<UserViewModel>(context);
     final statisticsViewModel = Provider.of<StatisticsViewModel>(context);
+    
+    // Yetkisiz erişim hatası kontrolü ve login sayfasına yönlendirme
+    if (statisticsViewModel.errorMessage != null && 
+        statisticsViewModel.errorMessage!.contains('Yetkisiz erişim') && 
+        statisticsViewModel.errorMessage!.contains('417')) {
+      // Bir kereden fazla yönlendirmeyi önlemek için gecikmeli çalıştır
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Token ve kullanıcı bilgilerini temizle
+        final apiService = Provider.of<ApiService>(context, listen: false);
+        await apiService.clearToken();
+        
+        // Login sayfasına yönlendir
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginView()),
+        );
+      });
+    }
     
     return Scaffold(
       appBar: AppBar(
