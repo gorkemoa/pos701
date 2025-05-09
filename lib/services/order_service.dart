@@ -667,29 +667,49 @@ class OrderService {
       final String responseBody = utf8.decode(httpResponse.bodyBytes);
       debugPrint('🔵 [SİPARİŞ TAMAMLAMA] HTTP yanıt gövdesi: $responseBody');
       
-      final responseData = jsonDecode(responseBody);
-      
-      // "410": "Gone" alanını temizle - bu alan Map'in List olarak yorumlanmasına neden oluyor
-      if (responseData.containsKey('410')) {
-        responseData.remove('410');
-        debugPrint('🔵 [SİPARİŞ TAMAMLAMA] "410" anahtarı yanıttan temizlendi');
-      }
-      
-      // HTTP durum kodunu kontrol et
-      if (httpResponse.statusCode == 200 || httpResponse.statusCode == 410) {
-        debugPrint('🟢 [SİPARİŞ TAMAMLAMA] Başarılı: ${jsonEncode(responseData)}');
-        return ApiResponseModel<dynamic>(
-          error: false,
-          success: true,
-          errorCode: null,
-          successMessage: responseData['success_message'] ?? 'Sipariş başarıyla tamamlandı',
-        );
+      // API yanıtı bir PHP hata mesajı içerebilir, ilk olarak yanıtın JSON olup olmadığını kontrol et
+      if (responseBody.trim().startsWith('{') || responseBody.trim().startsWith('[')) {
+        try {
+          final responseData = jsonDecode(responseBody);
+          
+          // "410": "Gone" alanını temizle - bu alan Map'in List olarak yorumlanmasına neden oluyor
+          if (responseData is Map && responseData.containsKey('410')) {
+            responseData.remove('410');
+            debugPrint('🔵 [SİPARİŞ TAMAMLAMA] "410" anahtarı yanıttan temizlendi');
+          }
+          
+          // HTTP durum kodunu kontrol et
+          if (httpResponse.statusCode == 200 || httpResponse.statusCode == 410) {
+            debugPrint('🟢 [SİPARİŞ TAMAMLAMA] Başarılı: ${jsonEncode(responseData)}');
+            return ApiResponseModel<dynamic>(
+              error: false,
+              success: true,
+              errorCode: null,
+              successMessage: responseData is Map ? responseData['success_message'] ?? 'Sipariş başarıyla tamamlandı' : 'Sipariş başarıyla tamamlandı',
+            );
+          } else {
+            debugPrint('🔴 [SİPARİŞ TAMAMLAMA] Hata: ${httpResponse.statusCode}, Veri: ${jsonEncode(responseData)}');
+            return ApiResponseModel<dynamic>(
+              error: true,
+              success: false,
+              errorCode: responseData is Map ? responseData['message'] ?? "İşlem başarısız: HTTP ${httpResponse.statusCode}" : "İşlem başarısız: HTTP ${httpResponse.statusCode}",
+            );
+          }
+        } catch (jsonError) {
+          debugPrint('🔴 [SİPARİŞ TAMAMLAMA] JSON çözümleme hatası: $jsonError');
+          return ApiResponseModel<dynamic>(
+            error: true,
+            success: false,
+            errorCode: "Sunucudan gelen yanıt geçerli değil: $jsonError",
+          );
+        }
       } else {
-        debugPrint('🔴 [SİPARİŞ TAMAMLAMA] Hata: ${httpResponse.statusCode}, Veri: ${jsonEncode(responseData)}');
+        // JSON olmayan bir yanıt, muhtemelen PHP hata mesajı
+        debugPrint('🔴 [SİPARİŞ TAMAMLAMA] JSON olmayan yanıt: $responseBody');
         return ApiResponseModel<dynamic>(
           error: true,
           success: false,
-          errorCode: responseData['message'] ?? "İşlem başarısız: HTTP ${httpResponse.statusCode}",
+          errorCode: "Sunucu hatası: API servisi yanıt vermiyor veya geçersiz bir yanıt döndü",
         );
       }
     } catch (e, stackTrace) {

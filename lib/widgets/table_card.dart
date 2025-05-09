@@ -748,14 +748,14 @@ class TableCard extends StatelessWidget {
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.of(confirmContext).pop(false),
-                                child: const Text('İptal', style: TextStyle(fontSize: 15)),
+                                child: const Text('İptal', style: TextStyle(color: Colors.white, fontSize: 15)),
                               ),
                               ElevatedButton(
                                 onPressed: () => Navigator.of(confirmContext).pop(true),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue,
                                 ),
-                                child: const Text('Onayla', style: TextStyle(fontSize: 15)),
+                                child: const Text('Onayla', style: TextStyle(color: Colors.white, fontSize: 15)),
                               ),
                             ],
                           ),

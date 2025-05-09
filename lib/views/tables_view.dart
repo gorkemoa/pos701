@@ -134,7 +134,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           if (viewModel.errorMessage != null) {
             return Scaffold(
               appBar: AppBar(
-                title: Text(widget.title),
+               title: Text(widget.title , style: const TextStyle(color: Colors.white),),
                 backgroundColor: Color(AppConstants.primaryColorValue),
                 leading: IconButton(
                   icon: Icon(Icons.chevron_left, size: 30),
@@ -180,7 +180,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           if (regions.isEmpty) {
             return Scaffold(
               appBar: AppBar(
-                title: Text(widget.title),
+                title: Text(widget.title , style: TextStyle(color: Colors.white),),
                 backgroundColor: Color(AppConstants.primaryColorValue),
                 leading: IconButton(
                   icon: Icon(Icons.chevron_left, size: 30),
@@ -239,7 +239,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
 
           return Scaffold(
             appBar: AppBar(
-              title: Text(widget.title),
+              title: Text(widget.title , style: const TextStyle(color: Colors.white),),
               backgroundColor: Color(AppConstants.primaryColorValue),
               actions: [
                 // Destek İste butonu - ekran görüntüsündeki gibi
@@ -316,7 +316,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                               ),
                               ListTile(
                                 leading: const Icon(Icons.receipt_long),
-                                title: const Text('Tüm Siparişler' , style: TextStyle(fontSize: 8),),
+                                title: const Text('Tüm Siparişler' , style: TextStyle(fontSize: 12),),
                                 onTap: () {
                                   Navigator.pop(context);
                                   // Sipariş Listesi sayfasına yönlendir
@@ -360,8 +360,8 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                 _handleFloatingActionButton(context);
               },
               backgroundColor: Color(AppConstants.primaryColorValue),
-              icon: const Icon(Icons.add),
-              label: const Text('Yeni Sipariş'),
+              icon: const Icon(Icons.add , color: Colors.white,),
+              label: const Text('Yeni Sipariş', style: TextStyle(color: Colors.white),),
             ),
           );
         },

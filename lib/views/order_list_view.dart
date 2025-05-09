@@ -577,26 +577,58 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     final viewModel = Provider.of<OrderListViewModel>(context, listen: false);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
-    final result = await viewModel.completeOrder(
-      userToken: widget.userToken,
-      compID: widget.compID,
-      orderID: orderID,
+    // İşlem başlamadan önce bilgilendirme mesajı göster
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Text('Sipariş tamamlanıyor...'),
+        duration: Duration(seconds: 1),
+      ),
     );
     
-    if (result) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(viewModel.successMessage ?? 'Sipariş başarıyla tamamlandı'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
+    try {
+      final result = await viewModel.completeOrder(
+        userToken: widget.userToken,
+        compID: widget.compID,
+        orderID: orderID,
       );
-    } else {
+      
+      if (result) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(viewModel.successMessage ?? 'Sipariş başarıyla tamamlandı'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        String errorMessage = viewModel.errorMessage ?? 'İşlem sırasında bir hata oluştu';
+        
+        // PHP hatası gibi görünen mesajlar için özelleştirilmiş mesaj
+        if (errorMessage.contains('Uncaught TypeError') || errorMessage.contains('current()')) {
+          errorMessage = 'Sunucu tarafında teknik bir sorun oluştu. Lütfen sistem yöneticinizle iletişime geçin.';
+        }
+        
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Tamam',
+              textColor: Colors.white,
+              onPressed: () {
+                scaffoldMessenger.hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text(viewModel.errorMessage ?? 'İşlem sırasında bir hata oluştu'),
+          content: Text('Beklenmeyen bir hata oluştu: $e'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ),
       );
     }

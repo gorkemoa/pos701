@@ -1021,7 +1021,7 @@ class _CategoryViewState extends State<CategoryView> {
                   children: [
                     _buildMenuItem(
                       icon: Icons.description,
-                      title: 'NOT',
+                      title: 'Sipariş Notu',
                       onTap: () {
                         Navigator.of(context).pop();
                         _showOrderDescDialog();
