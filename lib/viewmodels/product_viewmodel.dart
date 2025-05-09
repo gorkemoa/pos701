@@ -8,17 +8,19 @@ class ProductViewModel extends ChangeNotifier {
   final AppLogger _logger = AppLogger();
   
   List<Product> _products = [];
+  List<Product> _filteredProducts = [];
   bool _isLoading = false;
   String? _errorMessage;
   bool _disposed = false;
   int? _categoryId;
   String? _categoryName;
+  String _searchQuery = '';
   
   ProductViewModel(this._productService) {
     _logger.i('ProductViewModel başlatıldı');
   }
   
-  List<Product> get products => _products;
+  List<Product> get products => _searchQuery.isEmpty ? _products : _filteredProducts;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasProducts => _products.isNotEmpty;
@@ -51,6 +53,7 @@ class ProductViewModel extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     _categoryId = catID;
+    _searchQuery = '';
     _safeNotifyListeners();
     
     try {
@@ -64,6 +67,7 @@ class ProductViewModel extends ChangeNotifier {
       
       if (response.success && response.data != null) {
         _products = response.data!.products;
+        _filteredProducts = [..._products];
         _logger.i('Ürünler başarıyla yüklendi. Ürün sayısı: ${_products.length}');
         _safeNotifyListeners();
         return true;
@@ -89,5 +93,20 @@ class ProductViewModel extends ChangeNotifier {
       _logger.w('ID: $id olan ürün bulunamadı');
       return null;
     }
+  }
+  
+  void filterProductsByName(String query) {
+    _searchQuery = query;
+    
+    if (query.isEmpty) {
+      _filteredProducts = [..._products];
+    } else {
+      _filteredProducts = _products.where((product) => 
+        product.proName.toLowerCase().contains(query.toLowerCase())).toList();
+      
+      _logger.i('Ürünler "$query" aramasına göre filtrelendi. Sonuç: ${_filteredProducts.length} ürün');
+    }
+    
+    _safeNotifyListeners();
   }
 } 
