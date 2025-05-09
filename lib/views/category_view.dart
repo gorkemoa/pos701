@@ -657,6 +657,12 @@ class _CategoryViewState extends State<CategoryView> {
                         ),
                       ),
                     ),
+                      const SizedBox(width: 4),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      child: Text('${product.proStock}'),
+                    ),
                     // Miktar
                     Container(
                       constraints: const BoxConstraints(minWidth: 32),
@@ -670,6 +676,8 @@ class _CategoryViewState extends State<CategoryView> {
                         textAlign: TextAlign.center,
                       ),
                     ),
+                  
+                    const SizedBox(width: 4),
                     // Artı Butonu
                     Material(
                       color: Colors.transparent,
