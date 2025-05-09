@@ -16,13 +16,8 @@ dependencies:
   logger: ^2.0.2+1
   fl_chart: ^0.66.1
   shared_preferences: ^2.0.15
-
-
-  
-  # Firebase paketleri - uyumlu sürümler
   firebase_core: ^2.25.4
   firebase_messaging: ^14.7.15
-  
   flutter_local_notifications: 16.3.0
   intl: ^0.19.0
 
@@ -30,8 +25,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+  flutter_launcher_icons: ^0.13.1  # ← EKLENDİ
+
+flutter_icons:                     # ← EKLENDİ
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/icon/         # ← Klasörü unutma
