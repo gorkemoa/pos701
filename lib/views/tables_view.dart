@@ -271,21 +271,17 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                       );
                     },
                     icon: const Icon(Icons.support_agent, color: Colors.white),
-                    label: const Text('Destek İste', style: TextStyle(color: Colors.white)),
+                    label: const Text('Destek İste', style: TextStyle(color: Colors.white, fontSize: 8)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black26,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.receipt_long),
-                  onPressed: () {
-                    // Fiş işlevi
-                  },
-                ),
+            
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: _loadData,
@@ -320,7 +316,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                               ),
                               ListTile(
                                 leading: const Icon(Icons.receipt_long),
-                                title: const Text('Tüm Siparişler'),
+                                title: const Text('Tüm Siparişler' , style: TextStyle(fontSize: 8),),
                                 onTap: () {
                                   Navigator.pop(context);
                                   // Sipariş Listesi sayfasına yönlendir

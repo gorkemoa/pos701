@@ -627,12 +627,14 @@ class _CategoryViewState extends State<CategoryView> {
           // Sepetteyse ve kontrol butonları görünüyorsa, ana tıklama bir şey yapmayabilir
           // veya ürün detayına gidebilir (şu anki davranış ekleme)
           if (!isInBasket) {
+            // Ürünü opID=0 ile ekle (yeni ürün)
             basketViewModel.addProduct(product, opID: 0);
+            debugPrint('🛍️ [CATEGORY_VIEW] Yeni ürün sepete eklendi: ${product.proName}');
           } else {
             // İsteğe bağlı: Sepetteyken karta tıklamak bir şey yapmasın
             // Veya miktar artırma gibi birincil eylem olabilir.
             // Mevcut +/- butonları zaten bu işlevi görüyor.
-            // basketViewModel.addProduct(product, opID: 0); // Bu satır tekrar eklemeyi sağlar, istenirse kalabilir.
+            debugPrint('🛍️ [CATEGORY_VIEW] Ürün zaten sepette: ${product.proName}, miktar: $quantity');
           }
         },
         child: Column(
@@ -698,7 +700,10 @@ class _CategoryViewState extends State<CategoryView> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => basketViewModel.decreaseProduct(product),
+                        onTap: () {
+                          basketViewModel.decreaseProduct(product);
+                          debugPrint('➖ [CATEGORY_VIEW] Ürün miktarı azaltıldı: ${product.proName}, miktar: ${basketViewModel.getProductQuantity(product)}');
+                        },
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           width: 32,
@@ -740,7 +745,10 @@ class _CategoryViewState extends State<CategoryView> {
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => basketViewModel.addProduct(product, opID: 0),
+                        onTap: () {
+                          basketViewModel.addProduct(product, opID: 0);
+                          debugPrint('➕ [CATEGORY_VIEW] Ürün miktarı artırıldı: ${product.proName}, miktar: ${basketViewModel.getProductQuantity(product)}');
+                        },
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           width: 32,
