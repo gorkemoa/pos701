@@ -25,13 +25,23 @@ class KitchenView extends StatefulWidget {
 
 class _KitchenViewState extends State<KitchenView> {
   Timer? _uiUpdateTimer;
+  late KitchenViewModel _kitchenViewModel;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
+      _initialized = true;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     // Sayfada ilk kez olduğumuzda, ViewModel'i oluştur ve otomatik yenilemeyi başlat
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
       final userViewModel = Provider.of<UserViewModel>(context, listen: false);
       
       // Sunucu saatini UserViewModel'den al ve KitchenViewModel'e aktar
@@ -40,13 +50,13 @@ class _KitchenViewState extends State<KitchenView> {
       
       if (serverDate.isNotEmpty && serverTime.isNotEmpty) {
         debugPrint('🔵 [Mutfak] Sunucu saati alındı: serverDate=$serverDate, serverTime=$serverTime');
-        kitchenViewModel.updateServerTime(serverTime, serverDate);
+        _kitchenViewModel.updateServerTime(serverTime, serverDate);
       }
       
       // Token boş değilse ve compID 0 değilse devam et
       if (widget.userToken.isNotEmpty && widget.compID > 0) {
         debugPrint('🔵 [Mutfak] Parametre kontrolü: userToken=${widget.userToken}, compID=${widget.compID}');
-        kitchenViewModel.startAutoRefresh(widget.userToken, widget.compID);
+        _kitchenViewModel.startAutoRefresh(widget.userToken, widget.compID);
       } else {
         // Kullanıcı bilgileri yeterli değilse, UserViewModel'den alabiliriz
         final token = userViewModel.userInfo?.userToken ?? '';
@@ -54,7 +64,7 @@ class _KitchenViewState extends State<KitchenView> {
         
         if (token.isNotEmpty && companyId > 0) {
           debugPrint('🔵 [Mutfak] UserViewModel parametreleri: userToken=$token, compID=$companyId');
-          kitchenViewModel.startAutoRefresh(token, companyId);
+          _kitchenViewModel.startAutoRefresh(token, companyId);
         } else {
           debugPrint('🔴 [Mutfak] Geçerli token veya şirket ID bulunamadı');
           // Hata durumunu göster
@@ -74,8 +84,7 @@ class _KitchenViewState extends State<KitchenView> {
   @override
   void dispose() {
     // Sayfadan çıkıldığında otomatik yenilemeyi durdur
-    final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
-    kitchenViewModel.stopAutoRefresh();
+    _kitchenViewModel.stopAutoRefresh();
     _uiUpdateTimer?.cancel();
     super.dispose();
   }
@@ -101,8 +110,7 @@ class _KitchenViewState extends State<KitchenView> {
     if (timestamp.isEmpty) return '00:00';
     
     try {
-      final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
-      final int elapsedSeconds = kitchenViewModel.getElapsedTime(timestamp);
+      final int elapsedSeconds = _kitchenViewModel.getElapsedTime(timestamp);
       
       // Saniyeyi dakika:saniye formatına dönüştür
       final int minutes = (elapsedSeconds ~/ 60);
@@ -374,8 +382,7 @@ class _KitchenViewState extends State<KitchenView> {
     // Süreye göre renk belirle
     Color timeColor = Colors.green;
     try {
-      final kitchenViewModel = Provider.of<KitchenViewModel>(context, listen: false);
-      final int elapsedSeconds = kitchenViewModel.getElapsedTime(product.proTime);
+      final int elapsedSeconds = _kitchenViewModel.getElapsedTime(product.proTime);
       
       if (elapsedSeconds >= 300) { // 5 dakika ve üzeri
         timeColor = Colors.red;
