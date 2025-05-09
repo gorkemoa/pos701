@@ -35,19 +35,36 @@ class KitchenViewModel extends ChangeNotifier {
 
   // Sunucu saatini güncelle
   void updateServerTime(String serverTimeString, String serverDateString) {
+    bool changed = false;
     if (serverTimeString.isNotEmpty) {
       try {
-        _serverTime = int.parse(serverTimeString);
-        
-        // Sunucu tarih/saat bilgisini DateTime'a dönüştür
-        if (serverDateString.isNotEmpty) {
-          _serverDateTime = DateTime.parse(serverDateString);
+        final newServerTime = int.parse(serverTimeString);
+        if (_serverTime != newServerTime) {
+          _serverTime = newServerTime;
+          // _serverTime (UTC timestamp) kullanarak _serverDateTime'ı (local DateTime) ayarla
+          _serverDateTime = DateTime.fromMillisecondsSinceEpoch(_serverTime * 1000, isUtc: true).toLocal();
+          changed = true;
+          debugPrint('🔵 [Mutfak VM] Sunucu saati güncellendi: _serverTime=$_serverTime, _serverDateTime=$_serverDateTime (local)');
         }
-        
-        notifyListeners();
       } catch (e) {
-        debugPrint('🔴 [Mutfak VM] Sunucu saati dönüştürme hatası: $e');
+        if (_serverTime != 0 || _serverDateTime != null) {
+          _serverTime = 0; // Hata durumunda fallback'i tetikle
+          _serverDateTime = null;
+          changed = true;
+        }
+        debugPrint('🔴 [Mutfak VM] Sunucu saati dönüştürme hatası: $e. Orijinal serverTimeString: $serverTimeString, serverDateString: $serverDateString');
       }
+    } else {
+      if (_serverTime != 0 || _serverDateTime != null) {
+        _serverTime = 0; // serverTimeString boşsa fallback'i tetikle
+        _serverDateTime = null;
+        changed = true;
+      }
+      debugPrint('🟡 [Mutfak VM] serverTimeString boş, sunucu saati güvenilir bir şekilde güncellenemedi.');
+    }
+
+    if (changed) {
+      notifyListeners();
     }
   }
   
