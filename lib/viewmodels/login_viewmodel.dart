@@ -127,4 +127,12 @@ class LoginViewModel extends ChangeNotifier {
       _logger.e('FCM topic aboneliği sırasında hata: $e');
     }
   }
+  
+  /// Kayıtlı kullanıcı adını temizler
+  Future<void> clearSavedUsername() async {
+    _logger.d('Kayıtlı kullanıcı adı temizleniyor');
+    await _authService.clearSavedUsername();
+    _savedUsername = null;
+    notifyListeners();
+  }
 } 
