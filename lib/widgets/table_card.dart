@@ -1271,14 +1271,14 @@ class TableCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
         child: Row(
           children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: 12),
+            Icon(icon, color: iconColor, size: 18),
+            const SizedBox(width: 10),
             Text(
               text,
-              style: const TextStyle(fontSize: 15),
+              style: const TextStyle(fontSize: 14),
             ),
           ],
         ),
@@ -1352,7 +1352,7 @@ class TableCard extends StatelessWidget {
                     Text(
                       table.tableName,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: table.isActive ? Colors.black87 : Colors.grey.shade700,
                       ),
@@ -1362,11 +1362,11 @@ class TableCard extends StatelessWidget {
                     ),
                     if (table.isActive && table.orderAmount.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 5),
+                        padding: const EdgeInsets.only(top: 3),
                         child: Text(
                           '₺${table.orderAmount}',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             color: primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1382,12 +1382,12 @@ class TableCard extends StatelessWidget {
             // Aktif masa için sağ üst köşede menü ikonu
             if (table.isActive)
               Positioned(
-                top: 2,
-                right: 2,
+                top: 1,
+                right: 1,
                 child: IconButton(
-                  icon: Icon(Icons.more_vert, size: 18, color: Colors.grey.shade600),
+                  icon: Icon(Icons.more_vert, size: 16, color: Colors.grey.shade600),
                   padding: EdgeInsets.zero,
-                  constraints: BoxConstraints.tight(const Size(28, 28)),
+                  constraints: BoxConstraints.tight(const Size(24, 24)),
                   onPressed: () => _showTableOptions(context),
                   tooltip: 'Masa İşlemleri',
                 ),
@@ -1410,18 +1410,18 @@ class TableCard extends StatelessWidget {
             // Birleştirilmiş masa ikonu - sol üstte daha küçük
             if (table.isMerged)
               Positioned(
-                top: 4,
-                left: 4,
+                top: 3,
+                left: 3,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
                   decoration: BoxDecoration(
                     color: primaryColor.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(3),
                   ),
                   child: const Icon(
                     Icons.people_alt,
                     color: Colors.white,
-                    size: 12,
+                    size: 10,
                   ),
                 ),
               ),
