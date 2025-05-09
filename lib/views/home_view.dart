@@ -844,7 +844,9 @@ class _HomeViewState extends State<HomeView> {
                       Expanded(
                         child: _buildTableInfoRow(
                           color: occupiedColor,
+                         
                           title: 'Dolu Masalar',
+
                           count: orderTables,
                           percentage: occupancyPercentage,
                         ),
@@ -885,7 +887,6 @@ class _HomeViewState extends State<HomeView> {
                                       fontSize: 12,
                                       color: Color(0xFF666666),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -895,7 +896,6 @@ class _HomeViewState extends State<HomeView> {
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF333333),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
@@ -943,7 +943,6 @@ class _HomeViewState extends State<HomeView> {
                   fontSize: 12,
                   color: Color(0xFF666666),
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
@@ -953,7 +952,6 @@ class _HomeViewState extends State<HomeView> {
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF333333),
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
