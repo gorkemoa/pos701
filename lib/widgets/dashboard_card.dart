@@ -60,6 +60,7 @@ class DashboardCard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF555555),
                         ),
+                        textAlign: TextAlign.right,
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -68,6 +69,7 @@ class DashboardCard extends StatelessWidget {
                           fontSize: 16,
                           color: Color(0xFF777777),
                         ),
+                        textAlign: TextAlign.right,
                       ),
                     ],
                   ),
