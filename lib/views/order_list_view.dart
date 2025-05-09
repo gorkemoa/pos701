@@ -99,7 +99,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                 
                 onTap: (index) {
                   setState(() {});
-
+                  _loadData(); // Sekme değiştiğinde sipariş listesini yenile
                 },
               ),
             ),
@@ -254,7 +254,6 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     }
 
     // Sipariş tipini kontrol et
-    final bool canComplete = order.orderStatusID != '4';
     final bool canCancel = order.orderStatusID != '4'; // İptal edilebilir durumlar
     final bool canPay = order.orderStatusID != '4'; // Ödeme alınabilir durumlar
     
@@ -311,7 +310,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                     const SizedBox(height: 8),
                     _buildDetailRow(Icons.access_time, 'Tarih: ${order.orderDate}'),
                     
-                    if (canPay || canComplete || canCancel) ...[
+                    if (canPay || canCancel) ...[
                       const SizedBox(height: 16),
                       Wrap(
                         spacing: 8,
@@ -321,7 +320,6 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                             _buildPaymentButton(order, isQuickPay: true),
                             _buildPaymentButton(order, isQuickPay: false),
                           ],
-                          if (canComplete) _buildCompleteOrderButton(order),
                           if (canCancel) _buildCancelOrderButton(order),
                         ],
                       ),
@@ -545,95 +543,6 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     );
   }
 
-  // Sipariş tamamlama butonu
-  Widget _buildCompleteOrderButton(Order order) {
-    return SizedBox(
-      height: 36,
-      child: Consumer<OrderListViewModel>(
-        builder: (context, viewModel, _) {
-          return ElevatedButton.icon(
-            onPressed: viewModel.isLoading
-                ? null  // Yükleme sırasında devre dışı bırak
-                : () => _completeOrder(order.orderID),
-            icon: const Icon(Icons.check_circle_outline, size: 16),
-            label: const Text('Tamamla', style: TextStyle(fontSize: 12)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(AppConstants.primaryColorValue),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // Sipariş tamamlama işlevi
-  Future<void> _completeOrder(int orderID) async {
-    final viewModel = Provider.of<OrderListViewModel>(context, listen: false);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
-    // İşlem başlamadan önce bilgilendirme mesajı göster
-    scaffoldMessenger.showSnackBar(
-      const SnackBar(
-        content: Text('Sipariş tamamlanıyor...'),
-        duration: Duration(seconds: 1),
-      ),
-    );
-    
-    try {
-      final result = await viewModel.completeOrder(
-        userToken: widget.userToken,
-        compID: widget.compID,
-        orderID: orderID,
-      );
-      
-      if (result) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(viewModel.successMessage ?? 'Sipariş başarıyla tamamlandı'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } else {
-        String errorMessage = viewModel.errorMessage ?? 'İşlem sırasında bir hata oluştu';
-        
-        // PHP hatası gibi görünen mesajlar için özelleştirilmiş mesaj
-        if (errorMessage.contains('Uncaught TypeError') || errorMessage.contains('current()')) {
-          errorMessage = 'Sunucu tarafında teknik bir sorun oluştu. Lütfen sistem yöneticinizle iletişime geçin.';
-        }
-        
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Tamam',
-              textColor: Colors.white,
-              onPressed: () {
-                scaffoldMessenger.hideCurrentSnackBar();
-              },
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Beklenmeyen bir hata oluştu: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-
   // Sipariş iptal butonu
   Widget _buildCancelOrderButton(Order order) {
     return SizedBox(
@@ -750,6 +659,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
           duration: const Duration(seconds: 2),
         ),
       );
+      _loadData(); // Sipariş listesini yenile
     } else {
       scaffoldMessenger.showSnackBar(
         SnackBar(
