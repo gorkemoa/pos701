@@ -174,6 +174,14 @@ class _LoginViewState extends State<LoginView> {
                                     _passwordController.text,
                                   );
                                   if (success) {
+                                    // Beni hatırla seçeneği işlendi
+                                    if (viewModel.rememberMe) {
+                                      // Kullanıcı adı kaydedildi
+                                    } else {
+                                      // Beni hatırla seçili değilse, kaydedilmiş kullanıcı adını temizle
+                                      await viewModel.clearSavedUsername();
+                                    }
+                                    
                                     // Kullanıcı bilgilerini yükle
                                     final userViewModel = Provider.of<UserViewModel>(
                                       context,
