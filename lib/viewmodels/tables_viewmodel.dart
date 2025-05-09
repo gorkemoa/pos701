@@ -253,7 +253,9 @@ class TablesViewModel extends ChangeNotifier {
         bool anyChanges = false;
         
         for (var region in _tablesResponse!.data.regions) {
-          for (var table in region.tables) {
+          for (int i = 0; i < region.tables.length; i++) {
+            var table = region.tables[i];
+            
             // Masa ID'si aktif sipariş listesinde var mı kontrol et
             bool shouldBeActive = activeOrderIds.contains(table.orderID) && table.orderID > 0;
             
@@ -267,23 +269,71 @@ class TablesViewModel extends ChangeNotifier {
             debugPrint('  - Mevcut aktiflik: ${table.isActive}, Olması gereken: $shouldBeActive');
             debugPrint('  - Mevcut birleşik: ${table.isMerged}, Olması gereken: $shouldBeMerged');
             
-            // Eğer aktiflik veya birleştirilmiş durumu farklıysa
+            // Eğer aktiflik veya birleştirilmiş durumu farklıysa, tüm veriyi yeniden çekmek yerine burada düzeltelim
             if (table.isActive != shouldBeActive || table.isMerged != shouldBeMerged) {
               debugPrint('Masa ${table.tableName} (ID: ${table.tableID}) - ' +
                        'Mevcut aktiflik: ${table.isActive}, Olması gereken: $shouldBeActive - ' +
                        'Mevcut birleştirilmiş: ${table.isMerged}, Olması gereken: $shouldBeMerged');
-              anyChanges = true;
-              break;
+                       
+              // Modeli doğrudan güncelle
+              try {
+                // Yeni bir TableItem oluşturarak güncelleme yapalım
+                final updatedTable = TableItem(
+                  tableID: table.tableID,
+                  orderID: table.orderID,
+                  tableName: table.tableName,
+                  orderAmount: table.orderAmount,
+                  isActive: shouldBeActive,
+                  isMerged: shouldBeMerged,
+                  mergedTableIDs: shouldBeMerged ? (mergedTablesMap[table.tableID] ?? []) : [],
+                );
+                
+                // TablesResponse içindeki TableItem'ı güncelle
+                // Bu derin bir kopyalama yaparak immutable objeleri günceller
+                final updatedRegions = _tablesResponse!.data.regions.map((r) {
+                  if (r.regionID == region.regionID) {
+                    final updatedTables = List<TableItem>.from(r.tables);
+                    updatedTables[i] = updatedTable;
+                    
+                    return Region(
+                      regionID: r.regionID,
+                      regionName: r.regionName,
+                      totalOrder: r.totalOrder,
+                      tables: updatedTables,
+                    );
+                  }
+                  return r;
+                }).toList();
+                
+                // TablesResponse'ı güncelle
+                _tablesResponse = TablesResponse(
+                  error: _tablesResponse!.error,
+                  success: _tablesResponse!.success,
+                  data: TablesData(regions: updatedRegions),
+                  message: _tablesResponse!.message,
+                );
+                
+                debugPrint('⚡ Masa ${table.tableName} verisi yerel olarak güncellendi: ' +
+                         'Aktiflik: $shouldBeActive, Birleştirilmiş: $shouldBeMerged');
+                
+                // Değişiklik yapıldığını işaretle
+                anyChanges = true;
+              } catch (e) {
+                debugPrint('❌ Masa ${table.tableName} güncelleme hatası: $e');
+                // Hata durumunda tam veri güncelleme işaretini koy
+                anyChanges = true;
+                break;
+              }
             }
           }
           if (anyChanges) break;
         }
         
-        // Eğer değişiklik varsa, bunu sadece bildir ama tam veri güncellemesi yapma
+        // Değişiklik varsa UI'ı güncelle
         if (anyChanges) {
-          debugPrint('Masa aktifliğinde veya birleştirilmiş durumda değişiklik tespit edildi, tam veri yenileniyor...');
-          // Tam veri güncellemesi yap
-          return await refreshTablesDataSilently(userToken: userToken, compID: compID);
+          debugPrint('Masa durumları yerel olarak güncellendi, UI yenileniyor...');
+          notifyListeners();
+          return true;
         }
         
         _jsonErrorCount = 0; // Başarılı işlem - hata sayacını sıfırla
@@ -367,6 +417,77 @@ class TablesViewModel extends ChangeNotifier {
         _successMessage = step == 'merged' 
             ? (response['success_message'] ?? 'Masalar başarıyla birleştirildi')
             : (response['success_message'] ?? 'Masalar başarıyla ayrıldı');
+        
+        // İşlem başarılı oldu, hemen masa verilerini güncelle
+        debugPrint('👍 ${step == "merged" ? "Birleştirme" : "Ayırma"} işlemi başarılı, masa verilerini güncelleniyor...');
+        
+        // Eğer yanıtta veri varsa, onu kullanarak masaları güncelle
+        if (response.containsKey('data') && response['data'] != null) {
+          Map<String, dynamic> data = response['data'] as Map<String, dynamic>;
+          
+          // Eğer sipariş verisi döndüyse ve birleştirilen masalar bilgisi varsa
+          if (data.containsKey('order') && data['order'] is Map) {
+            Map<String, dynamic> order = data['order'] as Map<String, dynamic>;
+            
+            if (order.containsKey('mergeTables')) {
+              var mergedTables = order['mergeTables'];
+              debugPrint('📊 API yanıtından birleştirilmiş masalar: $mergedTables');
+              
+              // Birleştirilmiş masa ID'lerini liste olarak al
+              List<int> mergedTableIds = [];
+              if (mergedTables is List) {
+                for (var item in mergedTables) {
+                  if (item is int) {
+                    mergedTableIds.add(item);
+                  } else if (item is String) {
+                    try {
+                      mergedTableIds.add(int.parse(item));
+                    } catch (e) {
+                      // Geçersiz ID'leri atla
+                    }
+                  } else if (item is Map && item.containsKey('table_id')) {
+                    try {
+                      mergedTableIds.add(int.parse(item['table_id'].toString()));
+                    } catch (e) {
+                      // Geçersiz ID'leri atla
+                    }
+                  }
+                }
+              }
+              
+              debugPrint('📊 İşlenen birleştirilmiş masa ID\'leri: $mergedTableIds');
+              
+              // Ana masayı güncelle (birleştirme için)
+              if (step == 'merged' && !mergedTableIds.isEmpty) {
+                // Ana masayı bul ve güncelle
+                _updateTableMergeStatus(mainTableID, true, mergedTableIds);
+                
+                // Birleştirilen masaları da güncelle
+                for (var tableId in mergedTableIds) {
+                  _updateTableMergeStatus(tableId, false, []);
+                }
+              } 
+              // Ayırma işlemi için
+              else if (step == 'unmerged') {
+                // Ana masanın birleştirilmiş durumunu kaldır
+                _updateTableMergeStatus(mainTableID, false, []);
+                
+                // Ayırma işleminde, eski birleştirilmiş masaların da durumunu güncelle
+                for (var region in regions) {
+                  for (var table in region.tables) {
+                    if (table.mergedTableIDs.contains(mainTableID)) {
+                      _updateTableMergeStatus(table.tableID, false, []);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Her durumda tam veri güncellemesi yap - bu, olası tutarsızlıkları çözer
+        await refreshTablesDataSilently(userToken: userToken, compID: compID);
+        
         notifyListeners();
         return true;
       } else {
@@ -384,6 +505,61 @@ class TablesViewModel extends ChangeNotifier {
     }
   }
   
+  // Yardımcı metod - Tabloda birleştirme durumunu günceller
+  void _updateTableMergeStatus(int tableID, bool isMerged, List<int> mergedTableIDs) {
+    debugPrint('💫 Masa ID:$tableID için birleştirme durumu güncelleniyor - isMerged:$isMerged, mergedTableIDs:$mergedTableIDs');
+    
+    // Bölgeleri ve masaları dolaş
+    for (int regionIndex = 0; regionIndex < regions.length; regionIndex++) {
+      final region = regions[regionIndex];
+      for (int tableIndex = 0; tableIndex < region.tables.length; tableIndex++) {
+        final table = region.tables[tableIndex];
+        
+        if (table.tableID == tableID) {
+          // Tabloyu bulduk, şimdi güncellememiz gerekiyor
+          // Immutable nesnelerle çalıştığımız için, güncellenmiş bölgeler listesi oluşturmamız gerekiyor
+          final updatedRegions = List<Region>.from(regions);
+          
+          // Bu bölgedeki tabloları güncelle
+          final updatedTables = List<TableItem>.from(region.tables);
+          
+          // Yeni TableItem oluştur (tüm özellikleri koru, sadece isMerged ve mergedTableIDs'yi güncelle)
+          updatedTables[tableIndex] = TableItem(
+            tableID: table.tableID,
+            orderID: table.orderID,
+            tableName: table.tableName,
+            orderAmount: table.orderAmount,
+            isActive: table.isActive,
+            isMerged: isMerged,
+            mergedTableIDs: mergedTableIDs,
+          );
+          
+          // Güncellenmiş tablolar listesiyle yeni Region oluştur
+          updatedRegions[regionIndex] = Region(
+            regionID: region.regionID,
+            regionName: region.regionName,
+            totalOrder: region.totalOrder,
+            tables: updatedTables,
+          );
+          
+          // TablesResponse'ı güncelle
+          if (_tablesResponse != null) {
+            _tablesResponse = TablesResponse(
+              error: _tablesResponse!.error,
+              success: _tablesResponse!.success,
+              data: TablesData(regions: updatedRegions),
+              message: _tablesResponse!.message,
+            );
+          }
+          
+          debugPrint('✅ Masa ID:$tableID için birleştirme durumu güncellendi');
+          return;
+        }
+      }
+    }
+    
+    debugPrint('❌ Masa ID:$tableID bulunamadı, güncelleme yapılamadı');
+  }
 
   Future<bool> transferOrder({
     required String userToken,
@@ -436,6 +612,22 @@ class TablesViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
+      // Ayırma işlemi öncesinde, mevcut birleştirilmiş masaları kaydet
+      List<int> currentMergedTables = [];
+      
+      // Bölgeleri ve masaları dolaş, ayırılacak masanın birleştirilmiş masalarını bul
+      for (var region in regions) {
+        for (var table in region.tables) {
+          if (table.tableID == tableID && table.isMerged) {
+            currentMergedTables = List<int>.from(table.mergedTableIDs);
+            debugPrint('🔍 Ayırılacak masa ID:$tableID için mevcut birleştirilmiş masalar: $currentMergedTables');
+            break;
+          }
+        }
+      }
+      
+      debugPrint('⚙️ Masa ayırma API çağrısı yapılıyor - Masa ID: $tableID, Sipariş ID: $orderID');
+      
       final response = await _tableService.mergeTables(
         userToken: userToken,
         compID: compID,
@@ -449,6 +641,21 @@ class TablesViewModel extends ChangeNotifier {
       
       if (response['success'] == true) {
         _successMessage = response['success_message'] ?? 'Masalar başarıyla ayrıldı';
+        
+        // Önce ayrılan masaların durumunu güncelle (API çağrısı başarılı oldu)
+        debugPrint('👍 Masa ayırma işlemi başarılı, masa durumları güncelleniyor...');
+        
+        // Ana masayı güncelle - artık birleştirilmiş masa değil
+        _updateTableMergeStatus(tableID, false, []);
+        
+        // Önceden birleştirilmiş olan tüm masaları güncelle
+        for (var mergedTableID in currentMergedTables) {
+          _updateTableMergeStatus(mergedTableID, false, []);
+        }
+        
+        // Ek kontrol olarak veri güncellemesini de yap
+        await refreshTablesDataSilently(userToken: userToken, compID: compID);
+        
         notifyListeners();
         return true;
       } else {
