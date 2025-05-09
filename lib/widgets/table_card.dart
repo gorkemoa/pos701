@@ -309,16 +309,43 @@ class TableCard extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black54, // Yarı şeffaf arka plan
       builder: (ctx) {
         loadingContext = ctx;
-        return const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Ödeme işlemi gerçekleştiriliyor...', style: TextStyle(fontSize: 15)),
-            ],
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          elevation: 8.0,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Ödeme işlemi gerçekleştiriliyor...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Bu işlem birkaç saniye sürebilir',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -459,16 +486,43 @@ class TableCard extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black54, // Yarı şeffaf arka plan
       builder: (ctx) {
         loadingContext = ctx;
-        return const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Masalar ayrılıyor...', style: TextStyle(fontSize: 15)),
-            ],
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          elevation: 8.0,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Masalar ayrılıyor...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Bu işlem birkaç saniye sürebilir',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -585,27 +639,65 @@ class TableCard extends StatelessWidget {
           // Küçük bir gecikme ekle
           await Future.delayed(const Duration(milliseconds: 100));
           
-          // Yükleniyor diyaloğu göster
+          // Yükleniyor göstergesini ekranın ortasında göster
           if (!context.mounted) return;
           
-          BuildContext? loadingContext;
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) {
-              loadingContext = ctx;
-              return const AlertDialog(
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('Masa değiştiriliyor...', style: TextStyle(fontSize: 15)),
-                  ],
+          // Overlay olarak kullanacağımız widget'ı göster (şeffaf)
+          OverlayEntry? loadingOverlay;
+          loadingOverlay = OverlayEntry(
+            builder: (ctx) => Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CircularProgressIndicator(),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Masa değiştiriliyor...',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Bu işlem birkaç saniye sürebilir',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              );
-            },
+              ),
+            ),
           );
+
+          // Overlay'i göster
+          if (context.mounted) {
+            Overlay.of(context).insert(loadingOverlay);
+          }
 
           try {
             // Masa değiştirme API çağrısı
@@ -616,12 +708,9 @@ class TableCard extends StatelessWidget {
               tableID: selectedTable.tableID,
             );
             
-            // Yükleniyor diyaloğunu kapat
-            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
-              // ignore: use_build_context_synchronously
-              Navigator.of(loadingContext!).pop();
-              loadingContext = null;
-            }
+            // Yükleniyor overlay'ini kaldır
+            loadingOverlay?.remove();
+            loadingOverlay = null;
             
             // Küçük bir gecikme ekle
             await Future.delayed(const Duration(milliseconds: 300));
@@ -634,19 +723,12 @@ class TableCard extends StatelessWidget {
                 SnackBar(content: Text(viewModel.successMessage ?? 'Masa başarıyla değiştirildi')),
               );
               
-              // Masalar sayfasına yönlendir
+              // Mevcut sayfadaki verileri güncelle, anasayfaya yönlendirme yapma
               if (context.mounted) {
                 // ignore: use_build_context_synchronously
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TablesView(
-                      userToken: userToken,
-                      compID: compID,
-                      title: 'Masalar',
-                    ),
-                  ),
-                  (route) => false, // Tüm geçmiş sayfaları temizle
+                await viewModel.refreshTablesDataSilently(
+                  userToken: userToken,
+                  compID: compID,
                 );
               }
             } else {
@@ -663,12 +745,9 @@ class TableCard extends StatelessWidget {
           } catch (e) {
             debugPrint('Masa değiştirme hatası: $e');
             
-            // Yükleniyor diyaloğunu kapat (hata durumunda da)
-            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
-              // ignore: use_build_context_synchronously
-              Navigator.of(loadingContext!).pop();
-              loadingContext = null;
-            }
+            // Yükleniyor overlay'ini kaldır (hata durumunda da)
+            loadingOverlay?.remove();
+            loadingOverlay = null;
             
             // Küçük bir gecikme ekle
             await Future.delayed(const Duration(milliseconds: 300));
@@ -784,16 +863,43 @@ class TableCard extends StatelessWidget {
                         showDialog(
                           context: context,
                           barrierDismissible: false,
+                          barrierColor: Colors.black54, // Yarı şeffaf arka plan
                           builder: (ctx) {
                             loadingContext = ctx;
-                            return const AlertDialog(
-                              content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(),
-                                  SizedBox(height: 12),
-                                  Text('Adisyon aktarılıyor...', style: TextStyle(fontSize: 15)),
-                                ],
+                            return Dialog(
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16.0),
+                              ),
+                              elevation: 8.0,
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Adisyon aktarılıyor...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Bu işlem birkaç saniye sürebilir',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -944,16 +1050,43 @@ class TableCard extends StatelessWidget {
           showDialog(
             context: context,
             barrierDismissible: false,
+            barrierColor: Colors.black54, // Yarı şeffaf arka plan
             builder: (ctx) {
               loadingContext = ctx;
-              return const AlertDialog(
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('Masalar birleştiriliyor...', style: TextStyle(fontSize: 15)),
-                  ],
+              return Dialog(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                elevation: 8.0,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: CircularProgressIndicator(),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Masalar birleştiriliyor...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Bu işlem birkaç saniye sürebilir',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -1162,16 +1295,43 @@ class TableCard extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black54, // Yarı şeffaf arka plan
       builder: (ctx) {
         loadingContext = ctx;
-        return const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Sipariş iptal ediliyor...', style: TextStyle(fontSize: 15)),
-            ],
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          elevation: 8.0,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Sipariş iptal ediliyor...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Bu işlem birkaç saniye sürebilir',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
