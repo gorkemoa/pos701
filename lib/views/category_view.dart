@@ -1445,10 +1445,10 @@ class _CategoryViewState extends State<CategoryView> {
                                     // Seçili müşteri bilgisi
                                     if (_selectedCustomer != null)
                                       Container(
-                                        padding: const EdgeInsets.all(16),
+                                        padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
                                           color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(8),
                                           border: Border.all(
                                             color: Color(AppConstants.primaryColorValue),
                                             width: 1,
@@ -1464,14 +1464,12 @@ class _CategoryViewState extends State<CategoryView> {
                                                   'Seçili Müşteri:',
                                                   style: TextStyle(
                                                     fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
+                                                    fontSize: 14,
                                                     color: Color(AppConstants.primaryColorValue),
                                                   ),
                                                 ),
-                                                IconButton(
-                                                  icon: const Icon(Icons.clear),
-                                                  color: Color(AppConstants.primaryColorValue),
-                                                  onPressed: () {
+                                                GestureDetector(
+                                                  onTap: () {
                                                     setState(() {
                                                       _selectedCustomer = null;
                                                     });
@@ -1479,22 +1477,27 @@ class _CategoryViewState extends State<CategoryView> {
                                                       _selectedCustomer = null;
                                                     });
                                                   },
+                                                  child: Icon(
+                                                    Icons.clear,
+                                                    color: Color(AppConstants.primaryColorValue),
+                                                    size: 20,
+                                                  ),
                                                 ),
                                               ],
                                             ),
-                                            const SizedBox(height: 12),
+                                            const SizedBox(height: 8),
                                             Row(
                                               children: [
                                                 CircleAvatar(
                                                   backgroundColor: Color(AppConstants.primaryColorValue).withOpacity(0.2),
-                                                  radius: 28,
+                                                  radius: 18,
                                                   child: Icon(
                                                     Icons.person,
-                                                    size: 32,
+                                                    size: 20,
                                                     color: Color(AppConstants.primaryColorValue),
                                                   ),
                                                 ),
-                                                const SizedBox(width: 16),
+                                                const SizedBox(width: 10),
                                                 Expanded(
                                                   child: Column(
                                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1502,30 +1505,50 @@ class _CategoryViewState extends State<CategoryView> {
                                                       Text(
                                                         _selectedCustomer!.custName,
                                                         style: const TextStyle(
-                                                          fontSize: 18,
+                                                          fontSize: 14,
                                                           fontWeight: FontWeight.bold,
                                                         ),
                                                       ),
-                                                      const SizedBox(height: 6),
+                                                      const SizedBox(height: 3),
                                                       Row(
                                                         children: [
-                                                          const Icon(Icons.phone, size: 16, color: Colors.grey),
-                                                          const SizedBox(width: 4),
+                                                          const Icon(Icons.phone, size: 12, color: Colors.grey),
+                                                          const SizedBox(width: 2),
                                                           Text(
                                                             _selectedCustomer!.custPhone,
-                                                            style: const TextStyle(fontSize: 14),
+                                                            style: const TextStyle(fontSize: 11),
                                                           ),
                                                         ],
                                                       ),
                                                       if (_selectedCustomer!.custEmail.isNotEmpty) ...[
-                                                        const SizedBox(height: 4),
+                                                        const SizedBox(height: 2),
                                                         Row(
                                                           children: [
-                                                            const Icon(Icons.email, size: 16, color: Colors.grey),
-                                                            const SizedBox(width: 4),
-                                                            Text(
-                                                              _selectedCustomer!.custEmail,
-                                                              style: const TextStyle(fontSize: 14),
+                                                            const Icon(Icons.email, size: 12, color: Colors.grey),
+                                                            const SizedBox(width: 2),
+                                                            Expanded(
+                                                              child: Text(
+                                                                _selectedCustomer!.custEmail,
+                                                                style: const TextStyle(fontSize: 11),
+                                                                overflow: TextOverflow.ellipsis,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                      if (_selectedCustomer!.addresses.isNotEmpty) ...[
+                                                        const SizedBox(height: 2),
+                                                        Row(
+                                                          children: [
+                                                            const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                                                            const SizedBox(width: 2),
+                                                            Expanded(
+                                                              child: Text(
+                                                                '${_selectedCustomer!.addresses.first.adrTitle}: ${_selectedCustomer!.addresses.first.adrAddress}',
+                                                                style: const TextStyle(fontSize: 11),
+                                                                overflow: TextOverflow.ellipsis,
+                                                                maxLines: 1,
+                                                              ),
                                                             ),
                                                           ],
                                                         ),
@@ -1662,45 +1685,65 @@ class _CategoryViewState extends State<CategoryView> {
                                                             ),
                                                           ),
                                                           const SizedBox(width: 16),
-                                                          Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                Text(
-                                                                  customer.custName,
-                                                                  style: TextStyle(
-                                                                    fontWeight: FontWeight.bold, 
-                                                                    fontSize: 16,
-                                                                    color: isSelected ? Color(AppConstants.primaryColorValue) : Colors.black,
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(height: 4),
-                                                                Row(
-                                                                  children: [
-                                                                    Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
-                                                                    const SizedBox(width: 4),
-                                                                    Text(
-                                                                      customer.custPhone,
-                                                                      style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                                                                                                                      Expanded(
+                                                              child: Column(
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: [
+                                                                  Text(
+                                                                    customer.custName,
+                                                                    style: TextStyle(
+                                                                      fontWeight: FontWeight.bold, 
+                                                                      fontSize: 16,
+                                                                      color: isSelected ? Color(AppConstants.primaryColorValue) : Colors.black,
                                                                     ),
-                                                                  ],
-                                                                ),
-                                                                if (customer.custEmail.isNotEmpty) ...[
+                                                                  ),
                                                                   const SizedBox(height: 4),
                                                                   Row(
                                                                     children: [
-                                                                      Icon(Icons.email, size: 14, color: Colors.grey.shade600),
+                                                                      Icon(Icons.phone, size: 14, color: Colors.grey.shade600),
                                                                       const SizedBox(width: 4),
                                                                       Text(
-                                                                        customer.custEmail,
+                                                                        customer.custPhone,
                                                                         style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
                                                                       ),
                                                                     ],
                                                                   ),
+                                                                  if (customer.custEmail.isNotEmpty) ...[
+                                                                    const SizedBox(height: 4),
+                                                                    Row(
+                                                                      children: [
+                                                                        Icon(Icons.email, size: 14, color: Colors.grey.shade600),
+                                                                        const SizedBox(width: 4),
+                                                                        Expanded(
+                                                                          child: Text(
+                                                                            customer.custEmail,
+                                                                            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                                                                            overflow: TextOverflow.ellipsis,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ],
+                                                                  if (customer.addresses.isNotEmpty) ...[
+                                                                    const SizedBox(height: 4),
+                                                                    Row(
+                                                                      children: [
+                                                                        Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
+                                                                        const SizedBox(width: 4),
+                                                                        Expanded(
+                                                                          child: Text(
+                                                                            '${customer.addresses.first.adrTitle}: ${customer.addresses.first.adrAddress}',
+                                                                            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                                                                            overflow: TextOverflow.ellipsis,
+                                                                            maxLines: 1,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ],
                                                                 ],
-                                                              ],
+                                                              ),
                                                             ),
-                                                          ),
                                                           Icon(
                                                             isSelected ? Icons.check_circle : Icons.arrow_forward_ios,
                                                             color: isSelected ? Color(AppConstants.primaryColorValue) : Colors.grey,

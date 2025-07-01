@@ -395,250 +395,252 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       return const Center(child: Text('Ürün detayları bulunamadı'));
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Ürün Başlığı ve Fiyat
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-          Text(
-            _productDetail!.postTitle,
-            style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_productDetail!.variants.isNotEmpty) 
-                    Row(
-                      children: [
-                        Text(
-                          'Seçili Porsiyon: ',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        Text(
-                          _productDetail!.variants[_selectedPorsiyonIndex].proUnit,
-                          style: TextStyle(
-                            fontSize: 13,
-              fontWeight: FontWeight.bold,
-                            color: Color(AppConstants.primaryColorValue),
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Ürün Başlığı ve Fiyat
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Porsiyonlar
-          if (_productDetail!.variants.length > 1) // Sadece birden fazla porsiyon varsa göster
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.restaurant, size: 14, color: Color(AppConstants.primaryColorValue)),
-                    const SizedBox(width: 4),
-          const Text(
-                      'Porsiyon Seçimi',
-            style: TextStyle(
-                        fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+            Text(
+              _productDetail!.postTitle,
+              style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_productDetail!.variants.isNotEmpty) 
+                      Row(
+                        children: [
+                          Text(
+                            'Seçili Porsiyon: ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          Text(
+                            _productDetail!.variants[_selectedPorsiyonIndex].proUnit,
+                            style: TextStyle(
+                              fontSize: 13,
+                fontWeight: FontWeight.bold,
+                              color: Color(AppConstants.primaryColorValue),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                // Sadeleştirilmiş Porsiyon Seçimi
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      isExpanded: true,
-                      value: _selectedPorsiyonIndex,
-                      icon: const Icon(Icons.arrow_drop_down),
-                      elevation: 1,
-                      style: TextStyle(color: Colors.black87, fontSize: 14),
-                      onChanged: (int? newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _selectedPorsiyonIndex = newValue;
-                            _updatePriceController();
-                          });
-                        }
-                      },
-                      items: _productDetail!.variants.asMap().entries.map<DropdownMenuItem<int>>((entry) {
-                        int index = entry.key;
-                        var porsiyon = entry.value;
-                        return DropdownMenuItem<int>(
-                          value: index,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(porsiyon.proUnit),
-                              Spacer(),
-                              Text(
-                                '₺${porsiyon.proPrice.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(AppConstants.primaryColorValue),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          
-          // Özel Fiyat Alanı
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.monetization_on, size: 14, color: Color(AppConstants.primaryColorValue)),
-                       SizedBox(width: 4),
-                       Text(
-            'Ürün Fiyatı',
-            style: TextStyle(
-                          fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-                      ),
-                    ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _priceController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [NumericTextFormatter()],
-                          style: TextStyle(fontSize: 14),
-                  decoration: InputDecoration(
-                    labelText: 'Fiyat (₺)',
-                            labelStyle: TextStyle(fontSize: 13),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            prefixIcon: Icon(Icons.monetization_on, size: 18),
-                    suffixText: '₺',
-                    enabled: _isCustomPrice,
-                    filled: _isCustomPrice,
-                    fillColor: _isCustomPrice ? Colors.yellow.shade50 : null,
-                  ),
-                ),
-              ),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        height: 40,
-                        child: TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isCustomPrice = !_isCustomPrice;
-                    if (!_isCustomPrice) {
-                      // Özel fiyat kaldırılırsa orijinal fiyata geri dön
-                      _updatePriceController();
-                    }
-                  });
-                },
-                          icon: Icon(_isCustomPrice ? Icons.lock_open : Icons.lock, size: 16),
-                          label: Text(
-                            _isCustomPrice ? 'Kilidi Kaldır' : 'Değiştir',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          style: TextButton.styleFrom(
-                            backgroundColor: _isCustomPrice ? Colors.orange.shade100 : Colors.grey.shade100,
-                            foregroundColor: _isCustomPrice ? Colors.orange.shade800 : Colors.black87,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                ),
-              ),
-            ],
-          ),
-          if (_isCustomPrice)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                        'Özel fiyat girişi aktif.',
-                style: TextStyle(
-                          fontSize: 11,
-                  color: Colors.orange.shade800,
-                  fontStyle: FontStyle.italic,
-                ),
               ),
             ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Ürün Notu Alanı
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
+            const SizedBox(height: 16),
+            
+            // Porsiyonlar
+            if (_productDetail!.variants.length > 1) // Sadece birden fazla porsiyon varsa göster
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.note, size: 14, color: Color(AppConstants.primaryColorValue)),
+                      Icon(Icons.restaurant, size: 14, color: Color(AppConstants.primaryColorValue)),
                       const SizedBox(width: 4),
-          const Text(
-            'Ürün Notu',
-            style: TextStyle(
+              const Text(
+                        'Porsiyon Seçimi',
+                style: TextStyle(
                           fontSize: 14,
-              fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Sadeleştirilmiş Porsiyon Seçimi
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        isExpanded: true,
+                        value: _selectedPorsiyonIndex,
+                        icon: const Icon(Icons.arrow_drop_down),
+                        elevation: 1,
+                        style: TextStyle(color: Colors.black87, fontSize: 14),
+                        onChanged: (int? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedPorsiyonIndex = newValue;
+                              _updatePriceController();
+                            });
+                          }
+                        },
+                        items: _productDetail!.variants.asMap().entries.map<DropdownMenuItem<int>>((entry) {
+                          int index = entry.key;
+                          var porsiyon = entry.value;
+                          return DropdownMenuItem<int>(
+                            value: index,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(porsiyon.proUnit),
+                                Spacer(),
+                                Text(
+                                  '₺${porsiyon.proPrice.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(AppConstants.primaryColorValue),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            
+            // Özel Fiyat Alanı
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.monetization_on, size: 14, color: Color(AppConstants.primaryColorValue)),
+                         SizedBox(width: 4),
+                         Text(
+              'Ürün Fiyatı',
+              style: TextStyle(
+                        fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _priceController,
+                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [NumericTextFormatter()],
+                            style: TextStyle(fontSize: 14),
+                            decoration: InputDecoration(
+                              labelText: 'Fiyat (₺)',
+                              labelStyle: TextStyle(fontSize: 13),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              prefixIcon: Icon(Icons.monetization_on, size: 18),
+                              suffixText: '₺',
+                              enabled: _isCustomPrice,
+                              filled: _isCustomPrice,
+                              fillColor: _isCustomPrice ? Colors.yellow.shade50 : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                          height: 40,
+                          child: TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _isCustomPrice = !_isCustomPrice;
+                      if (!_isCustomPrice) {
+                        // Özel fiyat kaldırılırsa orijinal fiyata geri dön
+                        _updatePriceController();
+                      }
+                    });
+                  },
+                            icon: Icon(_isCustomPrice ? Icons.lock_open : Icons.lock, size: 16),
+                            label: Text(
+                              _isCustomPrice ? 'Kilidi Kaldır' : 'Değiştir',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: _isCustomPrice ? Colors.orange.shade100 : Colors.grey.shade100,
+                              foregroundColor: _isCustomPrice ? Colors.orange.shade800 : Colors.black87,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                  ),
+                        ),
+                      ],
+                    ),
+                    if (_isCustomPrice)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Özel fiyat girişi aktif.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.orange.shade800,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
+            const SizedBox(height: 16),
+            
+            // Ürün Notu Alanı
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.note, size: 14, color: Color(AppConstants.primaryColorValue)),
+                        const SizedBox(width: 4),
+            const Text(
+              'Ürün Notu',
+              style: TextStyle(
+                        fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
                       ),
                     ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _noteController,
-                    style: TextStyle(fontSize: 13),
-                    decoration: InputDecoration(
-              hintText: 'Ürün ile ilgili eklemek istediğiniz notları yazın',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _noteController,
+                            style: TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                      hintText: 'Ürün ile ilgili eklemek istediğiniz notları yazın',
                       hintStyle: TextStyle(fontSize: 12),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       border: OutlineInputBorder(
@@ -650,84 +652,89 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          
-          // İkram Seçeneği
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-          Row(
-            children: [
-              Checkbox(
-                value: _isGift,
-                activeColor: Color(AppConstants.primaryColorValue),
-                        visualDensity: VisualDensity.compact,
-                onChanged: (value) {
-                  setState(() {
-                    _isGift = value ?? false;
-                  });
-                },
+            const SizedBox(height: 16),
+            
+            // İkram Seçeneği
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              const Text(
-                'İkram olarak işaretle',
-                style: TextStyle(
-                          fontSize: 13,
-                  fontWeight: FontWeight.bold,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+            Row(
+              children: [
+                Checkbox(
+                  value: _isGift,
+                  activeColor: Color(AppConstants.primaryColorValue),
+                          visualDensity: VisualDensity.compact,
+                  onChanged: (value) {
+                    setState(() {
+                      _isGift = value ?? false;
+                    });
+                  },
                 ),
-              ),
-              const Spacer(),
-              if (_isGift)
-                Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                              Icon(Icons.card_giftcard, color: Colors.red.shade400, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        'İkram',
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                        ),
-                      ),
-                    ],
+                const Text(
+                  'İkram olarak işaretle',
+                  style: TextStyle(
+                            fontSize: 13,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-            ],
-          ),
-          if (_isGift)
-            Padding(
-                      padding: const EdgeInsets.only(left: 40, top: 4),
-              child: Text(
-                        'Bu ürün ikram olarak işaretlenecek.',
-                style: TextStyle(
-                          fontSize: 11,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-        ],
-      ),
-            ),
+                const Spacer(),
+                if (_isGift)
+                  Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
                     ),
-                ],
+                    child: Row(
+                      children: [
+                                Icon(Icons.card_giftcard, color: Colors.red.shade400, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'İkram',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            if (_isGift)
+              Padding(
+                        padding: const EdgeInsets.only(left: 40, top: 4),
+                child: Text(
+                          'Bu ürün ikram olarak işaretlenecek.',
+                  style: TextStyle(
+                            fontSize: 11,
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ),
-    );
+          ],
+        ),
+              ),
+            ),
+          ],
+          ),
+        ),
+      );
+    
+        
+        
+  
   }
 
   Widget _buildBottomBar() {
