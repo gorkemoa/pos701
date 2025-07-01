@@ -4,8 +4,7 @@ allprojects {
         mavenCentral()
     }
     
-    // Build dizinini Flutter'ın beklediği konuma ayarla
-    buildDir = File(rootProject.projectDir, "../build/android/${project.name}")
+    // Build directory configuration removed as it was causing issues
 }
 
 // Build directory configuration removed - was causing path issues
