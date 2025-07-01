@@ -39,6 +39,17 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    
+    // Flutter'ın beklediği konuma APK çıktısını yönlendir
+    tasks.withType<com.android.build.gradle.tasks.PackageAndroidArtifact> {
+        finalizedBy("copyDebugApk")
+    }
+}
+
+tasks.register<Copy>("copyDebugApk") {
+    from("${buildDir}/outputs/apk/debug")
+    into("${rootProject.projectDir}/../build/app/outputs/flutter-apk")
+    include("*.apk")
 }
 
 flutter {
