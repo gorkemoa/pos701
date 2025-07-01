@@ -11,7 +11,7 @@ import 'package:pos701/views/login_view.dart';
 import 'package:pos701/services/api_service.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({Key? key}) : super(key: key);
+  const HomeView({super.key});
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -189,6 +189,7 @@ class _HomeViewState extends State<HomeView> {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
+                                // ignore: deprecated_member_use
                                 color: Colors.black.withOpacity(0.05),
                                 spreadRadius: 1,
                                 blurRadius: 5,
@@ -287,9 +288,6 @@ class _HomeViewState extends State<HomeView> {
         LineChartData(
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              tooltipBgColor: Colors.blueGrey.shade800,
-              tooltipRoundedRadius: 8,
-              tooltipPadding: const EdgeInsets.all(8),
               getTooltipItems: (List<LineBarSpot> touchedSpots) {
                 return touchedSpots.map((LineBarSpot touchedSpot) {
                   final int hour = touchedSpot.x.toInt();
@@ -495,9 +493,6 @@ class _HomeViewState extends State<HomeView> {
               barTouchData: BarTouchData(
                 enabled: true,
                 touchTooltipData: BarTouchTooltipData(
-                  tooltipBgColor: Colors.blueGrey.shade800,
-                  tooltipRoundedRadius: 8,
-                  tooltipPadding: const EdgeInsets.all(10),
                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
                     final payment = payments[groupIndex];
                     final percentage = totalAmount > 0 

@@ -1,34 +1,18 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:7.3.0")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.10")
-        classpath("com.google.gms:google-services:4.4.1")  // Google Services Eklentisi
-    }
-}
-
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
+    
+    // Build dizinini Flutter'ın beklediği konuma ayarla
+    buildDir = File(rootProject.projectDir, "../build/android/${project.name}")
 }
 
-val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
-rootProject.layout.buildDirectory.value(newBuildDir)
-
-subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
-}
+// Build directory configuration removed - was causing path issues
 subprojects {
     project.evaluationDependsOn(":app")
 }
 
-tasks.register("clean", Delete::class) {
-    delete(rootProject.buildDir)
+tasks.register<Delete>("clean") {
+    delete(rootProject.layout.buildDirectory)
 }
