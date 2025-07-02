@@ -1,4 +1,4 @@
-platform :ios, '12.0'
+platform :ios, '13.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
@@ -22,13 +22,13 @@ end
 
 # Podhelper'ı doğrudan FLUTTER_ROOT üzerinden yükle
 require File.expand_path(
-  File.join(ENV['FLUTTER_ROOT'], 'packages', 'flutter_tools', 'bin', 'podhelper')
+  File.join(flutter_root, 'packages', 'flutter_tools', 'bin', 'podhelper')
 )
 
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  # Firebase ve diğer pod’ları statik framework + modüler headers ile yükle
+  # Firebase ve diğer pod'ları statik framework + modüler headers ile yükle
   use_frameworks! :linkage => :static
   use_modular_headers!
 
@@ -41,16 +41,16 @@ end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    # Flutter’ın ek ayarlarını en başta uygula
+    # Flutter'ın ek ayarlarını en başta uygula
     flutter_additional_ios_build_settings(target)
 
     target.build_configurations.each do |config|
-      # Modül oluşturmayı, uzantı api’sini, Swift sürümünü ve minimum iOS sürümünü ayarla
+      # Modül oluşturmayı, uzantı api'sini, Swift sürümünü ve minimum iOS sürümünü ayarla
       config.build_settings['DEFINES_MODULE'] = 'YES'
       config.build_settings['APPLICATION_EXTENSION_API_ONLY'] = 'NO'
       config.build_settings['SWIFT_VERSION'] = '5.0'
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
-      # Aşağıdaki satırlar Xcode’un non-modular header hatasını yoksayar
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      # Aşağıdaki satırlar Xcode'un non-modular header hatasını yoksayar
       config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
       config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
       config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'

@@ -145,19 +145,27 @@ void main() async {
             if (snapshot.connectionState == ConnectionState.waiting) {
               logger.d('Oturum durumu kontrol ediliyor...');
               return Scaffold(
-                backgroundColor: Color(AppConstants.primaryColorValue),
+                backgroundColor: Colors.white,
                 body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Stack(
                     children: [
-                      Image.asset(
-                        'assets/icon/app_icon.png',
-                        width: 120,
-                        height: 120,
+                      // Tam ekran kaplayan splash görseli
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/splash/powered_by.png',
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                      const SizedBox(height: 30),
-                      const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      // Alt kısımda loading indicator
+                      Positioned(
+                        bottom: 100,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF26B4E9)), // Mavi 7 rengi
+                          ),
+                        ),
                       ),
                     ],
                   ),

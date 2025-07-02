@@ -38,15 +38,13 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: const Text(
           'Kullanıcı Giriş Ekranı',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Color(AppConstants.primaryColorValue),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {},
-        ),
+
       ),
       body: Consumer<LoginViewModel>(
         builder: (context, viewModel, child) {
