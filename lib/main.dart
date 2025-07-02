@@ -31,8 +31,12 @@ bool _isFirebaseInitialized = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Uygulama sabitlerini başlat
+   await AppConstants.init();
+  
   final logger = AppLogger();
   logger.i('Uygulama başlatılıyor');
+  logger.i('Uygulama Versiyonu: ${AppConstants.appVersion} (${AppConstants.buildNumber})');
   logger.i('API Base URL: ${AppConstants.baseUrl}');
   
   // Firebase'i başlat

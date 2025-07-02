@@ -702,6 +702,18 @@ class TablesViewModel extends ChangeNotifier {
     ).toList();
   }
   
+  // Belirli bir masa ID'si için TableItem nesnesini döndürür
+  TableItem? getTableByID(int tableID) {
+    for (var region in regions) {
+      for (var table in region.tables) {
+        if (table.tableID == tableID) {
+          return table;
+        }
+      }
+    }
+    return null;
+  }
+  
   void clearMessages() {
     _errorMessage = null;
     _successMessage = null;

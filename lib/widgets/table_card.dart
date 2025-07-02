@@ -27,6 +27,7 @@ class TableCard extends StatelessWidget {
   void _showTableOptions(BuildContext context) {
     final TablesViewModel viewModel = Provider.of<TablesViewModel>(context, listen: false);
     
+    
     // Debug: Birleştirilmiş masa bilgisini konsola yazdir
     debugPrint('Masa bilgisi: ID=${table.tableID}, İsim=${table.tableName}');
     debugPrint('Birleştirilmiş mi: ${table.isMerged}');
@@ -62,7 +63,7 @@ class TableCard extends StatelessWidget {
                   bottomSheetContext,
                   icon: Icons.payment,
                   iconColor: Colors.red,
-                  text: 'Hızlı Öde (${table.orderAmount} ₺)',
+                  text: 'Hızlı Öde (${table.orderAmount})',
                   onTap: () {
                     Navigator.pop(bottomSheetContext);
                     // Hızlı ödeme işlemi
@@ -1023,6 +1024,17 @@ class TableCard extends StatelessWidget {
       return;
     }
 
+    // Ana masanın mevcut birleştirilmiş masalarını al
+    final List<TableItem> existingMergedTables = [];
+    if (table.isMerged && table.mergedTableIDs.isNotEmpty) {
+      for (int mergedTableID in table.mergedTableIDs) {
+        final mergedTable = viewModel.getTableByID(mergedTableID);
+        if (mergedTable != null) {
+          existingMergedTables.add(mergedTable);
+        }
+      }
+    }
+
     // Birleştirilecek masaların seçimi diyaloğunu göster
     if (!context.mounted) return;
     
@@ -1031,6 +1043,7 @@ class TableCard extends StatelessWidget {
       builder: (dialogContext) => TableMergeDialog(
         mainTable: table,
         availableTables: availableTables,
+        existingMergedTables: existingMergedTables,
         onTablesMerged: (selectedTables) async {
           // Seçilen masa ID'lerini al
           final selectedTableIds = selectedTables.map((t) => t.tableID).toList();
@@ -1524,13 +1537,14 @@ class TableCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 3),
                         child: Text(
-                          '₺${table.orderAmount}',
+                          '${table.orderAmount}',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
-                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

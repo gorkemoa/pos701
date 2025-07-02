@@ -1,6 +1,16 @@
+import 'package:package_info_plus/package_info_plus.dart';
+
 class AppConstants {
   static const String appName = 'POS701';
-  static const String appVersion = '2.1';
+  static late String appVersion;
+  static late String buildNumber;
+
+  static Future<void> init() async {
+    final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    appVersion = packageInfo.version;
+    buildNumber = packageInfo.buildNumber;
+  }
+
   static const String baseUrl = 'https://api.pos701.com/'; // API base URL bilginizi güncelleyin
   
   // API Endpoints

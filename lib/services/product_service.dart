@@ -35,12 +35,13 @@ class ProductService {
       
       _logger.d('Kategori yanıtı alındı. Status: ${response.statusCode}');
       _logger.d('HTTP Durum Kodu: ${response.statusCode}');
-      _logger.d('Yanıt Başlıkları: ${response.headers}');
+      //_logger.d('Yanıt Başlıkları: ${response.headers}');
       
       if (response.statusCode == 200 || response.statusCode == 410) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        _logger.d('Ham yanıt tipi: ${jsonResponse.runtimeType}');
-        _logger.d('Ham yanıt içeriği: $jsonResponse');
+        //_logger.d('Ham yanıt tipi: ${jsonResponse.runtimeType}');
+        
+        //_logger.d('Ham yanıt içeriği: $jsonResponse');
         
         final categoryResponse = CategoryResponse.fromJson(jsonResponse);
         return categoryResponse;

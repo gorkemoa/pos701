@@ -5,12 +5,14 @@ import 'package:pos701/constants/app_constants.dart';
 class TableMergeDialog extends StatefulWidget {
   final TableItem mainTable;
   final List<TableItem> availableTables;
+  final List<TableItem> existingMergedTables;
   final Function(List<TableItem>) onTablesMerged;
 
   const TableMergeDialog({
     Key? key,
     required this.mainTable,
     required this.availableTables,
+    this.existingMergedTables = const [],
     required this.onTablesMerged,
   }) : super(key: key);
 
@@ -138,7 +140,23 @@ class _TableMergeDialogState extends State<TableMergeDialog> {
             onPressed: () {
               Navigator.of(context).pop();
               Navigator.of(context).pop(); // Ana diyaloğu kapat
-              widget.onTablesMerged(_selectedTables);
+              
+              // Mevcut ve yeni seçilen masaları birleştir
+              final allMergedTables = [
+                ...widget.existingMergedTables,
+                ..._selectedTables
+              ];
+              
+              // Yinelenenleri önlemek için masaları ID'lerine göre benzersiz hale getir
+              final uniqueIds = <int>{};
+              final uniqueTables = <TableItem>[];
+              for (final table in allMergedTables) {
+                if (uniqueIds.add(table.tableID)) {
+                  uniqueTables.add(table);
+                }
+              }
+
+              widget.onTablesMerged(uniqueTables);
             },
             style: ElevatedButton.styleFrom(
               foregroundColor: Colors.white,
