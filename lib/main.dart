@@ -144,9 +144,23 @@ void main() async {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               logger.d('Oturum durumu kontrol ediliyor...');
-              return const Scaffold(
+              return Scaffold(
+                backgroundColor: Color(AppConstants.primaryColorValue),
                 body: Center(
-                  child: CircularProgressIndicator(),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/icon/app_icon.png',
+                        width: 120,
+                        height: 120,
+                      ),
+                      const SizedBox(height: 30),
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               );
             } else {
