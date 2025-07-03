@@ -234,7 +234,7 @@ class TablesViewModel extends ChangeNotifier {
           // Yeni JSON formatı: mergeTableID ve mergeTableName
           // Eski format: tableID ve tableName
           final id = item['mergeTableID'] ?? item['tableID'];
-          final name = item['mergeTableName'] ?? item['tableName'];
+          final name = item['tableName'];
           
           if (id != null) {
             final parsedId = int.parse(id.toString());
@@ -299,6 +299,7 @@ else {
                   isActive: shouldBeActive,
                   isMerged: shouldBeMerged,
                   mergedTableIDs: shouldBeMerged ? (mergedTablesMap[table.tableID] ?? []) : [],
+                  mergedTableNames: table.mergedTableNames,
                 );
                 
                 // TablesResponse içindeki TableItem'ı güncelle
@@ -545,6 +546,7 @@ else {
             isActive: table.isActive,
             isMerged: isMerged,
             mergedTableIDs: mergedTableIDs,
+            mergedTableNames: table.mergedTableNames,
           );
           
           // Güncellenmiş tablolar listesiyle yeni Region oluştur

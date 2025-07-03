@@ -409,7 +409,7 @@ class _TableUnmergeDialogState extends State<TableUnmergeDialog> {
                                   vertical: 8,
                                 ),
                                 title: Text(
-                                  table.tableName,
+                                  table.mergedTableNames?[table.tableID] ?? table.tableName,
                                   style: TextStyle(
                                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                     fontSize: 16,

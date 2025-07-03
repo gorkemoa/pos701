@@ -90,6 +90,7 @@ class TableItem {
   final bool isActive;
   final bool isMerged;
   final List<int> mergedTableIDs;
+  final Map<int, String>? mergedTableNames;
 
   TableItem({
     required this.tableID,
@@ -99,10 +100,12 @@ class TableItem {
     required this.isActive,
     bool? isMerged,
     this.mergedTableIDs = const [],
+    this.mergedTableNames,
   }) : isMerged = isMerged ?? mergedTableIDs.isNotEmpty;
 
   factory TableItem.fromJson(Map<String, dynamic> json) {
     List<int> mergedIds = [];
+    Map<int, String> mergedNames = {};
     
     if (json['mergeTables'] != null) {
       List<dynamic> mergeTables = json['mergeTables'] as List<dynamic>;
@@ -116,10 +119,18 @@ class TableItem {
             // Sayısal olmayan string değerleri atla
           }
         } else if (item is Map) {
-          // Yeni JSON formatında tableID kullanılıyor
-          if (item.containsKey('tableID')) {
+          // Yeni JSON formatında tableID ve tableName kullanılıyor
+          final id = item['mergeTableID'] ?? item['tableID'];
+          final name = item['mergeTableName'] ?? item['tableName'];
+          
+          if (id != null) {
             try {
-              mergedIds.add(int.parse(item['tableID'].toString()));
+              final parsedId = int.parse(id.toString());
+              mergedIds.add(parsedId);
+              
+              if (name != null && name is String && name.isNotEmpty) {
+                mergedNames[parsedId] = name;
+              }
             } catch (e) {
               // Dönüştürme hatası durumunda atla
             }
@@ -140,6 +151,7 @@ class TableItem {
       isActive: json['isActive'] ?? false,
       isMerged: mergedStatus,
       mergedTableIDs: mergedIds,
+      mergedTableNames: mergedNames.isNotEmpty ? mergedNames : null,
     );
   }
 
@@ -152,6 +164,7 @@ class TableItem {
       'isActive': isActive,
       'isMerged': isMerged,
       'mergedTableIDs': mergedTableIDs,
+      if (mergedTableNames != null) 'mergedTableNames': mergedTableNames,
     };
   }
 } 

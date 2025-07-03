@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-
 class ProductResponse {
   final bool error;
   final bool success;
