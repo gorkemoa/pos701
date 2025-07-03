@@ -89,6 +89,7 @@ class OrderRequest {
   final String orderName;
   final String orderDesc;
   final int orderGuest;
+  final int custAdrID;
   final int kuverQty;
   final int isKuver;
   final int isWaiter;
@@ -108,6 +109,7 @@ class OrderRequest {
     this.orderName = '',
     this.orderDesc = '',
     required this.orderGuest,
+    required this.custAdrID,
     required this.kuverQty,
     this.isKuver = 0,
     this.isWaiter = 0,
@@ -129,6 +131,7 @@ class OrderRequest {
       'orderName': orderName,
       'orderDesc': orderDesc,
       'orderGuest': orderGuest,
+      'custAdrID': custAdrID,
       'kuverQty': kuverQty,
       'isKuver': isKuver,
       'isWaiter': isWaiter,

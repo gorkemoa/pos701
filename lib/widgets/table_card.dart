@@ -36,6 +36,12 @@ class TableCard extends StatelessWidget {
       debugPrint('Birleştirilmiş masalar: ${table.mergedTableIDs}');
     }
     
+    final TablesViewModel debugViewModel = Provider.of<TablesViewModel>(context, listen: false);
+    final TableItem? debugMainTable = debugViewModel.getMainTableForMergedTable(table.tableID);
+    if (debugMainTable != null) {
+      debugPrint('Bu masa ${debugMainTable.tableName} (ID: ${debugMainTable.tableID}) ana masasına bağlı');
+    }
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1469,6 +1475,11 @@ class TableCard extends StatelessWidget {
     final borderRadius = BorderRadius.circular(12);
     final primaryColor = Color(AppConstants.primaryColorValue);
     
+    // Bu masanın hangi ana masaya bağlı olduğunu kontrol et
+    final TablesViewModel viewModel = Provider.of<TablesViewModel>(context, listen: false);
+    final TableItem? mainTable = viewModel.getMainTableForMergedTable(table.tableID);
+    final bool isLinkedToMainTable = mainTable != null;
+    
     return GestureDetector(
       onTap: () {
         // Masanın durumuna bakılmaksızın, her durumda CategoryView'a yönlendir
@@ -1586,21 +1597,46 @@ class TableCard extends StatelessWidget {
             //     ),
             //   ),
             
-            // Birleştirilmiş masa ikonu - sol üstte daha küçük
+            // Ana masa ikonu (birleştirici masa)
             if (table.isMerged)
               Positioned(
                 top: 3,
                 left: 3,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(3),
+                child: Tooltip(
+                  message: 'Ana masa - ${table.mergedTableIDs.length} masa birleştirildi',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Icon(
+                      Icons.people_alt,
+                      color: Colors.white,
+                      size: 10,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.people_alt,
-                    color: Colors.white,
-                    size: 10,
+                ),
+              ),
+            
+            // Birleştirilen masa ikonu (ana masaya bağlı)
+            if (isLinkedToMainTable && !table.isMerged)
+              Positioned(
+                top: 3,
+                left: 3,
+                child: Tooltip(
+                  message: '${mainTable!.tableName} masasına bağlı',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Icon(
+                      Icons.group,
+                      color: Colors.white,
+                      size: 10,
+                    ),
                   ),
                 ),
               ),

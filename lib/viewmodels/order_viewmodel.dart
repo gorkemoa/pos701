@@ -88,6 +88,7 @@ class OrderViewModel extends ChangeNotifier {
     String custName = '',
     String custPhone = '',
     List<dynamic> custAdrs = const [],
+    int custAdrID = 0,
     int kuverQty = 1,
     int isKuver = 0,
     int isWaiter = 0,
@@ -122,6 +123,7 @@ class OrderViewModel extends ChangeNotifier {
       final orderRequest = OrderRequest(
         userToken: userToken,
         compID: compID,
+        custAdrID: custAdrID,
         tableID: tableID,
         orderType: orderType,
         orderName: tableName,

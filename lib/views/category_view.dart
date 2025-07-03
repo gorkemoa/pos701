@@ -52,6 +52,7 @@ class _CategoryViewState extends State<CategoryView> {
   int _orderGuest = 1; // Misafir sayısı için değişken
   Customer? _selectedCustomer; // Seçili müşteri
   List<order_model.CustomerAddress> _selectedCustomerAddresses = [];
+  int? _selectedCustomerAddressId;
   int _isKuver = 0; // Kuver ücretinin aktif/pasif durumu (0: pasif, 1: aktif)
   int _isWaiter = 0; // Garsoniye ücretinin aktif/pasif durumu (0: pasif, 1: aktif)
 
@@ -796,6 +797,7 @@ class _CategoryViewState extends State<CategoryView> {
       
       // Müşteri adres bilgilerini de ekleyelim
       arguments['custAdrs'] = _selectedCustomerAddresses;
+      arguments['custAdrID'] = _selectedCustomerAddressId;
       
       debugPrint('🛒 Müşteri seçildi: ${_selectedCustomer!.custName}');
       if (_selectedCustomerAddresses.isNotEmpty) {
@@ -1667,6 +1669,27 @@ class _CategoryViewState extends State<CategoryView> {
                                                       });
                                                       outerSetState(() {
                                                         _selectedCustomer = customer;
+                                                        // Müşteri seçildiğinde adreslerini de ata
+                                                        if (customer.addresses.isNotEmpty) {
+                                                          // Varsayılan veya ilk adresi bul
+                                                          final defaultAddress = customer.addresses.firstWhere(
+                                                            (a) => a.isDefault,
+                                                            orElse: () => customer.addresses.first,
+                                                          );
+                                                          _selectedCustomerAddressId = defaultAddress.adrID;
+
+                                                          _selectedCustomerAddresses = customer.addresses.map((addr) {
+                                                            return order_model.CustomerAddress(
+                                                              adrTitle: addr.adrTitle,
+                                                              adrAdress: addr.adrAddress,
+                                                              adrNote: addr.adrNote,
+                                                              isDefault: addr.isDefault,
+                                                            );
+                                                          }).toList();
+                                                        } else {
+                                                          _selectedCustomerAddresses = [];
+                                                          _selectedCustomerAddressId = null;
+                                                        }
                                                       });
                                                     },
                                                     child: Padding(
@@ -2095,8 +2118,23 @@ class _CategoryViewState extends State<CategoryView> {
                                           outerSetState(() {
                                             _selectedCustomer = newCustomer;
                                             
-                                            // Ayrıca adres bilgilerini de kaydet (sipariş oluşturma sırasında kullanılacak)
-                                            _selectedCustomerAddresses = orderAddresses;
+                                            if (newCustomer != null && newCustomer.addresses.isNotEmpty) {
+                                                final defaultAddress = newCustomer.addresses.firstWhere(
+                                                    (a) => a.isDefault,
+                                                    orElse: () => newCustomer.addresses.first);
+                                                _selectedCustomerAddressId = defaultAddress.adrID;
+                                                _selectedCustomerAddresses = newCustomer.addresses.map((addr) {
+                                                  return order_model.CustomerAddress(
+                                                    adrTitle: addr.adrTitle,
+                                                    adrAdress: addr.adrAddress,
+                                                    adrNote: addr.adrNote,
+                                                    isDefault: addr.isDefault,
+                                                  );
+                                                }).toList();
+                                            } else {
+                                                _selectedCustomerAddresses = [];
+                                                _selectedCustomerAddressId = null;
+                                            }
                                           });
                                           
                                           Navigator.of(context).pop();

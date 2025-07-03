@@ -234,7 +234,7 @@ class TablesViewModel extends ChangeNotifier {
           // Yeni JSON formatı: mergeTableID ve mergeTableName
           // Eski format: tableID ve tableName
           final id = item['mergeTableID'] ?? item['tableID'];
-          final name = item['tableName'];
+          final name =  item['mergeTableName'] ?? item['tableName'];
           
           if (id != null) {
             final parsedId = int.parse(id.toString());
@@ -299,7 +299,7 @@ else {
                   isActive: shouldBeActive,
                   isMerged: shouldBeMerged,
                   mergedTableIDs: shouldBeMerged ? (mergedTablesMap[table.tableID] ?? []) : [],
-                  mergedTableNames: table.mergedTableNames,
+                  mergedTableNames: mergedTableNames.isNotEmpty ? mergedTableNames : null,
                 );
                 
                 // TablesResponse içindeki TableItem'ı güncelle
@@ -722,6 +722,18 @@ else {
     for (var region in regions) {
       for (var table in region.tables) {
         if (table.tableID == tableID) {
+          return table;
+        }
+      }
+    }
+    return null;
+  }
+  
+  // Bir masanın hangi ana masaya bağlı olduğunu bulur
+  TableItem? getMainTableForMergedTable(int tableID) {
+    for (var region in regions) {
+      for (var table in region.tables) {
+        if (table.isMerged && table.mergedTableIDs.contains(tableID)) {
           return table;
         }
       }
