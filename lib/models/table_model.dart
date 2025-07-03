@@ -116,9 +116,10 @@ class TableItem {
             // Sayısal olmayan string değerleri atla
           }
         } else if (item is Map) {
-          if (item.containsKey('table_id')) {
+          // Yeni JSON formatında tableID kullanılıyor
+          if (item.containsKey('tableID')) {
             try {
-              mergedIds.add(int.parse(item['table_id'].toString()));
+              mergedIds.add(int.parse(item['tableID'].toString()));
             } catch (e) {
               // Dönüştürme hatası durumunda atla
             }

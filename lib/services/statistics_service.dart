@@ -217,7 +217,6 @@ class StatisticsService {
               _logger.i('API isteği zamanı: $currentTime');
               _logger.i('Endpoint: service/user/account/statistics');
             } catch (e) {
-              _logger.e('Durum kontrolü hatası: $e');
             }
           } else {
             responseData = {

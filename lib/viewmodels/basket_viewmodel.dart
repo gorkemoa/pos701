@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
 import 'package:pos701/services/order_service.dart';

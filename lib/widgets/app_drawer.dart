@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/number_symbols_data.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/views/kitchen_view.dart';
@@ -12,9 +13,12 @@ import 'package:pos701/services/firebase_messaging_service.dart';
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
 
+  
+
   @override
   State<AppDrawer> createState() => _AppDrawerState();
 }
+
 
 class _AppDrawerState extends State<AppDrawer> {
   bool _tanimlamalarExpanded = false;
@@ -39,8 +43,8 @@ class _AppDrawerState extends State<AppDrawer> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Menü',
+                  Text(
+                    'Menü | ${userViewModel.userInfo?.company?.compName ?? ''}',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 20,

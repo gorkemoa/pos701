@@ -4,6 +4,7 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/widgets/table_selection_dialog.dart';
 import 'package:pos701/widgets/table_merge_dialog.dart';
+import 'package:pos701/widgets/table_unmerge_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/views/category_view.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
@@ -442,178 +443,182 @@ class TableCard extends StatelessWidget {
   }
 
   void _handleTableUnmerge(BuildContext context, TablesViewModel viewModel) async {
-    // Ayırma işleminden önce onay al
-    final confirmUnmerge = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.help_outline, color: Colors.orange, size: 20),
-            SizedBox(width: 8),
-            Text('Masaları Ayır', style: TextStyle(fontSize: 17)),
-          ],
-        ),
-        content: Text(
-          'Bu işlem ${table.tableName} masasını ve bağlı masaları ayıracaktır. Devam etmek istiyor musunuz?',
-          style: const TextStyle(fontSize: 15),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('İptal', style: TextStyle(fontSize: 15)),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey[700],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Evet, Ayır', style: TextStyle(fontSize: 15)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmUnmerge != true) return;
-
-    // Yükleniyor diyaloğunu göster
-    if (!context.mounted) return;
-    
-    BuildContext? loadingContext;
-    // ignore: use_build_context_synchronously
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black54, // Yarı şeffaf arka plan
-      builder: (ctx) {
-        loadingContext = ctx;
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          elevation: 8.0,
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Masalar ayrılıyor...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Bu işlem birkaç saniye sürebilir',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    try {
-      // Masa ayırma API çağrısı - unMergeTables fonksiyonunu kullan
-      final success = await viewModel.unMergeTables(
-        userToken: userToken,
-        compID: compID,
-        tableID: table.tableID,
-        orderID: table.orderID,
-      );
-      
-      // Yükleniyor diyaloğunu kapat
-      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
-        // ignore: use_build_context_synchronously
-        Navigator.of(loadingContext!).pop();
-        loadingContext = null;
-      }
-      
-      // Küçük bir gecikme ekle
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      if (success) {
-        // Başarılı mesajını göster
-        if (!context.mounted) return;
-        
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(viewModel.successMessage ?? 'Masalar başarıyla ayrıldı'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        
-        // Masalar sayfasına yönlendir
-        if (context.mounted) {
-          // ignore: use_build_context_synchronously
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TablesView(
-                userToken: userToken,
-                compID: compID,
-                title: 'Masalar',
-              ),
-            ),
-            (route) => false, // Tüm geçmiş sayfaları temizle
-          );
+    // Birleştirilmiş masaları al
+    final List<TableItem> mergedTables = [];
+    if (table.isMerged && table.mergedTableIDs.isNotEmpty) {
+      for (int mergedTableID in table.mergedTableIDs) {
+        final mergedTable = viewModel.getTableByID(mergedTableID);
+        if (mergedTable != null) {
+          mergedTables.add(mergedTable);
         }
-      } else {
-        // Hata mesajını göster
-        if (!context.mounted) return;
-        
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(viewModel.errorMessage ?? 'Masa ayırma işlemi başarısız oldu'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Masa ayırma hatası: $e');
-      
-      // Yükleniyor diyaloğunu kapat (hata durumunda da)
-      if (loadingContext != null && Navigator.canPop(loadingContext!)) {
-        // ignore: use_build_context_synchronously
-        Navigator.of(loadingContext!).pop();
-        loadingContext = null;
-      }
-      
-      // Küçük bir gecikme ekle
-      await Future.delayed(const Duration(milliseconds: 300));
-      
-      // Hata mesajını göster
-      if (context.mounted) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Masa ayırma işlemi sırasında hata oluştu: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
       }
     }
+
+    if (mergedTables.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ayrılabilecek masa bulunamadı')),
+      );
+      return;
+    }
+
+    // Seçimli masa ayırma diyaloğunu göster
+    if (!context.mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => TableUnmergeDialog(
+        mainTable: table,
+        mergedTables: mergedTables,
+        onTablesUnmerged: (selectedTables) async {
+          if (selectedTables.isEmpty) return;
+          
+          // Seçilen masaların ID'lerini al
+          final selectedTableIds = selectedTables.map((t) => t.tableID).toList();
+
+          // Kullanıcı bilgilerini al
+          final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+          final userToken = userViewModel.userInfo?.userToken ?? '';
+          final compID = userViewModel.userInfo?.company?.compID ?? 0;
+
+          // Yükleniyor diyaloğunu göster
+          if (!context.mounted) return;
+          
+          BuildContext? loadingContext;
+          // ignore: use_build_context_synchronously
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            barrierColor: Colors.black54,
+            builder: (ctx) {
+              loadingContext = ctx;
+              return Dialog(
+                backgroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                ),
+                elevation: 8.0,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: CircularProgressIndicator(),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Seçilen masalar ayrılıyor...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Bu işlem birkaç saniye sürebilir',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+
+          try {
+            // Seçimli masa ayırma API çağrısı
+            final success = await viewModel.unMergeSelectedTables(
+              userToken: userToken,
+              compID: compID,
+              tableID: table.tableID,
+              orderID: table.orderID,
+              tablesToUnmerge: selectedTableIds,
+            );
+            
+            // Yükleniyor diyaloğunu kapat
+            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
+              // ignore: use_build_context_synchronously
+              Navigator.of(loadingContext!).pop();
+              loadingContext = null;
+            }
+            
+            // Küçük bir gecikme ekle
+            await Future.delayed(const Duration(milliseconds: 300));
+            
+            if (success) {
+              // Başarılı mesajını göster
+              if (!context.mounted) return;
+              
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(viewModel.successMessage ?? 'Seçilen masalar başarıyla ayrıldı'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              
+              // Masalar sayfasına yönlendir
+              if (context.mounted) {
+                // ignore: use_build_context_synchronously
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TablesView(
+                      userToken: userToken,
+                      compID: compID,
+                      title: 'Masalar',
+                    ),
+                  ),
+                  (route) => false, // Tüm geçmiş sayfaları temizle
+                );
+              }
+            } else {
+              // Hata mesajını göster
+              if (!context.mounted) return;
+              
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(viewModel.errorMessage ?? 'Masa ayırma işlemi başarısız oldu'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          } catch (e) {
+            debugPrint('Masa ayırma hatası: $e');
+            
+            // Yükleniyor diyaloğunu kapat (hata durumunda da)
+            if (loadingContext != null && Navigator.canPop(loadingContext!)) {
+              // ignore: use_build_context_synchronously
+              Navigator.of(loadingContext!).pop();
+              loadingContext = null;
+            }
+            
+            // Küçük bir gecikme ekle
+            await Future.delayed(const Duration(milliseconds: 300));
+            
+            // Hata mesajını göster
+            if (context.mounted) {
+              // ignore: use_build_context_synchronously
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Masa ayırma işlemi sırasında hata oluştu: $e'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
   }
 
   void _handleTableChange(BuildContext context, TablesViewModel viewModel) async {

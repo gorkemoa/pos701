@@ -316,6 +316,7 @@ class OrderViewModel extends ChangeNotifier {
     int kuverQty = 1,
     int custID = 0,
     String custName = '',
+    List<dynamic> addresses = const [],
     String custPhone = '',
     List<dynamic> custAdrs = const [],
     required int isKuver,

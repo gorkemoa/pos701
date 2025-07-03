@@ -209,6 +209,7 @@ class TablesViewModel extends ChangeNotifier {
         
         // Aktif sipariş tabloları ve birleştirilmiş masaları takip et
         final Map<int, List<int>> mergedTablesMap = {};
+        final Map<int, String> mergedTableNames = {}; // Masa adlarını saklamak için
         
         // Birleştirilmiş masaları işle
         for (var order in ordersData) {
@@ -218,33 +219,44 @@ class TablesViewModel extends ChangeNotifier {
           // Debug: Her siparişin detaylarını göster
           
           // mergeTables alanını kontrol et (yeni API formatı)
-          if (order['mergeTables'] != null) {
-            List<dynamic> mergeTables = order['mergeTables'] as List<dynamic>;
-            if (mergeTables.isNotEmpty) {
-              List<int> mergedTableIds = [];
-              for (var mergeTable in mergeTables) {
-                if (mergeTable is int) {
-                  mergedTableIds.add(mergeTable);
-                } else if (mergeTable is String) {
-                  try {
-                    mergedTableIds.add(int.parse(mergeTable));
-                  } catch (e) {
-                    debugPrint('Geçersiz birleştirilmiş masa ID: $mergeTable');
-                  }
-                } else if (mergeTable is Map) {
-                  // Eğer mergeTables içinde farklı bir obje yapısı varsa
-                  if (mergeTable.containsKey('table_id')) {
-                    try {
-                      mergedTableIds.add(int.parse(mergeTable['table_id'].toString()));
-                    } catch (e) {
-                    }
-                  }
-                }
-              }
-              mergedTablesMap[tableID] = mergedTableIds;
-              debugPrint('Masa $tableID için birleştirilmiş masalar: $mergedTableIds');
+        if (order['mergeTables'] != null) {
+  final List<dynamic> mergeTables = order['mergeTables'];
+  if (mergeTables.isNotEmpty) {
+    final List<int> mergedTableIds = [];
+
+    for (var item in mergeTables) {
+      try {
+        if (item is int) {
+          mergedTableIds.add(item);
+        } else if (item is String) {
+          mergedTableIds.add(int.parse(item));
+        } else if (item is Map) {
+          // Yeni JSON formatı: mergeTableID ve mergeTableName
+          // Eski format: tableID ve tableName
+          final id = item['mergeTableID'] ?? item['tableID'];
+          final name = item['mergeTableName'] ?? item['tableName'];
+          
+          if (id != null) {
+            final parsedId = int.parse(id.toString());
+            mergedTableIds.add(parsedId);
+
+            if (name != null && name is String && name.isNotEmpty) {
+              mergedTableNames[parsedId] = name;
             }
-          } else {
+            
+            debugPrint('Birleştirilmiş masa eklendi: $name (ID: $id)');
+          }
+        }
+      } catch (e) {
+        debugPrint('Geçersiz birleştirilmiş masa ID: $item, Hata: $e');
+      }
+    }
+
+    mergedTablesMap[tableID] = mergedTableIds;
+    debugPrint('Masa $tableID için birleştirilmiş masalar: $mergedTableIds');
+  }
+}
+else {
             debugPrint('Masa $tableID için mergeTables alanı bulunamadı veya boş');
           }
         }
@@ -263,17 +275,18 @@ class TablesViewModel extends ChangeNotifier {
             bool shouldBeMerged = mergedTablesMap.containsKey(table.tableID) && 
                                mergedTablesMap[table.tableID]!.isNotEmpty;
             
-            // Debug: Masa durumlarını göster
-            debugPrint('Masa ${table.tableName} (ID: ${table.tableID}) durum kontrolü:');
-            debugPrint('  - OrderID: ${table.orderID}');
-            debugPrint('  - Mevcut aktiflik: ${table.isActive}, Olması gereken: $shouldBeActive');
-            debugPrint('  - Mevcut birleşik: ${table.isMerged}, Olması gereken: $shouldBeMerged');
+            // Masa adı değişikliği kontrolü
+            final newName = mergedTableNames[table.tableID];
+            final bool nameShouldChange = newName != null && newName.isNotEmpty && table.tableName != newName;
+
+       
             
-            // Eğer aktiflik veya birleştirilmiş durumu farklıysa, tüm veriyi yeniden çekmek yerine burada düzeltelim
-            if (table.isActive != shouldBeActive || table.isMerged != shouldBeMerged) {
+            // Eğer aktiflik, birleştirilmiş durumu veya isim farklıysa güncelle
+            if (table.isActive != shouldBeActive || table.isMerged != shouldBeMerged || nameShouldChange) {
               debugPrint('Masa ${table.tableName} (ID: ${table.tableID}) - ' +
                        'Mevcut aktiflik: ${table.isActive}, Olması gereken: $shouldBeActive - ' +
-                       'Mevcut birleştirilmiş: ${table.isMerged}, Olması gereken: $shouldBeMerged');
+                       'Mevcut birleştirilmiş: ${table.isMerged}, Olması gereken: $shouldBeMerged - ' +
+                       'İsim değişmeli: $nameShouldChange');
                        
               // Modeli doğrudan güncelle
               try {
@@ -281,7 +294,7 @@ class TablesViewModel extends ChangeNotifier {
                 final updatedTable = TableItem(
                   tableID: table.tableID,
                   orderID: table.orderID,
-                  tableName: table.tableName,
+                  tableName: nameShouldChange ? newName! : table.tableName,
                   orderAmount: table.orderAmount,
                   isActive: shouldBeActive,
                   isMerged: shouldBeMerged,
@@ -314,7 +327,7 @@ class TablesViewModel extends ChangeNotifier {
                 );
                 
                 debugPrint('⚡ Masa ${table.tableName} verisi yerel olarak güncellendi: ' +
-                         'Aktiflik: $shouldBeActive, Birleştirilmiş: $shouldBeMerged');
+                         'Aktiflik: $shouldBeActive, Birleştirilmiş: $shouldBeMerged, İsim: ${nameShouldChange ? newName : table.tableName}');
                 
                 // Değişiklik yapıldığını işaretle
                 anyChanges = true;
@@ -445,9 +458,9 @@ class TablesViewModel extends ChangeNotifier {
                     } catch (e) {
                       // Geçersiz ID'leri atla
                     }
-                  } else if (item is Map && item.containsKey('table_id')) {
+                  } else if (item is Map && item.containsKey('tableID')) {
                     try {
-                      mergedTableIds.add(int.parse(item['table_id'].toString()));
+                      mergedTableIds.add(int.parse(item['tableID'].toString()));
                     } catch (e) {
                       // Geçersiz ID'leri atla
                     }
@@ -847,4 +860,81 @@ class TablesViewModel extends ChangeNotifier {
       return false;
     }
   }
-} 
+
+  // Seçimli masa ayırma (selective unmerge) işlemi
+  Future<bool> unMergeSelectedTables({
+    required String userToken,
+    required int compID,
+    required int tableID,
+    required int orderID,
+    required List<int> tablesToUnmerge,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+    notifyListeners();
+    
+    try {
+      // Ana masayı bul ve mevcut birleştirilmiş masa listesini al
+      TableItem? mainTable = getTableByID(tableID);
+      if (mainTable == null || !mainTable.isMerged) {
+        _errorMessage = 'Ana masa bulunamadı veya birleştirilmiş değil.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Birleşik KALACAK masaların yeni listesini oluştur
+      List<int> remainingMergedTables = List<int>.from(mainTable.mergedTableIDs);
+      remainingMergedTables.removeWhere((id) => tablesToUnmerge.contains(id));
+
+      debugPrint('⚙️ Masa birleştirme durumunu GÜNCELLEME API çağrısı - Ana Masa ID: $tableID');
+      debugPrint('🔄 Birleşik kalacak masalar (payload): $remainingMergedTables');
+      
+      // API'yi, birleştirme durumunu GÜNCELLEMEK için 'merged' adımıyla ve YENİ LİSTEYLE çağır
+      final response = await _tableService.mergeTables(
+        userToken: userToken,
+        compID: compID,
+        tableID: tableID,
+        orderID: orderID,
+        mergeTables: remainingMergedTables, // Birleşik kalacak masaların GÜNCEL listesi
+        step: 'merged', // Birleştirme listesini güncellemek için 'merged' kullanılmalı
+      );
+      
+      _isLoading = false;
+      
+      if (response['success'] == true) {
+        _successMessage = response['success_message'] ?? 'Seçilen masalar başarıyla ayrıldı';
+        
+        debugPrint('👍 Seçimli masa ayırma işlemi başarılı, yerel durum güncelleniyor...');
+        
+        // Ana masanın durumunu güncelle
+        if (remainingMergedTables.isEmpty) {
+          _updateTableMergeStatus(tableID, false, []);
+        } else {
+          _updateTableMergeStatus(tableID, true, remainingMergedTables);
+        }
+        
+        // Ayrılan masaların durumunu güncelle
+        for (var unmergedTableId in tablesToUnmerge) {
+          _updateTableMergeStatus(unmergedTableId, false, []);
+        }
+        
+        // Veri tutarlılığı için tam veri güncellemesi yap
+        await refreshTablesDataSilently(userToken: userToken, compID: compID);
+        
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['error_message'] ?? 'Seçimli masa ayırma işlemi başarısız oldu';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+}
