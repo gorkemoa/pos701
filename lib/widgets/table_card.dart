@@ -1485,6 +1485,8 @@ class TableCard extends StatelessWidget {
     final TablesViewModel viewModel = Provider.of<TablesViewModel>(context, listen: false);
     final TableItem? mainTable = viewModel.getMainTableForMergedTable(table.tableID);
     final bool isLinkedToMainTable = mainTable != null;
+    // Yan masa: başka bir ana masaya bağlı ancak kendisi ana masa olmayan masa
+    final bool isSideTable = isLinkedToMainTable && !table.isMerged;
     
     return GestureDetector(
       onTap: () {
@@ -1570,6 +1572,34 @@ class TableCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                    // Yan masa ise bağlı olduğu ana masayı göster
+                    if (isSideTable)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '→ ${mainTable!.tableName}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.blue.shade700,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    // Ana masa ise etiketi göster
+                    if (table.isMerged)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          'Ana Masa',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1589,21 +1619,35 @@ class TableCard extends StatelessWidget {
                 ),
               ),
             
-            // Ana masa için hafif arka plan vurgusu (düşük opaklıkta)
+            // Ana masa için belirgin arka plan vurgusu
             if (table.isMerged)
               Positioned.fill(
                 child: IgnorePointer(
                   ignoring: true,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.06), // Çok hafif vurgu
+                      color: primaryColor.withOpacity(0.15), // Daha belirgin vurgu
                       borderRadius: borderRadius,
                     ),
                   ),
                 ),
               ),
             
-            // Ana masa ikonu (birleştirici masa)
+            // Yan masalar için mavi arka plan vurgusu
+            if (isSideTable)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.10),
+                      borderRadius: borderRadius,
+                    ),
+                  ),
+                ),
+              ),
+            
+            // Ana masa etiketi
             if (table.isMerged)
               Positioned(
                 top: 3,
@@ -1611,37 +1655,46 @@ class TableCard extends StatelessWidget {
                 child: Tooltip(
                   message: 'Ana masa - ${table.mergedTableIDs.length} masa birleştirildi',
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(3),
+                      color: primaryColor.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Icon(
-                      Icons.people_alt,
-                      color: Colors.white,
-                      size: 10,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.people_alt, color: Colors.white, size: 12),
+                        SizedBox(width: 3),
+                        Text('ANA', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ),
                 ),
               ),
             
-            // Birleştirilen masa ikonu (ana masaya bağlı)
-            if (isLinkedToMainTable && !table.isMerged)
+            // Yan masa etiketi (ana masaya bağlı)
+            if (isSideTable)
               Positioned(
                 top: 3,
                 left: 3,
                 child: Tooltip(
                   message: '${mainTable!.tableName} masasına bağlı',
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(3),
+                      color: Colors.blue.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Icon(
-                      Icons.group,
-                      color: Colors.white,
-                      size: 10,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.group, color: Colors.white, size: 12),
+                        const SizedBox(width: 3),
+                        Text(
+                          _shortTableName(mainTable!.tableName),
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1650,5 +1703,10 @@ class TableCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Ana masanın adını kısaltmak için yardımcı metod (en fazla 4 karakter)
+  String _shortTableName(String name) {
+    return name.length <= 4 ? name : name.substring(0, 4);
   }
 }
