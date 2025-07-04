@@ -1540,10 +1540,8 @@ class TableCard extends StatelessWidget {
           children: [
             // Ana içerik
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 1.0, vertical: 16.0),
-              child: FittedBox(
-                alignment: Alignment.center,
-                fit: BoxFit.scaleDown,
+              padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1551,7 +1549,7 @@ class TableCard extends StatelessWidget {
                     Text(
                       table.tableName,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: table.isActive ? Colors.black87 : Colors.grey.shade700,
                       ),
@@ -1565,7 +1563,7 @@ class TableCard extends StatelessWidget {
                         child: Text(
                           table.orderAmount,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 10,
                             color: primaryColor,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1581,7 +1579,7 @@ class TableCard extends StatelessWidget {
                         child: Text(
                           '→ ${mainTable!.tableName}',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 8,
                             color: Colors.blue.shade700,
                           ),
                           textAlign: TextAlign.center,
