@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class CustomerAddress {
   final int adrID;
   final String adrTitle;

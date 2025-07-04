@@ -14,7 +14,6 @@ import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/customer_viewmodel.dart';
 import 'package:pos701/models/customer_model.dart';
-import 'package:pos701/services/customer_service.dart';
 import 'package:pos701/models/order_model.dart' as order_model;  // Sipariş için CustomerAddress sınıfı
 
 class CategoryView extends StatefulWidget {
@@ -827,6 +826,7 @@ class _CategoryViewState extends State<CategoryView> {
           orderGuest: _orderGuest,
           selectedCustomer: _selectedCustomer,
           customerAddresses: _selectedCustomerAddresses,  // Müşteri adres bilgilerini ekle
+          custAdrID: _selectedCustomerAddressId ?? 0, // Seçili müşteri adres ID'si
           tableID: widget.tableID, // Masa ID'sini ekle
           orderType: widget.orderType, // Sipariş türünü ekle
           isKuver: _isKuver, // Kuver durumunu ekle

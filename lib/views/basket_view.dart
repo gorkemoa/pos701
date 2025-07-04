@@ -24,6 +24,7 @@ class BasketView extends StatefulWidget {
   final int isKuver;
   final int isWaiter;
   final int orderPayType;
+  final int custAdrID;
   
   const BasketView({
     super.key,
@@ -38,6 +39,7 @@ class BasketView extends StatefulWidget {
     this.isKuver = 0,
     this.isWaiter = 0,
     this.orderPayType = 0,
+    this.custAdrID = 0,
   });
 
   @override
@@ -58,6 +60,7 @@ class _BasketViewState extends State<BasketView> {
   int _isKuver = 0;
   int _isWaiter = 0;
   int _orderPayType = 0;
+  int _custAdrID = 0;
 
 
   @override
@@ -68,6 +71,7 @@ class _BasketViewState extends State<BasketView> {
     _isKuver = widget.isKuver;
     _isWaiter = widget.isWaiter;
     _orderPayType = widget.orderPayType;
+    _custAdrID = widget.custAdrID;
     _initializeData();
   }
 
@@ -108,6 +112,10 @@ class _BasketViewState extends State<BasketView> {
           _getSiparisDetayi(widget.orderID!);
         } else {
           setState(() => _isLoading = false);
+        }
+        
+        if (args.containsKey('custAdrID')) {
+          _custAdrID = args['custAdrID'] ?? 0;
         }
       } else if (widget.orderID != null) {
         _getSiparisDetayi(widget.orderID!);
@@ -361,6 +369,7 @@ class _BasketViewState extends State<BasketView> {
           custName: custName,
           custPhone: custPhone,
           custAdrs: custAdrs,
+          custAdrID: _custAdrID,
           isKuver: kuverDurumu,
           isWaiter: garsoniyeDurumu,
           orderPayType: _orderPayType,
