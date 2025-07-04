@@ -816,6 +816,7 @@ class _CategoryViewState extends State<CategoryView> {
     debugPrint('🛒 Misafir sayısı: $_orderGuest');
     debugPrint('🛒 Kuver durumu: $_isKuver');
     debugPrint('🛒 Garsoniye durumu: $_isWaiter');
+    debugPrint('🛒 Müşteri adres ID: $_selectedCustomerAddressId');
     
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -1296,7 +1297,7 @@ class _CategoryViewState extends State<CategoryView> {
 
     if (!mounted) return;
     
-    // Yeni müşteri ekleme için değişkenler
+                                    // Yeni müşteri ekleme için değişkenler
     String newCustomerName = '';
     String newCustomerPhone = '';
     String newCustomerEmail = '';
@@ -1304,11 +1305,8 @@ class _CategoryViewState extends State<CategoryView> {
     final formKey = GlobalKey<FormState>();
     
     // Adres bilgileri için değişkenler
+    List<Map<String, dynamic>> tempAddresses = [];
     bool showAddressForm = false;
-    String addrTitle = '';
-    String addrAddress = '';
-    String addrNote = '';
-    bool isDefaultAddress = true;
     
     // _CategoryViewState'in setState'ini çağırmak için referans
     final outerSetState = setState;
@@ -1319,10 +1317,57 @@ class _CategoryViewState extends State<CategoryView> {
     // Aktif tab değişkenini diyalog dışında tanımlayalım
     int activeTabIndex = 0;
     
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
+    // Dialog içindeki setState referansı
+    StateSetter? dialogSetState;
+    
+          showDialog(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) {
+            dialogSetState = setState;
+            
+            // Dialog içindeki adres fonksiyonları
+            void addNewAddress() {
+              setState(() {
+                tempAddresses.add({
+                  'adrTitle': '',
+                  'adrAddress': '',
+                  'adrNote': '',
+                  'isDefault': tempAddresses.isEmpty, // İlk adres varsayılan olsun
+                  'isEditing': true,
+                });
+                showAddressForm = true;
+              });
+            }
+            
+            // Adres silme fonksiyonu
+            void removeAddress(int index) {
+              setState(() {
+                bool wasDefault = tempAddresses[index]['isDefault'];
+                tempAddresses.removeAt(index);
+                
+                // Eğer varsayılan adres silindiyse ve başka adres varsa, ilk adresi varsayılan yap
+                if (wasDefault && tempAddresses.isNotEmpty) {
+                  tempAddresses[0]['isDefault'] = true;
+                }
+              });
+            }
+            
+            // Varsayılan adres belirleme fonksiyonu
+            void setDefaultAddress(int index) {
+              setState(() {
+                for (int i = 0; i < tempAddresses.length; i++) {
+                  tempAddresses[i]['isDefault'] = i == index;
+                }
+              });
+            }
+            
+            // Adres düzenleme modunu değiştirme
+            void toggleEditAddress(int index) {
+              setState(() {
+                tempAddresses[index]['isEditing'] = !tempAddresses[index]['isEditing'];
+              });
+            }
           return Dialog(
             insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             shape: RoundedRectangleBorder(
@@ -1546,7 +1591,9 @@ class _CategoryViewState extends State<CategoryView> {
                                                             const SizedBox(width: 2),
                                                             Expanded(
                                                               child: Text(
-                                                                '${_selectedCustomer!.addresses.first.adrTitle}: ${_selectedCustomer!.addresses.first.adrAddress}',
+                                                                _selectedCustomerAddressId != null 
+                                                                    ? '${_selectedCustomer!.addresses.firstWhere((a) => a.adrID == _selectedCustomerAddressId).adrTitle}: ${_selectedCustomer!.addresses.firstWhere((a) => a.adrID == _selectedCustomerAddressId).adrAddress}'
+                                                                    : '${_selectedCustomer!.addresses.first.adrTitle}: ${_selectedCustomer!.addresses.first.adrAddress}',
                                                                 style: const TextStyle(fontSize: 11),
                                                                 overflow: TextOverflow.ellipsis,
                                                                 maxLines: 1,
@@ -1563,6 +1610,203 @@ class _CategoryViewState extends State<CategoryView> {
                                           ],
                                         ),
                                       ),
+                                      
+                                      // Müşteri adres seçimi (eğer birden fazla adres varsa)
+                                      if (_selectedCustomer != null && _selectedCustomer!.addresses.length > 1) ...[
+                                        const SizedBox(height: 12),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade50,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.grey.shade300),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.location_on,
+                                                    size: 16,
+                                                    color: Color(AppConstants.primaryColorValue),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Adres Seçin (${_selectedCustomer!.addresses.length} adet)',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 14,
+                                                      color: Color(AppConstants.primaryColorValue),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              
+                                              // Adres listesi
+                                              ListView.builder(
+                                                shrinkWrap: true,
+                                                physics: const NeverScrollableScrollPhysics(),
+                                                itemCount: _selectedCustomer!.addresses.length,
+                                                itemBuilder: (context, index) {
+                                                  final address = _selectedCustomer!.addresses[index];
+                                                  final bool isSelected = _selectedCustomerAddressId == address.adrID;
+                                                  
+                                                  return Container(
+                                                    margin: const EdgeInsets.only(bottom: 8),
+                                                    child: Material(
+                                                      color: isSelected 
+                                                          ? Color(AppConstants.primaryColorValue).withOpacity(0.1)
+                                                          : Colors.white,
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      child: InkWell(
+                                                        onTap: () {
+                                                          setState(() {
+                                                            _selectedCustomerAddressId = address.adrID;
+                                                          });
+                                                          outerSetState(() {
+                                                            _selectedCustomerAddressId = address.adrID;
+                                                            
+                                                            // Seçilen adresin bilgilerini güncelle
+                                                            _selectedCustomerAddresses = [
+                                                              order_model.CustomerAddress(
+                                                                adrTitle: address.adrTitle,
+                                                                adrAdress: address.adrAddress,
+                                                                adrNote: address.adrNote,
+                                                                isDefault: address.isDefault,
+                                                              )
+                                                            ];
+                                                          });
+                                                        },
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        child: Container(
+                                                          padding: const EdgeInsets.all(10),
+                                                          decoration: BoxDecoration(
+                                                            border: Border.all(
+                                                              color: isSelected 
+                                                                  ? Color(AppConstants.primaryColorValue)
+                                                                  : Colors.grey.shade300,
+                                                              width: isSelected ? 2 : 1,
+                                                            ),
+                                                            borderRadius: BorderRadius.circular(6),
+                                                          ),
+                                                          child: Row(
+                                                            children: [
+                                                              // Seçim radio butonu
+                                                              Container(
+                                                                width: 20,
+                                                                height: 20,
+                                                                decoration: BoxDecoration(
+                                                                  shape: BoxShape.circle,
+                                                                  border: Border.all(
+                                                                    color: isSelected 
+                                                                        ? Color(AppConstants.primaryColorValue)
+                                                                        : Colors.grey.shade400,
+                                                                    width: 2,
+                                                                  ),
+                                                                  color: isSelected 
+                                                                      ? Color(AppConstants.primaryColorValue)
+                                                                      : Colors.transparent,
+                                                                ),
+                                                                child: isSelected
+                                                                    ? const Icon(
+                                                                        Icons.check,
+                                                                        size: 12,
+                                                                        color: Colors.white,
+                                                                      )
+                                                                    : null,
+                                                              ),
+                                                              
+                                                              const SizedBox(width: 12),
+                                                              
+                                                              // Adres bilgileri
+                                                              Expanded(
+                                                                child: Column(
+                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                  children: [
+                                                                    Row(
+                                                                      children: [
+                                                                        // Varsayılan adres badge'i
+                                                                        if (address.isDefault)
+                                                                          Container(
+                                                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                                            decoration: BoxDecoration(
+                                                                              color: Colors.orange,
+                                                                              borderRadius: BorderRadius.circular(10),
+                                                                            ),
+                                                                            child: const Text(
+                                                                              'Varsayılan',
+                                                                              style: TextStyle(
+                                                                                color: Colors.white,
+                                                                                fontSize: 8,
+                                                                                fontWeight: FontWeight.bold,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        
+                                                                        if (address.isDefault) const SizedBox(width: 8),
+                                                                        
+                                                                        Expanded(
+                                                                          child: Text(
+                                                                            address.adrTitle,
+                                                                            style: TextStyle(
+                                                                              fontWeight: FontWeight.bold,
+                                                                              fontSize: 13,
+                                                                              color: isSelected 
+                                                                                  ? Color(AppConstants.primaryColorValue)
+                                                                                  : Colors.black,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                    const SizedBox(height: 4),
+                                                                    Text(
+                                                                      address.adrAddress,
+                                                                      style: TextStyle(
+                                                                        fontSize: 11,
+                                                                        color: Colors.grey.shade700,
+                                                                      ),
+                                                                      maxLines: 2,
+                                                                      overflow: TextOverflow.ellipsis,
+                                                                    ),
+                                                                    if (address.adrNote.isNotEmpty) ...[
+                                                                      const SizedBox(height: 2),
+                                                                      Text(
+                                                                        address.adrNote,
+                                                                        style: TextStyle(
+                                                                          fontSize: 10,
+                                                                          color: Colors.grey.shade500,
+                                                                          fontStyle: FontStyle.italic,
+                                                                        ),
+                                                                        maxLines: 1,
+                                                                        overflow: TextOverflow.ellipsis,
+                                                                      ),
+                                                                    ],
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                              
+                                                              // Seçim ikonu
+                                                              if (isSelected)
+                                                                Icon(
+                                                                  Icons.check_circle,
+                                                                  color: Color(AppConstants.primaryColorValue),
+                                                                  size: 20,
+                                                                ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     
                                     const SizedBox(height: 16),
                                     
@@ -1669,7 +1913,7 @@ class _CategoryViewState extends State<CategoryView> {
                                                       });
                                                       outerSetState(() {
                                                         _selectedCustomer = customer;
-                                                        // Müşteri seçildiğinde adreslerini de ata
+                                                        // Müşteri seçildiğinde varsayılan adresi ata
                                                         if (customer.addresses.isNotEmpty) {
                                                           // Varsayılan veya ilk adresi bul
                                                           final defaultAddress = customer.addresses.firstWhere(
@@ -1678,14 +1922,15 @@ class _CategoryViewState extends State<CategoryView> {
                                                           );
                                                           _selectedCustomerAddressId = defaultAddress.adrID;
 
-                                                          _selectedCustomerAddresses = customer.addresses.map((addr) {
-                                                            return order_model.CustomerAddress(
-                                                              adrTitle: addr.adrTitle,
-                                                              adrAdress: addr.adrAddress,
-                                                              adrNote: addr.adrNote,
-                                                              isDefault: addr.isDefault,
-                                                            );
-                                                          }).toList();
+                                                          // Sadece seçilen adresi yükle
+                                                          _selectedCustomerAddresses = [
+                                                            order_model.CustomerAddress(
+                                                              adrTitle: defaultAddress.adrTitle,
+                                                              adrAdress: defaultAddress.adrAddress,
+                                                              adrNote: defaultAddress.adrNote,
+                                                              isDefault: defaultAddress.isDefault,
+                                                            )
+                                                          ];
                                                         } else {
                                                           _selectedCustomerAddresses = [];
                                                           _selectedCustomerAddressId = null;
@@ -1761,6 +2006,28 @@ class _CategoryViewState extends State<CategoryView> {
                                                                             maxLines: 1,
                                                                           ),
                                                                         ),
+                                                                        // Birden fazla adres varsa bilgi göster
+                                                                        if (customer.addresses.length > 1)
+                                                                          Container(
+                                                                            margin: const EdgeInsets.only(left: 8),
+                                                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                                            decoration: BoxDecoration(
+                                                                              color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                                                                              borderRadius: BorderRadius.circular(10),
+                                                                              border: Border.all(
+                                                                                color: Color(AppConstants.primaryColorValue),
+                                                                                width: 1,
+                                                                              ),
+                                                                            ),
+                                                                            child: Text(
+                                                                              '+${customer.addresses.length - 1} adres',
+                                                                              style: TextStyle(
+                                                                                fontSize: 9,
+                                                                                color: Color(AppConstants.primaryColorValue),
+                                                                                fontWeight: FontWeight.bold,
+                                                                              ),
+                                                                            ),
+                                                                          ),
                                                                       ],
                                                                     ),
                                                                   ],
@@ -1879,115 +2146,315 @@ class _CategoryViewState extends State<CategoryView> {
                                             },
                                           ),
                                           
-                                          // Adres ekle butonu
+                                          // Adresler bölümü
                                           Padding(
                                             padding: const EdgeInsets.symmetric(vertical: 16),
-                                            child: Row(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                const Text(
-                                                  'Adres Bilgileri',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    const Text(
+                                                      'Adres Bilgileri',
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    ElevatedButton.icon(
+                                                      icon: const Icon(Icons.add, size: 18),
+                                                      label: const Text('Yeni Adres'),
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Color(AppConstants.primaryColorValue),
+                                                        foregroundColor: Colors.white,
+                                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                      ),
+                                                      onPressed: () {
+                                                        addNewAddress();
+                                                      },
+                                                    ),
+                                                  ],
                                                 ),
-                                                const SizedBox(width: 16),
-                                                TextButton.icon(
-                                                  icon: Icon(
-                                                    showAddressForm ? Icons.remove_circle : Icons.add_circle,
-                                                    color: Color(AppConstants.primaryColorValue),
-                                                  ),
-                                                  label: Text(
-                                                    showAddressForm ? 'Adres İptal' : 'Adres Ekle',
-                                                    style: TextStyle(color: Color(AppConstants.primaryColorValue)),
-                                                  ),
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      showAddressForm = !showAddressForm;
-                                                    });
+                                                
+                                                const SizedBox(height: 12),
+                                                
+                                                // Adres listesi
+                                                ListView.builder(
+                                                  shrinkWrap: true,
+                                                  physics: const NeverScrollableScrollPhysics(),
+                                                  itemCount: tempAddresses.length,
+                                                  itemBuilder: (context, index) {
+                                                    final address = tempAddresses[index];
+                                                    final bool isEditing = address['isEditing'] ?? false;
+                                                    
+                                                    return Container(
+                                                      margin: const EdgeInsets.only(bottom: 12),
+                                                      decoration: BoxDecoration(
+                                                        border: Border.all(
+                                                          color: address['isDefault'] 
+                                                              ? Color(AppConstants.primaryColorValue)
+                                                              : Colors.grey.shade300,
+                                                          width: address['isDefault'] ? 2 : 1,
+                                                        ),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                        color: address['isDefault'] 
+                                                            ? Color(AppConstants.primaryColorValue).withOpacity(0.05)
+                                                            : Colors.white,
+                                                      ),
+                                                      child: Column(
+                                                        children: [
+                                                          // Adres başlık çubuğu
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                            decoration: BoxDecoration(
+                                                              color: address['isDefault'] 
+                                                                  ? Color(AppConstants.primaryColorValue).withOpacity(0.1)
+                                                                  : Colors.grey.shade50,
+                                                              borderRadius: const BorderRadius.only(
+                                                                topLeft: Radius.circular(7),
+                                                                topRight: Radius.circular(7),
+                                                              ),
+                                                            ),
+                                                            child: Row(
+                                                              children: [
+                                                                // Varsayılan adres badge'i
+                                                                if (address['isDefault'])
+                                                                  Container(
+                                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                                    decoration: BoxDecoration(
+                                                                      color: Color(AppConstants.primaryColorValue),
+                                                                      borderRadius: BorderRadius.circular(12),
+                                                                    ),
+                                                                    child: const Text(
+                                                                      'Varsayılan',
+                                                                      style: TextStyle(
+                                                                        color: Colors.white,
+                                                                        fontSize: 10,
+                                                                        fontWeight: FontWeight.bold,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                
+                                                                if (address['isDefault']) const SizedBox(width: 8),
+                                                                
+                                                                Expanded(
+                                                                  child: Text(
+                                                                    'Adres ${index + 1}',
+                                                                    style: TextStyle(
+                                                                      fontWeight: FontWeight.bold,
+                                                                      color: address['isDefault'] 
+                                                                          ? Color(AppConstants.primaryColorValue)
+                                                                          : Colors.black87,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                
+                                                                // Düzenleme butonu
+                                                                IconButton(
+                                                                  icon: Icon(
+                                                                    isEditing ? Icons.check : Icons.edit,
+                                                                    size: 18,
+                                                                    color: Color(AppConstants.primaryColorValue),
+                                                                  ),
+                                                                  onPressed: () {
+                                                                    toggleEditAddress(index);
+                                                                  },
+                                                                ),
+                                                                
+                                                                // Varsayılan yapma butonu (varsayılan değilse)
+                                                                if (!address['isDefault'])
+                                                                  IconButton(
+                                                                    icon: const Icon(
+                                                                      Icons.star_border,
+                                                                      size: 18,
+                                                                      color: Colors.orange,
+                                                                    ),
+                                                                    onPressed: () {
+                                                                      setDefaultAddress(index);
+                                                                    },
+                                                                    tooltip: 'Varsayılan Yap',
+                                                                  ),
+                                                                
+                                                                // Silme butonu
+                                                                IconButton(
+                                                                  icon: const Icon(
+                                                                    Icons.delete,
+                                                                    size: 18,
+                                                                    color: Colors.red,
+                                                                  ),
+                                                                  onPressed: () {
+                                                                    removeAddress(index);
+                                                                  },
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          
+                                                          // Adres içeriği
+                                                          if (isEditing) ...[
+                                                            // Düzenleme formu
+                                                            Padding(
+                                                              padding: const EdgeInsets.all(12),
+                                                              child: Column(
+                                                                children: [
+                                                                  // Adres başlığı
+                                                                  TextFormField(
+                                                                    initialValue: address['adrTitle'],
+                                                                    decoration: const InputDecoration(
+                                                                      labelText: 'Adres Başlığı *',
+                                                                      hintText: 'Ev, İş vb.',
+                                                                      border: OutlineInputBorder(),
+                                                                      prefixIcon: Icon(Icons.label),
+                                                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                                                    ),
+                                                                    validator: (value) {
+                                                                      if (value == null || value.trim().isEmpty) {
+                                                                        return 'Adres başlığı boş olamaz';
+                                                                      }
+                                                                      return null;
+                                                                    },
+                                                                    onChanged: (value) {
+                                                                      setState(() {
+                                                                        tempAddresses[index]['adrTitle'] = value.trim();
+                                                                      });
+                                                                    },
+                                                                  ),
+                                                                  
+                                                                  const SizedBox(height: 12),
+                                                                  
+                                                                  // Adres
+                                                                  TextFormField(
+                                                                    initialValue: address['adrAddress'],
+                                                                    decoration: const InputDecoration(
+                                                                      labelText: 'Adres *',
+                                                                      hintText: 'Adres bilgilerini giriniz',
+                                                                      border: OutlineInputBorder(),
+                                                                      prefixIcon: Icon(Icons.location_on),
+                                                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                                                    ),
+                                                                    maxLines: 2,
+                                                                    validator: (value) {
+                                                                      if (value == null || value.trim().isEmpty) {
+                                                                        return 'Adres boş olamaz';
+                                                                      }
+                                                                      return null;
+                                                                    },
+                                                                    onChanged: (value) {
+                                                                      setState(() {
+                                                                        tempAddresses[index]['adrAddress'] = value.trim();
+                                                                      });
+                                                                    },
+                                                                  ),
+                                                                  
+                                                                  const SizedBox(height: 12),
+                                                                  
+                                                                  // Adres notu
+                                                                  TextFormField(
+                                                                    initialValue: address['adrNote'],
+                                                                    decoration: const InputDecoration(
+                                                                      labelText: 'Adres Notu (Opsiyonel)',
+                                                                      hintText: 'Kapı no, kat, daire vb.',
+                                                                      border: OutlineInputBorder(),
+                                                                      prefixIcon: Icon(Icons.note),
+                                                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                                                    ),
+                                                                    maxLines: 2,
+                                                                    onChanged: (value) {
+                                                                      setState(() {
+                                                                        tempAddresses[index]['adrNote'] = value.trim();
+                                                                      });
+                                                                    },
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ] else ...[
+                                                            // Görüntüleme modu
+                                                            if (address['adrTitle']?.isNotEmpty == true || 
+                                                                address['adrAddress']?.isNotEmpty == true)
+                                                              Padding(
+                                                                padding: const EdgeInsets.all(12),
+                                                                child: Column(
+                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                  children: [
+                                                                    if (address['adrTitle']?.isNotEmpty == true) ...[
+                                                                      Row(
+                                                                        children: [
+                                                                          const Icon(Icons.label, size: 16, color: Colors.grey),
+                                                                          const SizedBox(width: 8),
+                                                                          Text(
+                                                                            address['adrTitle'],
+                                                                            style: const TextStyle(
+                                                                              fontWeight: FontWeight.bold,
+                                                                              fontSize: 14,
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      const SizedBox(height: 8),
+                                                                    ],
+                                                                    
+                                                                    if (address['adrAddress']?.isNotEmpty == true) ...[
+                                                                      Row(
+                                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                                                                          const SizedBox(width: 8),
+                                                                          Expanded(
+                                                                            child: Text(
+                                                                              address['adrAddress'],
+                                                                              style: const TextStyle(fontSize: 13),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      const SizedBox(height: 8),
+                                                                    ],
+                                                                    
+                                                                    if (address['adrNote']?.isNotEmpty == true) ...[
+                                                                      Row(
+                                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          const Icon(Icons.note, size: 16, color: Colors.grey),
+                                                                          const SizedBox(width: 8),
+                                                                          Expanded(
+                                                                            child: Text(
+                                                                              address['adrNote'],
+                                                                              style: TextStyle(
+                                                                                fontSize: 12,
+                                                                                color: Colors.grey.shade600,
+                                                                                fontStyle: FontStyle.italic,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ],
+                                                                  ],
+                                                                ),
+                                                              )
+                                                            else
+                                                              Padding(
+                                                                padding: const EdgeInsets.all(12),
+                                                                child: Text(
+                                                                  'Adres bilgilerini tamamlamak için düzenle butonuna tıklayın',
+                                                                  style: TextStyle(
+                                                                    color: Colors.grey.shade600,
+                                                                    fontSize: 12,
+                                                                    fontStyle: FontStyle.italic,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                          ],
+                                                        ],
+                                                      ),
+                                                    );
                                                   },
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          
-                                          // Adres formu (göster/gizle)
-                                          if (showAddressForm) ...[
-                                            const Divider(),
-                                            
-                                            // Adres başlığı
-                                            TextFormField(
-                                              decoration: const InputDecoration(
-                                                labelText: 'Adres Başlığı *',
-                                                hintText: 'Ev, İş vb.',
-                                                border: OutlineInputBorder(),
-                                                prefixIcon: Icon(Icons.label),
-                                              ),
-                                              validator: (value) {
-                                                if (showAddressForm && (value == null || value.trim().isEmpty)) {
-                                                  return 'Adres başlığı boş olamaz';
-                                                }
-                                                return null;
-                                              },
-                                              onChanged: (value) {
-                                                addrTitle = value.trim();
-                                              },
-                                            ),
-                                            
-                                            const SizedBox(height: 16),
-                                            
-                                            // Adres
-                                            TextFormField(
-                                              decoration: const InputDecoration(
-                                                labelText: 'Adres *',
-                                                hintText: 'Adres bilgilerini giriniz',
-                                                border: OutlineInputBorder(),
-                                                prefixIcon: Icon(Icons.location_on),
-                                              ),
-                                              maxLines: 3,
-                                              validator: (value) {
-                                                if (showAddressForm && (value == null || value.trim().isEmpty)) {
-                                                  return 'Adres boş olamaz';
-                                                }
-                                                return null;
-                                              },
-                                              onChanged: (value) {
-                                                addrAddress = value.trim();
-                                              },
-                                            ),
-                                            
-                                            const SizedBox(height: 16),
-                                            
-                                            // Adres notu
-                                            TextFormField(
-                                              decoration: const InputDecoration(
-                                                labelText: 'Adres Notu (Opsiyonel)',
-                                                hintText: 'Kapı no, kat, daire vb.',
-                                                border: OutlineInputBorder(),
-                                                prefixIcon: Icon(Icons.note),
-                                              ),
-                                              maxLines: 2,
-                                              onChanged: (value) {
-                                                addrNote = value.trim();
-                                              },
-                                            ),
-                                            
-                                            const SizedBox(height: 16),
-                                            
-                                            // Varsayılan adres
-                                            CheckboxListTile(
-                                              title: const Text('Varsayılan adres olarak kaydet'),
-                                              value: isDefaultAddress,
-                                              contentPadding: EdgeInsets.zero,
-                                              controlAffinity: ListTileControlAffinity.leading,
-                                              activeColor: Color(AppConstants.primaryColorValue),
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  isDefaultAddress = value ?? true;
-                                                });
-                                              },
-                                            ),
-                                          ],
                                           
                                           // Kaydet butonu için boşluk
                                           const SizedBox(height: 16),
@@ -2074,19 +2541,18 @@ class _CategoryViewState extends State<CategoryView> {
                                     if (formKey.currentState != null && formKey.currentState!.validate()) {
                                       debugPrint('🔄 Form doğrulandı. Adres bilgileri oluşturuluyor.');
                                       
-                                      // Adres bilgilerini oluştur (eğer eklenecekse)
-                                      if (showAddressForm && addrTitle.isNotEmpty && addrAddress.isNotEmpty) {
-                                        orderAddresses = [
-                                          order_model.CustomerAddress(
-                                            adrTitle: addrTitle,
-                                            adrAdress: addrAddress,
-                                            adrNote: addrNote,
-                                            isDefault: isDefaultAddress,
-                                          )
-                                        ];
-                                      } else {
-                                        orderAddresses = [];
-                                      }
+                                      // Geçerli adres bilgilerini oluştur
+                                      orderAddresses = tempAddresses
+                                          .where((address) => 
+                                              address['adrTitle']?.isNotEmpty == true && 
+                                              address['adrAddress']?.isNotEmpty == true)
+                                          .map((address) => order_model.CustomerAddress(
+                                                adrTitle: address['adrTitle'],
+                                                adrAdress: address['adrAddress'],
+                                                adrNote: address['adrNote'] ?? '',
+                                                isDefault: address['isDefault'] ?? false,
+                                              ))
+                                          .toList();
                                       
                                       debugPrint('🔄 Adres bilgileri oluşturuldu. Müşteri ekleme işlemi başlatılıyor.');
                                       debugPrint('🔄 Müşteri Adı: $newCustomerName, Telefon: $newCustomerPhone');

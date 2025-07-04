@@ -320,6 +320,7 @@ class OrderViewModel extends ChangeNotifier {
     List<dynamic> addresses = const [],
     String custPhone = '',
     List<dynamic> custAdrs = const [],
+    int custAdrID = 0, // Müşteri adres ID'si
     required int isKuver,
     required int isWaiter,
     int orderPayType = 0, // Paket sipariş ödeme türü
@@ -359,6 +360,7 @@ class OrderViewModel extends ChangeNotifier {
         custName: custName, // Müşteri adını ekle
         custPhone: custPhone, // Müşteri telefonunu ekle
         custAdrs: formattedAddresses, // Dönüştürülmüş adresleri ekle
+        custAdrID: custAdrID, // Müşteri adres ID'si ekle
         isCust: custID > 0 || custName.isNotEmpty || custPhone.isNotEmpty ? 1 : 0, // Müşteri bilgisi varsa 1 olarak ayarla
         isKuver: isKuver, // Kuver durumu
         isWaiter: isWaiter, // Garsoniye durumu

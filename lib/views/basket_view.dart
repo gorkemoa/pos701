@@ -346,6 +346,7 @@ class _BasketViewState extends State<BasketView> {
           custName: custName,
           custPhone: custPhone,
           custAdrs: custAdrs,
+          custAdrID: _custAdrID, // custAdrID parametresini ekle
           isKuver: kuverDurumu,
           isWaiter: garsoniyeDurumu,
           orderPayType: _orderPayType,

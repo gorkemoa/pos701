@@ -380,6 +380,7 @@ class OrderUpdateRequest {
   final String custName;
   final String custPhone;
   final List<dynamic> custAdrs;
+  final int custAdrID;
   final int isCust;
   final List<OrderProduct> products;
   final int isKuver;
@@ -398,6 +399,7 @@ class OrderUpdateRequest {
     this.custName = '',
     this.custPhone = '',
     this.custAdrs = const [],
+    this.custAdrID = 0,
     this.isCust = 0,
     required this.products,
     required this.isKuver,
@@ -418,6 +420,7 @@ class OrderUpdateRequest {
       'custName': custName,
       'custPhone': custPhone,
       'custAdrs': custAdrs,
+      'custAdrID': custAdrID,
       'isCust': isCust,
       'products': products.map((product) => product.toJson()).toList(),
       'isKuver': isKuver,
