@@ -310,6 +310,11 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                     const SizedBox(height: 8),
                     _buildDetailRow(Icons.access_time, 'Tarih: ${order.orderDate}'),
                     
+                    if (order.orderCustName.isNotEmpty || order.orderCustAdr.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _buildCustomerCard(order),
+                    ],
+                    
                     if (canPay || canCancel) ...[
                       const SizedBox(height: 16),
                       Wrap(
@@ -543,6 +548,98 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     );
   }
 
+  Widget _buildCustomerCard(Order order) {
+    final bool hasCustomerName = order.orderCustName.isNotEmpty;
+    final bool hasCustomerAddress = order.orderCustAdr.isNotEmpty;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.person_pin, size: 18, color: Colors.blue.shade600),
+              const SizedBox(width: 8),
+              Text(
+                'Müşteri Bilgileri',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                height: 28,
+                child: TextButton.icon(
+                  onPressed: () => _showCustomerDetailDialog(order),
+                  icon: Icon(Icons.visibility, size: 14, color: Colors.blue.shade600),
+                  label: Text(
+                    'Detay',
+                    style: TextStyle(fontSize: 11, color: Colors.blue.shade600),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (hasCustomerName) ...[
+            Row(
+              children: [
+                Icon(Icons.person, size: 14, color: Colors.blue.shade500),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    order.orderCustName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blue.shade700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (hasCustomerAddress) ...[
+            if (hasCustomerName) const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 14, color: Colors.blue.shade500),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    order.orderCustAdr,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade600,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // Sipariş iptal butonu
   Widget _buildCancelOrderButton(Order order) {
     return SizedBox(
@@ -669,5 +766,178 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
         ),
       );
     }
+  }
+
+  // Müşteri detay diyaloğu
+  Future<void> _showCustomerDetailDialog(Order order) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.person_pin, color: Colors.blue.shade600),
+              const SizedBox(width: 8),
+              const Text('Müşteri Detayları'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Sipariş Kodu
+                _buildDialogDetailRow(
+                  icon: Icons.receipt_outlined,
+                  title: 'Sipariş Kodu',
+                  value: order.orderCode,
+                  color: Colors.grey.shade700,
+                ),
+                const SizedBox(height: 12),
+                
+                // Müşteri Adı
+                if (order.orderCustName.isNotEmpty) ...[
+                  _buildDialogDetailRow(
+                    icon: Icons.person,
+                    title: 'Müşteri Adı',
+                    value: order.orderCustName,
+                    color: Colors.blue.shade600,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                
+                // Müşteri Adresi
+                if (order.orderCustAdr.isNotEmpty) ...[
+                  _buildDialogDetailRow(
+                    icon: Icons.location_on,
+                    title: 'Teslimat Adresi',
+                    value: order.orderCustAdr,
+                    color: Colors.green.shade600,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                
+                // Sipariş Tutarı
+                _buildDialogDetailRow(
+                  icon: Icons.attach_money,
+                  title: 'Sipariş Tutarı',
+                  value: order.orderAmount,
+                  color: Colors.orange.shade600,
+                ),
+                const SizedBox(height: 12),
+                
+                // Sipariş Tarihi
+                _buildDialogDetailRow(
+                  icon: Icons.access_time,
+                  title: 'Sipariş Tarihi',
+                  value: order.orderDate,
+                  color: Colors.purple.shade600,
+                ),
+                const SizedBox(height: 12),
+                
+                // Garson
+                _buildDialogDetailRow(
+                  icon: Icons.person_outline,
+                  title: 'Garson',
+                  value: order.orderUserName,
+                  color: Colors.indigo.shade600,
+                ),
+                
+                // Ödeme Bilgileri
+                if (order.payments.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.payment, size: 16, color: Colors.green.shade600),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Ödeme Bilgileri',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.green.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ...order.payments.map((payment) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle, size: 12, color: Colors.green.shade500),
+                        const SizedBox(width: 8),
+                        Text(
+                          payment.payType,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Kapat'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDialogDetailRow({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+    int maxLines = 1,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+                maxLines: maxLines,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 } 

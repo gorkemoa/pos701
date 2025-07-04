@@ -460,6 +460,8 @@ class Order {
   final String orderAmount;
   final String payAmount;
   final String remainingAmount;
+  final String orderCustName;
+  final String orderCustAdr;
   final List<Payment> payments;
 
   Order({
@@ -475,6 +477,8 @@ class Order {
     required this.orderAmount,
     required this.payAmount,
     required this.remainingAmount,
+    this.orderCustName = '',
+    this.orderCustAdr = '',
     required this.payments,
   });
 
@@ -492,6 +496,8 @@ class Order {
       orderAmount: json['orderAmount'],
       payAmount: json['payAmount'],
       remainingAmount: json['remainingAmount'],
+      orderCustName: json['orderCustName'] ?? '',
+      orderCustAdr: json['orderCustAdr'] ?? '',
       payments: json['payments'] != null
           ? List<Payment>.from(
               json['payments'].map((payment) => Payment.fromJson(payment)))
