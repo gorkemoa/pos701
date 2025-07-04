@@ -109,7 +109,7 @@ class TableCard extends StatelessWidget {
                   },
                 ),
                 const Divider(),
-                // Masa birleştirilmiş ise "Masaları Ayır" düğmesi, değilse "Masaları Birleştir" düğmesi göster
+                // Masa birleştirilmiş ise hem "Masaları Ayır" hem de "Masaları Birleştir" düğmeleri göster
                 if (table.isMerged)
                   Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -132,22 +132,23 @@ class TableCard extends StatelessWidget {
                         });
                       },
                     ),
-                  )
-                else
-                  _optionButton(
-                    bottomSheetContext,
-                    icon: Icons.merge_type,
-                    iconColor: Colors.blue,
-                    text: 'Masaları Birleştir',
-                    onTap: () {
-                      // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
-                      Navigator.pop(bottomSheetContext);
-                      // Context kapandıktan sonraki işlem için Future.microtask kullan
-                      Future.microtask(() {
-                        _handleTableMerge(context, viewModel);
-                      });
-                    },
                   ),
+
+                // Her durumda (birleşmiş olsun ya da olmasın) "Masaları Birleştir" seçeneğini göster
+                _optionButton(
+                  bottomSheetContext,
+                  icon: Icons.merge_type,
+                  iconColor: Colors.blue,
+                  text: 'Masaları Birleştir',
+                  onTap: () {
+                    // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
+                    Navigator.pop(bottomSheetContext);
+                    // Context kapandıktan sonraki işlem için Future.microtask kullan
+                    Future.microtask(() {
+                      _handleTableMerge(context, viewModel);
+                    });
+                  },
+                ),
                 const Divider(),
                 _optionButton(
                   bottomSheetContext,
