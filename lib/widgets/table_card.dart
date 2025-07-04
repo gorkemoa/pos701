@@ -42,6 +42,9 @@ class TableCard extends StatelessWidget {
       debugPrint('Bu masa ${debugMainTable.tableName} (ID: ${debugMainTable.tableID}) ana masasına bağlı');
     }
     
+    // Yan masa kontrolü: Masa bir ana masaya bağlıysa ve kendisi ana masa değilse yan masadır
+    final bool isSideTable = debugMainTable != null && !table.isMerged;
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -134,22 +137,24 @@ class TableCard extends StatelessWidget {
                     ),
                   ),
 
-                // Her durumda (birleşmiş olsun ya da olmasın) "Masaları Birleştir" seçeneğini göster
-                _optionButton(
-                  bottomSheetContext,
-                  icon: Icons.merge_type,
-                  iconColor: Colors.blue,
-                  text: 'Masaları Birleştir',
-                  onTap: () {
-                    // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
-                    Navigator.pop(bottomSheetContext);
-                    // Context kapandıktan sonraki işlem için Future.microtask kullan
-                    Future.microtask(() {
-                      _handleTableMerge(context, viewModel);
-                    });
-                  },
-                ),
-                const Divider(),
+                // Yan masa değilse (bağımsız masa veya ana masa) "Masaları Birleştir" seçeneğini göster
+                if (!isSideTable) ...[
+                  _optionButton(
+                    bottomSheetContext,
+                    icon: Icons.merge_type,
+                    iconColor: Colors.blue,
+                    text: 'Masaları Birleştir',
+                    onTap: () {
+                      // Önce BottomSheet'i kapat, sonra işlemi gerçekleştir
+                      Navigator.pop(bottomSheetContext);
+                      // Context kapandıktan sonraki işlem için Future.microtask kullan
+                      Future.microtask(() {
+                        _handleTableMerge(context, viewModel);
+                      });
+                    },
+                  ),
+                  const Divider(),
+                ],
                 _optionButton(
                   bottomSheetContext,
                   icon: Icons.receipt,
@@ -1584,19 +1589,19 @@ class TableCard extends StatelessWidget {
                 ),
               ),
             
-            // Birleştirilmiş masa için arka plan overlay kaldırıldı, yerine ikon kullanılacak
-            // if (table.isMerged)
-            //   Positioned.fill(
-            //     child: IgnorePointer(
-            //       ignoring: true,
-            //       child: Container(
-            //         decoration: BoxDecoration(
-            //           color: primaryColor.withOpacity(0.10),
-            //           borderRadius: borderRadius,
-            //         ),
-            //       ),
-            //     ),
-            //   ),
+            // Ana masa için hafif arka plan vurgusu (düşük opaklıkta)
+            if (table.isMerged)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.06), // Çok hafif vurgu
+                      borderRadius: borderRadius,
+                    ),
+                  ),
+                ),
+              ),
             
             // Ana masa ikonu (birleştirici masa)
             if (table.isMerged)

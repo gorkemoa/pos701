@@ -128,7 +128,6 @@ class OrderRequest {
       'tableID': tableID,
       'custID': custID,
       'orderType': orderType,
-      'orderName': orderName,
       'orderDesc': orderDesc,
       'orderGuest': orderGuest,
       'custAdrID': custAdrID,
