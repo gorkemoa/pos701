@@ -185,7 +185,17 @@ class _LoginViewState extends State<LoginView> {
                                       context,
                                       listen: false,
                                     );
-                                    await userViewModel.loadUserInfo();
+                                    final bool userInfoLoaded = await userViewModel.loadUserInfo();
+
+                                    // Kullanıcı bilgileri alınamadıysa işlem iptal
+                                    if (!userInfoLoaded || userViewModel.userInfo == null || userViewModel.userInfo!.compID == null) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Kullanıcı bilgileri alınamadı. Lütfen tekrar deneyin.')),
+                                        );
+                                      }
+                                      return;
+                                    }
                                     
                                     // FCM topic aboneliği yap
                                     final messagingService = Provider.of<FirebaseMessagingService>(

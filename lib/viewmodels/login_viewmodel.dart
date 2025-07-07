@@ -92,6 +92,23 @@ class LoginViewModel extends ChangeNotifier {
           await prefs.setInt(AppConstants.companyIdKey, response.data!.compID!);
         } else {
           _logger.w('Kullanıcı bilgilerinde Şirket ID (compID) bulunamadı');
+          // Şirket ID login yanıtında gelmediyse, kullanıcı bilgilerini çekmeyi deneyelim
+          try {
+            _logger.i('Şirket ID alınamadı, getUserInfo ile kullanıcı bilgileri çekiliyor...');
+            final userInfoResponse = await _authService.getUserInfo(_lastLoggedInUserId!);
+
+            if (userInfoResponse.success && userInfoResponse.data != null && userInfoResponse.data!.compID != null) {
+              await _apiService.saveCompanyId(userInfoResponse.data!.compID!);
+              _logger.i('Şirket ID kullanıcı bilgileri üzerinden kaydedildi: ${userInfoResponse.data!.compID}');
+
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setInt(AppConstants.companyIdKey, userInfoResponse.data!.compID!);
+            } else {
+              _logger.w('getUserInfo yanıtı da Şirket ID içermiyor veya başarısız: ${userInfoResponse.errorCode}');
+            }
+          } catch (e) {
+            _logger.e('Şirket ID alınırken hata oluştu', e);
+          }
         }
         
         return true;
