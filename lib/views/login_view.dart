@@ -4,6 +4,7 @@ import 'package:pos701/viewmodels/login_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/views/home_view.dart';
+import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
 
 class LoginView extends StatefulWidget {
@@ -204,13 +205,38 @@ class _LoginViewState extends State<LoginView> {
                                     );
                                     await viewModel.subscribeToUserTopic(messagingService);
                                     
-                                    // Ana sayfaya yönlendir
+                                    // userRank değerine göre yönlendirme yap
+                                    final String? userRank = userViewModel.userInfo?.userRank;
+                                    final int compID = userViewModel.userInfo!.compID!;
+                                    final String token = userViewModel.userInfo!.token;
+                                    
                                     if (mounted) {
-                                      Navigator.of(context).pushReplacement(
-                                        MaterialPageRoute(
-                                          builder: (context) => const HomeView(),
-                                        ),
-                                      );
+                                      if (userRank == '30') {
+                                        // Rank 30 ise doğrudan masa sayfasına yönlendir
+                                        Navigator.of(context).pushReplacement(
+                                          MaterialPageRoute(
+                                            builder: (context) => TablesView(
+                                              userToken: token,
+                                              compID: compID,
+                                              title: 'Masalar',
+                                            ),
+                                          ),
+                                        );
+                                      } else if (userRank == '50') {
+                                        // Rank 50 ise ana sayfaya yönlendir
+                                        Navigator.of(context).pushReplacement(
+                                          MaterialPageRoute(
+                                            builder: (context) => const HomeView(),
+                                          ),
+                                        );
+                                      } else {
+                                        // Diğer durumlarda varsayılan olarak ana sayfaya yönlendir
+                                        Navigator.of(context).pushReplacement(
+                                          MaterialPageRoute(
+                                            builder: (context) => const HomeView(),
+                                          ),
+                                        );
+                                      }
                                     }
                                   }
                                 }

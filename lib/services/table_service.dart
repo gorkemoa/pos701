@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos701/models/table_model.dart';
 import 'package:pos701/constants/app_constants.dart';
+import 'package:pos701/main.dart';
+import 'package:pos701/views/login_view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TableService {
   Future<TablesResponse> getTables({
@@ -34,6 +37,10 @@ class TableService {
       if (response.statusCode == 410 || response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         return TablesResponse.fromJson(data);
+      } else if (response.statusCode == 403) {
+        debugPrint('403 hatası yakalandı. Token temizleniyor ve login sayfasına yönlendiriliyor.');
+        await _handle403Error();
+        throw Exception('Geçersiz token. Üye doğrulama bilgileri hatalı.');
       } else {
         throw Exception('Sunucu hatası: ${response.statusCode}, ${response.body}');
       }
@@ -405,6 +412,40 @@ class TableService {
         'success': false,
         'error_message': 'İstek gönderilirken bir hata oluştu: $e',
       };
+    }
+  }
+  
+  /// 403 hatası durumunda token temizleme ve login sayfasına yönlendirme
+  Future<void> _handle403Error() async {
+    try {
+      debugPrint('403 hatası yakalandı. Token temizleniyor ve login sayfasına yönlendiriliyor.');
+      
+      // Token'ı temizle
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.tokenKey);
+      await prefs.remove(AppConstants.userIdKey);
+      await prefs.remove(AppConstants.companyIdKey);
+      
+      // Login sayfasına yönlendir
+      final context = navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        // Mevcut tüm route'ları temizle ve login sayfasına yönlendir
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginView()),
+          (route) => false,
+        );
+        
+        // Kullanıcıya bilgi ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('403 hatası işlenirken hata oluştu: $e');
     }
   }
 }

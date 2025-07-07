@@ -3,6 +3,9 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/utils/app_logger.dart';
+import 'package:flutter/material.dart';
+import 'package:pos701/main.dart';
+import 'package:pos701/views/login_view.dart';
 
 class ApiService {
   final Dio _dio = Dio();
@@ -19,9 +22,9 @@ class ApiService {
       'Authorization': _getBasicAuthHeader(),
     };
     
-    // API'nin 410 durum kodunu ve 401 durum kodunu başarılı bir yanıt olarak değerlendirmek için
+    // API'nin 410, 401 ve 403 durum kodlarını başarılı yanıt olarak değerlendirmek için
     _dio.options.validateStatus = (status) {
-      return (status != null && (status >= 200 && status < 300)) || status == 410 || status == 401;
+      return (status != null && (status >= 200 && status < 300)) || status == 410 || status == 401 || status == 403;
     };
 
     _dio.interceptors.add(
@@ -61,6 +64,12 @@ class ApiService {
           // 401 durum kodu için özel mesaj
           if (response.statusCode == 401) {
             _logger.w('HTTP 401 alındı: Yetkisiz erişim hatası. Yeniden kimlik doğrulama gerekebilir.');
+          }
+          
+          // 403 durum kodu için özel işlem - token hatası
+          if (response.statusCode == 403) {
+            _logger.w('HTTP 403 alındı: Geçersiz token hatası. Kullanıcı login sayfasına yönlendiriliyor.');
+            _handle403Error();
           }
           
           // Response Log
@@ -192,5 +201,36 @@ class ApiService {
     await _prefs?.remove(AppConstants.userIdKey);
     await _prefs?.remove(AppConstants.companyIdKey);
     _logger.i('Token ve kullanıcı bilgileri temizlendi');
+  }
+  
+  /// 403 hatası durumunda token temizleme ve login sayfasına yönlendirme
+  void _handle403Error() async {
+    try {
+      _logger.w('403 hatası yakalandı. Token temizleniyor ve login sayfasına yönlendiriliyor.');
+      
+      // Token'ı temizle
+      await clearToken();
+      
+      // Login sayfasına yönlendir
+      final context = navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        // Mevcut tüm route'ları temizle ve login sayfasına yönlendir
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginView()),
+          (route) => false,
+        );
+        
+        // Kullanıcıya bilgi ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      _logger.e('403 hatası işlenirken hata oluştu: $e');
+    }
   }
 } 

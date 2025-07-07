@@ -8,6 +8,7 @@ import 'package:pos701/widgets/app_drawer.dart';
 import 'package:pos701/widgets/dashboard_card.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:pos701/views/login_view.dart';
+import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/services/api_service.dart';
 
 class HomeView extends StatefulWidget {
@@ -27,6 +28,28 @@ class _HomeViewState extends State<HomeView> {
       if (userViewModel.userInfo == null) {
         // Kullanıcı bilgilerinin yüklenmesini bekle
         await userViewModel.loadUserInfo();
+      }
+      
+      // userRank kontrolü yap
+      if (mounted && userViewModel.userInfo != null) {
+        final String? userRank = userViewModel.userInfo?.userRank;
+        
+        // Eğer userRank 30 ise masa sayfasına yönlendir
+        if (userRank == '30') {
+          final int compID = userViewModel.userInfo!.compID!;
+          final String token = userViewModel.userInfo!.token;
+          
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => TablesView(
+                userToken: token,
+                compID: compID,
+                title: 'Masalar',
+              ),
+            ),
+          );
+          return;
+        }
       }
       
       // Kullanıcı bilgileri yüklendikten sonra istatistik verilerini yükle

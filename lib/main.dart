@@ -25,6 +25,9 @@ import 'package:pos701/services/firebase_messaging_service.dart';
 import 'package:pos701/viewmodels/notification_viewmodel.dart';
 import 'package:pos701/firebase_options.dart';
 
+// Global navigator key - 403 hatası durumunda login'e yönlendirme için
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 // Uygulama başlatıldı mı kontrolü için global değişken
 bool _isFirebaseInitialized = false;
 
@@ -124,6 +127,7 @@ void main() async {
         ),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(

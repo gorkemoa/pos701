@@ -63,21 +63,23 @@ class _AppDrawerState extends State<AppDrawer> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              child: Column(
+              child:               Column(
                 children: [
-                  _buildDrawerItem(
-                    icon: Icons.home,
-                    title: 'Anasayfa',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => HomeView(),
-                        ),
-                      );
-                    },
-                  ),
+                  // Anasayfa sadece userRank 50 olan kullanıcılara göster
+                  if (userViewModel.userInfo?.userRank == '50')
+                    _buildDrawerItem(
+                      icon: Icons.home,
+                      title: 'Anasayfa',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HomeView(),
+                          ),
+                        );
+                      },
+                    ),
                   _buildDrawerItem(
                     icon: Icons.shopping_basket,
                     title: 'Siparişler',
