@@ -184,86 +184,77 @@ class _CategoryViewState extends State<CategoryView> {
               return const Center(child: Text('Kategori bulunamadı'));
             }
 
-            return Column(
-              children: [
-                // Arama Çubuğu
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Ürün arayın...',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    // Arama temizlendiğinde tüm ürünleri görüntüle
-                                    _filterProducts();
-                                  },
-                                )
-                              : null,
-                          hintStyle: const TextStyle(fontSize: 14),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        onChanged: (value) {
-                          // Her değişiklikte değil, setState çağırarak UI'yı güncelle
-                          setState(() {});
-                          // Listener zaten _filterProducts'ı çağıracak
-                        },
-                      ),
-                      
-                      // Arama sonucu bilgisi
-                      if (_searchController.text.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0, left: 4.0),
-                          child: Consumer<ProductViewModel>(
-                            builder: (context, productViewModel, child) {
-                              final int productCount = productViewModel.products.length;
-                              return Text(
-                                'Bulunan ürün: $productCount',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              );
+            // Tüm içeriği tek scrollable alana al
+            return SingleChildScrollView(
+              child: Padding( 
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Arama Çubuğu
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Ürün arayın...',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _filterProducts();
+                                      },
+                                    )
+                                  : null,
+                              hintStyle: const TextStyle(fontSize: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                            onChanged: (value) {
+                              setState(() {});
                             },
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                
-                // Kategoriler ve Ürünler tek bir ScrollView içinde
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        // Kategoriler Bölümü
-                        _buildCategoriesSection(categoryViewModel),
-                        
-                        // Ürünler Bölümü
-                        _buildProductsSection(context),
-                      ],
+                          if (_searchController.text.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                              child: Consumer<ProductViewModel>(
+                                builder: (context, productViewModel, child) {
+                                  final int productCount = productViewModel.products.length;
+                                  return Text(
+                                    'Bulunan ürün: $productCount',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
+                    // Kategoriler Bölümü
+                    _buildCategoriesSection(categoryViewModel),
+                    // Ürünler Bölümü
+                    _buildProductsSection(context),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         ),
@@ -390,54 +381,27 @@ class _CategoryViewState extends State<CategoryView> {
   Widget _buildCategoriesSection(CategoryViewModel categoryViewModel) {
     List<Category> categories = categoryViewModel.categories;
     if (categories.isEmpty) return const SizedBox.shrink();
-    
-    // Sabit yükseklik hesapla (görseldeki 6 satırlık kategori alanı)
-    final double categoryBlockHeight = MediaQuery.of(context).size.height * 0.28;
-    final double rowHeight = categoryBlockHeight / 6.0;
-    
-    List<Widget> categoryRows = [];
-    int itemsProcessed = 0;
 
-    // İlk 5 satır, her satırda 3 kategori
-    for (int i = 0; i < 5 && itemsProcessed < categories.length; i++) {
-      List<Widget> rowButtons = [];
-      for (int j = 0; j < 3; j++) {
-        if (itemsProcessed < categories.length) {
-          Category category = categories[itemsProcessed];
-          Color categoryColor = _getCategoryColor(category);
-          rowButtons.add(Expanded(child: _buildConfigurableCategoryButton(category, categoryColor, rowHeight)));
-          itemsProcessed++;
-        } else {
-          rowButtons.add(const Expanded(child: SizedBox.shrink()));
-        }
-      }
-      categoryRows.add(SizedBox(
-        height: rowHeight, 
-        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: rowButtons)
-      ));
-    }
-
-    // Son satırda kalan kategoriler (en fazla 2 kategori)
-    if (itemsProcessed < categories.length) {
-      List<Widget> lastRowButtons = [];
-      int remainingItems = categories.length - itemsProcessed;
-      for (int k = 0; k < remainingItems && k < 2; k++) {
-        Category category = categories[itemsProcessed];
-        Color categoryColor = _getCategoryColor(category);
-        lastRowButtons.add(Expanded(child: _buildConfigurableCategoryButton(category, categoryColor, rowHeight)));
-        itemsProcessed++;
-      }
-      
-      // Son satırda en az bir kategori varsa ekle
-      if (lastRowButtons.isNotEmpty) {
-        categoryRows.add(SizedBox(
-          height: rowHeight, 
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: lastRowButtons)
-        ));
-      }
-    }
-
-    return Column(children: categoryRows);
+    // Kategoriler için grid yapısı, satır ve sütun sayısı dinamik
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 1.0),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(), // Ana scroll ile birlikte kayacak
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 0,
+          mainAxisSpacing: 0,
+          childAspectRatio: 3.0,
+        ),
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          final categoryColor = _getCategoryColor(category);
+          return _buildConfigurableCategoryButton(category, categoryColor, 48);
+        },
+      ),
+    );
   }
 
   // Ürünler bölümünü oluştur
@@ -498,7 +462,7 @@ class _CategoryViewState extends State<CategoryView> {
 
         // Ürün sayısına göre dinamik yükseklik hesapla (her satırda 3 ürün)
         final int productCount = productViewModel.products.length;
-        final int rowCount = (productCount / 3).ceil();
+        final int rowCount = (productCount / 2).ceil();
         final double estimatedGridHeight = rowCount * 180.0; // 180 piksel ortalama kart yüksekliği
         
         return Container(
@@ -524,47 +488,11 @@ class _CategoryViewState extends State<CategoryView> {
     );
   }
 
-  Widget _buildCategoryButton(Category category, Color categoryColor) {
-    
-    return Card(
-      margin: const EdgeInsets.all(1.0), // Adjusted margin for tighter fit
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(0),
-      ),
-      color: categoryColor,
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedCategory = category;
-          });
-          _loadProducts(category.catID, category.catName);
-        },
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Text(
-              category.catName.toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildConfigurableCategoryButton(Category category, Color categoryColor, double buttonHeight) {
     return SizedBox(
       height: buttonHeight,
       child: Card(
-        margin: const EdgeInsets.all(1.0), // Görseldeki sıkı yerleşim için kenar boşluğunu azalttım
+        margin: const EdgeInsets.all(1), // Görseldeki sıkı yerleşim için kenar boşluğunu azalttım
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(0), // Köşeleri olmayan düz butonlar
@@ -584,7 +512,7 @@ class _CategoryViewState extends State<CategoryView> {
                 category.catName.toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 14, 
+                  fontSize: 12, 
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,

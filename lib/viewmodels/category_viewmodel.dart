@@ -53,6 +53,10 @@ class CategoryViewModel extends ChangeNotifier {
       
       if (response.success && response.data != null) {
         _categories = response.data!.categories;
+        // Kategorileri debugPrint ile yazdır
+        for (final category in _categories) {
+          debugPrint('Kategori: ID=${category.catID}, Ad=${category.catName}, Renk=${category.catColor}');
+        }
         _logger.i('Kategoriler başarıyla yüklendi. Kategori sayısı: ${_categories.length}');
         _safeNotifyListeners();
         return true;
