@@ -72,10 +72,20 @@ class ProductViewModel extends ChangeNotifier {
         _safeNotifyListeners();
         return true;
       } else {
-        _errorMessage = 'Ürünler yüklenemedi';
-        _logger.w('Ürün yükleme başarısız: ${response.error}');
-        _safeNotifyListeners();
-        return false;
+        // API'den gelen özel mesajları kontrol et
+        if (response.error == false && response.success == false) {
+          // Bu durumda kategoride ürün yok, ancak bu bir hata değil
+          _products = [];
+          _filteredProducts = [];
+          _logger.i('Bu kategoride ürün bulunmuyor.');
+          _safeNotifyListeners();
+          return true;
+        } else {
+          _errorMessage = 'Ürünler yüklenemedi';
+          _logger.w('Ürün yükleme başarısız: ${response.error}');
+          _safeNotifyListeners();
+          return false;
+        }
       }
     } catch (e) {
       _isLoading = false;
@@ -109,4 +119,4 @@ class ProductViewModel extends ChangeNotifier {
     
     _safeNotifyListeners();
   }
-} 
+}

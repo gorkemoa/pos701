@@ -85,7 +85,7 @@ class ProductService {
       _logger.d('Yanıt Başlıkları: ${response.headers}');
       _logger.d('Ham yanıt içeriği: ${response.body}');
       
-      if (response.statusCode == 200 || response.statusCode == 410) {
+      if (response.statusCode == 200 || response.statusCode == 410 || response.statusCode == 417) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         _logger.d('Ham yanıt tipi: ${jsonResponse.runtimeType}');
         _logger.d('Ham yanıt içeriği: $jsonResponse');
@@ -148,4 +148,4 @@ class ProductService {
       throw Exception('Ürün detayları alınırken hata oluştu: Kullanıcı bilgileri yüklenemedi. Hata: $e');
     }
   }
-} 
+}

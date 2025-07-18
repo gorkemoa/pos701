@@ -168,6 +168,8 @@ class _LoginViewState extends State<LoginView> {
                             ? null
                             : () async {
                                 if (_formKey.currentState!.validate()) {
+                                  // isLoading tekrar kontrolü (çifte tıklama veya hızlı tıklama engeli)
+                                  if (viewModel.isLoading) return;
                                   final success = await viewModel.login(
                                     _usernameController.text,
                                     _passwordController.text,
@@ -180,14 +182,12 @@ class _LoginViewState extends State<LoginView> {
                                       // Beni hatırla seçili değilse, kaydedilmiş kullanıcı adını temizle
                                       await viewModel.clearSavedUsername();
                                     }
-                                    
                                     // Kullanıcı bilgilerini yükle
                                     final userViewModel = Provider.of<UserViewModel>(
                                       context,
                                       listen: false,
                                     );
                                     final bool userInfoLoaded = await userViewModel.loadUserInfo();
-
                                     // Kullanıcı bilgileri alınamadıysa işlem iptal
                                     if (!userInfoLoaded || userViewModel.userInfo == null || userViewModel.userInfo!.compID == null) {
                                       if (mounted) {
@@ -197,19 +197,16 @@ class _LoginViewState extends State<LoginView> {
                                       }
                                       return;
                                     }
-                                    
                                     // FCM topic aboneliği yap
                                     final messagingService = Provider.of<FirebaseMessagingService>(
                                       context,
                                       listen: false,
                                     );
                                     await viewModel.subscribeToUserTopic(messagingService);
-                                    
                                     // userRank değerine göre yönlendirme yap
                                     final String? userRank = userViewModel.userInfo?.userRank;
                                     final int compID = userViewModel.userInfo!.compID!;
                                     final String token = userViewModel.userInfo!.token;
-                                    
                                     if (mounted) {
                                       if (userRank == '30') {
                                         // Rank 30 ise doğrudan masa sayfasına yönlendir

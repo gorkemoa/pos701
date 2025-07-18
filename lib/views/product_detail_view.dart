@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // NumericFormatter için
 import 'package:pos701/models/product_detail_model.dart';
-import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
 import 'package:pos701/services/product_service.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
