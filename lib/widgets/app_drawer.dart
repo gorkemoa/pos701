@@ -3,6 +3,7 @@ import 'package:intl/number_symbols_data.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/views/kitchen_view.dart';
+import 'package:pos701/views/settings_view.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/services/auth_service.dart';
@@ -152,6 +153,19 @@ class _AppDrawerState extends State<AppDrawer> {
                     },
                   ),
                   _buildDrawerItem(
+                    icon: Icons.settings,
+                    title: 'Ayarlar',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsView(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
                     icon: Icons.ondemand_video,
                     title: 'Kullanım Kılavuzu',
                     onTap: () {
@@ -236,6 +250,7 @@ class _AppDrawerState extends State<AppDrawer> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    Widget? trailing,
   }) {
     return Column(
       children: [
@@ -247,6 +262,7 @@ class _AppDrawerState extends State<AppDrawer> {
             title,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
+          trailing: trailing,
           onTap: onTap,
         ),
         const Divider(height: 1, thickness: 0.5),

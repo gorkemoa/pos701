@@ -15,6 +15,7 @@ import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/customer_viewmodel.dart';
 import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;  // Sipariş için CustomerAddress sınıfı
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CategoryView extends StatefulWidget {
   final int compID;
@@ -74,6 +75,21 @@ class _CategoryViewState extends State<CategoryView> {
     _searchController.addListener(_filterProducts);
     
     _loadCategories();
+    _loadLayoutPreference();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Layout tercihini her sayfa açılışında yeniden yükle
+    _loadLayoutPreference();
+  }
+
+  Future<void> _loadLayoutPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isVerticalLayout = prefs.getBool('isVerticalLayout') ?? false;
+    });
   }
 
   @override
@@ -153,24 +169,9 @@ class _CategoryViewState extends State<CategoryView> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           actions: [
-            // --- YENİ: Mod toggle ---
-            Row(
-              children: [
-                const Text("Klasik", style: TextStyle(fontSize: 12)),
-                Switch(
-                  value: _isVerticalLayout,
-                  onChanged: (val) {
-                    setState(() {
-                      _isVerticalLayout = val;
-                    });
-                  },
-                ),
-                const Text("Dikey", style: TextStyle(fontSize: 12)),
-                IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: _showMenuDialog,
-                ),
-              ],
+            IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: _showMenuDialog,
             ),
           ],
         ),
@@ -433,7 +434,15 @@ class _CategoryViewState extends State<CategoryView> {
             // Sol: Kategori listesi
             Container(
               width: 120,
-              color: Colors.grey.shade100,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                border: Border(
+                  right: BorderSide(
+                    color: Colors.grey.shade300,
+                    width: 3,
+                  ),
+                ),
+              ),
               child: ListView.builder(
                 itemCount: categoryViewModel.categories.length,
                 itemBuilder: (context, index) {
@@ -454,6 +463,10 @@ class _CategoryViewState extends State<CategoryView> {
                           left: BorderSide(
                             color: isSelected ? Color(int.parse(category.catColor.replaceFirst('#', '0xFF'))) : Colors.transparent,
                             width: 4,
+                          ),
+                          bottom: BorderSide(
+                            color: Colors.grey.shade200,
+                            width: 0.5,
                           ),
                         ),
                       ),
@@ -504,30 +517,36 @@ class _CategoryViewState extends State<CategoryView> {
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 4),
                         child: ListTile(
-                            
-                          title: Text(product.proName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),),
-                          subtitle: Text('₺${product.proPrice.replaceAll(" TL", "")}'),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          title: Text(
+                            product.proName, 
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '₺${product.proPrice.replaceAll(" TL", "")}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
                           trailing: quantity > 0
                               ? Container(
-                                  margin: const EdgeInsets.only(left: 10),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                  width: 80,
+                                  height: 32,
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade100,
                                     borderRadius: BorderRadius.circular(1),
                                     border: Border.all(color: Color(AppConstants.primaryColorValue).withOpacity(0.2)),
                                   ),
-                                  constraints: const BoxConstraints(minWidth: 70, maxWidth: 90, minHeight: 32, maxHeight: 36),
                                   child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
                                       SizedBox(
-                                        width: 30,
+                                        width: 24,
                                         height: 24,
                                         child: IconButton(
                                           padding: EdgeInsets.zero,
-                                          iconSize: 20,
-                                          icon: const Icon(Icons.remove_circle_outline),
+                                          iconSize: 16,
+                                          icon: const Icon(Icons.remove),
                                           color: Color(AppConstants.primaryColorValue),
                                           onPressed: () {
                                             basketViewModel.decreaseProduct(product);
@@ -535,24 +554,21 @@ class _CategoryViewState extends State<CategoryView> {
                                           tooltip: 'Azalt',
                                         ),
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                                        child: Text(
-                                          '$quantity',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(AppConstants.primaryColorValue),
-                                            fontSize: 13,
-                                          ),
+                                      Text(
+                                        '$quantity',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(AppConstants.primaryColorValue),
+                                          fontSize: 12,
                                         ),
                                       ),
                                       SizedBox(
-                                        width: 30,
+                                        width: 24,
                                         height: 24,
                                         child: IconButton(
                                           padding: EdgeInsets.zero,
-                                          iconSize: 20,
-                                          icon: const Icon(Icons.add_circle_outline),
+                                          iconSize: 16,
+                                          icon: const Icon(Icons.add),
                                           color: Color(AppConstants.primaryColorValue),
                                           onPressed: () {
                                             basketViewModel.addProduct(product, opID: 0);
@@ -564,27 +580,22 @@ class _CategoryViewState extends State<CategoryView> {
                                   ),
                                 )
                               : Container(
-                                  margin: const EdgeInsets.only(right: 4),
-                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                                  width: 32,
+                                  height: 32,
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(4),
                                     border: Border.all(color: Color(AppConstants.primaryColorValue).withOpacity(0.2)),
                                   ),
-                                  constraints: const BoxConstraints(minWidth: 32, maxWidth: 40, minHeight: 32, maxHeight: 36),
-                                  child: SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      iconSize: 16,
-                                      icon: const Icon(Icons.add_circle_outline),
-                                      color: Color(AppConstants.primaryColorValue),
-                                      onPressed: () {
-                                        basketViewModel.addProduct(product, opID: 0);
-                                      },
-                                      tooltip: 'Ekle',
-                                    ),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    iconSize: 16,
+                                    icon: const Icon(Icons.add),
+                                    color: Color(AppConstants.primaryColorValue),
+                                    onPressed: () {
+                                      basketViewModel.addProduct(product, opID: 0);
+                                    },
+                                    tooltip: 'Ekle',
                                   ),
                                 ),
                         ),
@@ -709,7 +720,7 @@ class _CategoryViewState extends State<CategoryView> {
         // Ürün sayısına göre dinamik yükseklik hesapla (her satırda 3 ürün)
         final int productCount = productViewModel.products.length;
         final int rowCount = (productCount / 3).ceil();
-        final double estimatedGridHeight = rowCount * 180.0; // 180 piksel ortalama kart yüksekliği
+        final double estimatedGridHeight = rowCount * 220.0; // 220 piksel ortalama kart yüksekliği
         
         return Container(
           height: estimatedGridHeight,
@@ -721,7 +732,7 @@ class _CategoryViewState extends State<CategoryView> {
               crossAxisCount: 3,
               crossAxisSpacing: 10,
               mainAxisSpacing: 6,
-              childAspectRatio: 0.9,
+              childAspectRatio: 0.75,
             ),
             itemCount: productViewModel.products.length,
             itemBuilder: (context, index) {
@@ -735,15 +746,24 @@ class _CategoryViewState extends State<CategoryView> {
   }
 
   Widget _buildConfigurableCategoryButton(Category category, Color categoryColor, double buttonHeight) {
+    final bool isSelected = _selectedCategory?.catID == category.catID;
+    
     return SizedBox(
       height: buttonHeight,
       child: Card(
-        margin: const EdgeInsets.all(1), // Görseldeki sıkı yerleşim için kenar boşluğunu azalttım
-        elevation: 0,
+        margin: const EdgeInsets.all(1),
+        elevation: isSelected ? 4 : 1, // Seçilmeyen kategoriler için de hafif gölge
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(0), // Köşeleri olmayan düz butonlar
+          borderRadius: BorderRadius.circular(0),
+          side: isSelected ? BorderSide(
+            color: Colors.white,
+            width: 3,
+          ) : BorderSide(
+            color: Colors.grey.shade300,
+            width: 1,
+          ), // Seçilmeyen kategoriler için ince border
         ),
-        color: categoryColor,
+        color: isSelected ? categoryColor : categoryColor.withOpacity(0.9), // Seçilmeyen kategoriler daha az şeffaf
         child: InkWell(
           onTap: () {
             setState(() {
@@ -753,17 +773,24 @@ class _CategoryViewState extends State<CategoryView> {
           },
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0), // Metin için iç dolgu
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
               child: Text(
                 category.catName.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 12, 
-                  fontWeight: FontWeight.bold,
+                  fontSize: isSelected ? 13 : 12,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600, // Seçilmeyen kategoriler için daha kalın font
+                  shadows: [
+                    Shadow(
+                      offset: const Offset(1, 1),
+                      blurRadius: 2,
+                      color: Colors.black.withOpacity(isSelected ? 0.5 : 0.3), // Seçilmeyen kategoriler için daha hafif gölge
+                    ),
+                  ], // Tüm kategoriler için gölge efekti
                 ),
                 textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis, // Uzun metinler için
-                maxLines: 2, // En fazla iki satır
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
           ),
@@ -830,8 +857,8 @@ class _CategoryViewState extends State<CategoryView> {
                             fontWeight: FontWeight.w600,
                           ),
                           textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: 3,
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                     ),
@@ -852,6 +879,9 @@ class _CategoryViewState extends State<CategoryView> {
                           fontSize: 10,
                           color: Colors.green,
                         ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.visible,
                       ),
                   ],
                 ),
@@ -861,10 +891,12 @@ class _CategoryViewState extends State<CategoryView> {
             if (isInBasket)
               Container(
                 height: 40,
+                margin: const EdgeInsets.only(top: 8, bottom: 8),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
                   border: Border(
                     top: BorderSide(color: Colors.grey.shade200),
+                    bottom: BorderSide(color: Colors.grey.shade200),
                   ),
                 ),
                 child: Row(

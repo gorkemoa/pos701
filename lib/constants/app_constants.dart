@@ -1,4 +1,5 @@
 import 'package:package_info_plus/package_info_plus.dart';
+import 'dart:io';
 
 class AppConstants {
   static const String appName = 'POS701';
@@ -7,8 +8,26 @@ class AppConstants {
 
   static Future<void> init() async {
     final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-    appVersion = packageInfo.version;
-    buildNumber = packageInfo.buildNumber;
+    
+    // Platform dosyalarından dinamik olarak versiyon bilgisi alma
+    if (Platform.isAndroid) {
+      // Android: build.gradle.kts'den dinamik olarak al
+      appVersion = packageInfo.version;  // build.gradle.kts'deki versionName
+      buildNumber = packageInfo.buildNumber;  // build.gradle.kts'deki versionCode
+    } else if (Platform.isIOS) {
+      // iOS: Xcode'dan dinamik olarak al
+      appVersion = packageInfo.version;  // Xcode'daki Version
+      buildNumber = packageInfo.buildNumber;  // Xcode'daki Build
+    } else {
+      // Diğer platformlar için varsayılan
+      appVersion = packageInfo.version;
+      buildNumber = packageInfo.buildNumber;
+    }
+    
+    // Debug için versiyon bilgisini yazdır
+    print('Platform: ${Platform.operatingSystem}');
+    print('App Version: $appVersion');
+    print('Build Number: $buildNumber');
   }
 
   static const String baseUrl = 'https://api.pos701.com/'; // API base URL bilginizi güncelleyin

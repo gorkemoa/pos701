@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/models/product_category_model.dart';
 import 'package:pos701/models/product_model.dart';
