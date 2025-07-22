@@ -5,8 +5,12 @@ import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
+import 'package:pos701/viewmodels/order_viewmodel.dart'; // Added import for OrderViewModel
 import 'package:provider/provider.dart';
 import 'package:pos701/views/tables_view.dart'; // Added import for TablesView
+
+// Enum ekle
+enum AmountInputTarget { total, discount }
 
 class PaymentView extends StatefulWidget {
   final String userToken;
@@ -45,6 +49,8 @@ class _PaymentViewState extends State<PaymentView> {
   
   List<ExpandedBasketItem> _expandedItems = [];
   
+  late final TextEditingController _discountAmountController;
+  
   final List<String> _payActions = [
     "pay", // Öde
     "payClose", // Öde & Kapat
@@ -59,9 +65,12 @@ class _PaymentViewState extends State<PaymentView> {
     "Öde & Yazdır & Kapat",
   ];
 
+  AmountInputTarget _inputTarget = AmountInputTarget.total;
+
   @override
   void initState() {
     super.initState();
+    _discountAmountController = TextEditingController();
     _amountStr = widget.totalAmount.toStringAsFixed(2);
     
     _expandBasketItems();
@@ -69,6 +78,12 @@ class _PaymentViewState extends State<PaymentView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndLoadUserInfo();
     });
+  }
+
+  @override
+  void dispose() {
+    _discountAmountController.dispose();
+    super.dispose();
   }
   
   void _expandBasketItems() {
@@ -121,27 +136,33 @@ class _PaymentViewState extends State<PaymentView> {
   }
 
   void _addNumber(String num) {
-    if (_amountStr == "0") {
-      setState(() {
-        _amountStr = num;
-      });
-    } else {
-      setState(() {
-        _amountStr = _amountStr + num;
-      });
-    }
+    setState(() {
+      // Sadece indirim kutusu odaktayken numpad çalışsın
+      if (_inputTarget == AmountInputTarget.discount) {
+        String current = _discountAmountController.text;
+        if (current == "0") {
+          _discountAmountController.text = num;
+        } else {
+          _discountAmountController.text = current + num;
+        }
+        _discountAmount = double.tryParse(_discountAmountController.text) ?? 0;
+      }
+    });
   }
 
   void _removeLastNumber() {
-    if (_amountStr.length > 1) {
-      setState(() {
-        _amountStr = _amountStr.substring(0, _amountStr.length - 1);
-      });
-    } else {
-      setState(() {
-        _amountStr = "0";
-      });
-    }
+    setState(() {
+      // Sadece indirim kutusu odaktayken numpad çalışsın
+      if (_inputTarget == AmountInputTarget.discount) {
+        String current = _discountAmountController.text;
+        if (current.length > 1) {
+          _discountAmountController.text = current.substring(0, current.length - 1);
+        } else {
+          _discountAmountController.text = "0";
+        }
+        _discountAmount = double.tryParse(_discountAmountController.text) ?? 0;
+      }
+    });
   }
   
   void _showPaymentTypesDialog() {
@@ -263,6 +284,15 @@ class _PaymentViewState extends State<PaymentView> {
 
   void _processFullPayment() async {
     if (_isLoading || _selectedPaymentType == null) return;
+    if (_applyDiscount && _selectedDiscountType == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen bir indirim tipi seçin.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     
     setState(() => _isLoading = true);
     
@@ -322,6 +352,15 @@ class _PaymentViewState extends State<PaymentView> {
   
   void _processPartialPayment() async {
     if (_isLoading || _selectedPaymentType == null) return;
+    if (_applyDiscount && _selectedDiscountType == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen bir indirim tipi seçin.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     
     bool anySelected = _selectedItems.values.any((selected) => selected);
     if (!anySelected) {
@@ -371,7 +410,8 @@ class _PaymentViewState extends State<PaymentView> {
             successCount++;
             successKeys.add(expandedItem.key);
             _paidItems[expandedItem.key] = true;
-            debugPrint('✅ Parçalı ödeme başarılı: Ürün=${item.product.proName}, opID=${item.opID}, Birim=${expandedItem.unitIndex + 1}');
+            _selectedItems[expandedItem.key] = false;
+            debugPrint('✅ Parçalı ödeme başarılı: Ürün= {item.product.proName}, opID=${item.opID}, Birim=${expandedItem.unitIndex + 1}');
           } else {
             allSuccess = false;
             debugPrint('❌ Parçalı ödeme başarısız: Ürün=${item.product.proName}, opID=${item.opID}, Birim=${expandedItem.unitIndex + 1}, Hata=${tablesViewModel.errorMessage}');
@@ -390,6 +430,22 @@ class _PaymentViewState extends State<PaymentView> {
       if (successCount > 0) {
         widget.onPaymentSuccess();
         
+        // Parçalı ödeme sonrası sipariş detayını güncelle
+        final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+        final bool detailSuccess = await orderViewModel.getSiparisDetayi(
+          userToken: widget.userToken,
+          compID: widget.compID,
+          orderID: widget.orderID,
+        );
+        if (detailSuccess && orderViewModel.orderDetail != null) {
+          // Sepeti güncelle
+          setState(() {
+            widget.basketItems.clear();
+            widget.basketItems.addAll(orderViewModel.siparisUrunleriniSepeteAktar());
+            _expandBasketItems();
+          });
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${_selectedPaymentType!.typeName} ile $successCount ürün birimi için ödeme başarıyla alındı.'),
@@ -400,7 +456,16 @@ class _PaymentViewState extends State<PaymentView> {
         bool allItemsPaid = _expandedItems.every((item) => _paidItems[item.key] == true);
         
         if (allItemsPaid) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => TablesView(
+                userToken: widget.userToken,
+                compID: widget.compID,
+                title: 'Masalar',
+              ),
+            ),
+            (route) => false,
+          );
         }
       } else if (allSuccess == false) {
         // Hiçbir başarılı işlem yoksa ve en az bir hata varsa
@@ -615,6 +680,12 @@ class _PaymentViewState extends State<PaymentView> {
                 onChanged: (value) {
                   setState(() {
                     _applyDiscount = value;
+                    if (!value) {
+                      _discountAmountController.clear();
+                      _discountAmount = 0;
+                      _selectedDiscountType = 0;
+                      _inputTarget = AmountInputTarget.total;
+                    }
                   });
                 },
                 activeColor: Color(AppConstants.primaryColorValue),
@@ -634,6 +705,9 @@ class _PaymentViewState extends State<PaymentView> {
                     onChanged: (value) {
                       setState(() {
                         _selectedDiscountType = value ?? 0;
+                        _discountAmountController.clear();
+                        _discountAmount = 0;
+                        _inputTarget = AmountInputTarget.discount;
                       });
                     },
                   ),
@@ -643,6 +717,13 @@ class _PaymentViewState extends State<PaymentView> {
                   width: 100,
                   child: TextField(
                     keyboardType: TextInputType.number,
+                    readOnly: true,
+                    controller: _discountAmountController,
+                    onTap: () {
+                      setState(() {
+                        _inputTarget = AmountInputTarget.discount;
+                      });
+                    },
                     decoration: const InputDecoration(
                       hintText: "Miktar",
                       border: OutlineInputBorder(),
@@ -651,11 +732,6 @@ class _PaymentViewState extends State<PaymentView> {
                         horizontal: 12,
                       ),
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        _discountAmount = double.tryParse(value) ?? 0;
-                      });
-                    },
                   ),
                 ),
               ],
