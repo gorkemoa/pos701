@@ -309,6 +309,8 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
                     _buildDetailRow(Icons.person_outline, 'Garson: ${order.orderUserName}'),
                     const SizedBox(height: 8),
                     _buildDetailRow(Icons.access_time, 'Tarih: ${order.orderDate}'),
+                    const SizedBox(height: 8),
+                    _buildOrderDescRow(order),
                     
                     if (order.orderCustName.isNotEmpty || order.orderCustAdr.isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -545,6 +547,85 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOrderDescRow(Order order) {
+    const int maxDescLength = 30;
+    final String desc = order.orderDesc;
+    final bool isLong = desc.length > maxDescLength;
+    final String shortDesc = isLong ? desc.substring(0, maxDescLength) + '...' : desc;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.description, size: 14, color: Colors.grey.shade500),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  'Sipariş Açıklaması: $shortDesc',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isLong)
+                TextButton(
+                  onPressed: () => _showOrderDescDialog(desc),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Tümünü Gör',
+                    style: TextStyle(fontSize: 10),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Açıklama detay dialogu
+  Future<void> _showOrderDescDialog(String desc) async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Row(
+            children: const [
+              Icon(Icons.description, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Sipariş Açıklaması'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              desc,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Kapat'),
+            ),
+          ],
+        );
+      },
     );
   }
 

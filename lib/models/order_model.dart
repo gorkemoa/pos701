@@ -451,6 +451,7 @@ class Order {
   final int orderID;
   final String orderCode;
   final String orderName;
+  final String orderDesc;
   final String orderUserName;
   final String orderStatusID;
   final String orderStatus;
@@ -468,6 +469,7 @@ class Order {
     required this.orderID,
     required this.orderCode,
     required this.orderName,
+    required this.orderDesc,
     required this.orderUserName,
     required this.orderStatusID,
     required this.orderStatus,
@@ -487,6 +489,7 @@ class Order {
       orderID: json['orderID'],
       orderCode: json['orderCode'],
       orderName: json['orderName'],
+      orderDesc: json['orderDesc'],
       orderUserName: json['orderUserName'],
       orderStatusID: json['orderStatusID'],
       orderStatus: json['orderStatus'],

@@ -7,6 +7,7 @@ class OrderDetailResponse {
   final int custID;
   final String orderCode;
   final String orderName;
+  final String orderdesc;
   final double orderAmount;
   final double orderDiscount;
   final String orderDesc;
@@ -24,6 +25,7 @@ class OrderDetailResponse {
     required this.custID,
     required this.orderCode,
     required this.orderName,
+    required this.orderdesc,
     required this.orderAmount,
     required this.orderDiscount,
     required this.orderDesc,
@@ -60,6 +62,7 @@ class OrderDetailResponse {
         custID: json['custID'],
         orderCode: json['orderCode'],
         orderName: json['orderName'],
+        orderdesc: json['orderdesc'],
         orderAmount: (json['orderAmount'] ?? 0).toDouble(),
         orderDiscount: (json['orderDiscount'] ?? 0).toDouble(),
         orderDesc: json['orderDesc'],

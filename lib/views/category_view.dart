@@ -59,51 +59,16 @@ class _CategoryViewState extends State<CategoryView> {
   // --- YENİ: Görünüm modu ---
   bool _isVerticalLayout = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _categoryViewModel = CategoryViewModel(ProductService());
-    _productViewModel = ProductViewModel(ProductService());
-    // Sepeti temizle ve masa doluysa ürünleri sepete ekle
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      basketViewModel.clearBasket();
-      // Masa doluysa ve orderID varsa, ürünleri sepete otomatik ekle
-      if (widget.orderID != null && basketViewModel.isEmpty) {
-        final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
-        final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-        final userToken = userViewModel.userInfo?.userToken ?? widget.userToken;
-        final compID = userViewModel.userInfo?.compID ?? widget.compID;
-        final success = await orderViewModel.getSiparisDetayi(
-          userToken: userToken,
-          compID: compID,
-          orderID: widget.orderID!,
-        );
-        if (success && orderViewModel.orderDetail != null) {
-          final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
-          for (var item in sepetItems) {
-            if (item.opID > 0) {
-              basketViewModel.addProductWithOpID(
-                item.product,
-                item.proQty,
-                item.opID,
-                proNote: item.proNote,
-                isGift: item.isGift,
-              );
-            }
-          }
-        }
-      }
-    });
-    // Arama alanını dinlemeye başla
-    _searchController.addListener(_filterProducts);
-    _loadCategories();
-    _loadLayoutPreference();
-  }
+  bool _orderLoaded = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_orderLoaded && widget.orderID != null) {
+      _orderLoaded = true;
+      // Asenkron işlemi bir sonraki frame'e ertele
+      Future.microtask(() => _loadOrderDetailAndFillBasket());
+    }
     // Layout tercihini her sayfa açılışında yeniden yükle
     _loadLayoutPreference();
   }
@@ -113,6 +78,62 @@ class _CategoryViewState extends State<CategoryView> {
     setState(() {
       _isVerticalLayout = prefs.getBool('isVerticalLayout') ?? false;
     });
+  }
+
+  Future<void> _loadOrderDetailAndFillBasket() async {
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    if (basketViewModel.isEmpty) {
+      // Yükleniyor göstergesini aç
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+      final userToken = userViewModel.userInfo?.userToken ?? widget.userToken;
+      final compID = userViewModel.userInfo?.compID ?? widget.compID;
+      final success = await orderViewModel.getSiparisDetayi(
+        userToken: userToken,
+        compID: compID,
+        orderID: widget.orderID!,
+      );
+      if (success && orderViewModel.orderDetail != null) {
+        final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
+        for (var item in sepetItems) {
+          if (item.opID > 0) {
+            basketViewModel.addProductWithOpID(
+              item.product,
+              item.proQty,
+              item.opID,
+              proNote: item.proNote,
+              isGift: item.isGift,
+            );
+          }
+        }
+      }
+      // Yükleniyor göstergesini kapat
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _categoryViewModel = CategoryViewModel(ProductService());
+    _productViewModel = ProductViewModel(ProductService());
+    // Sepeti temizle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+      basketViewModel.clearBasket();
+    });
+    // Arama alanını dinlemeye başla
+    _searchController.addListener(_filterProducts);
+    _loadCategories();
+    _loadLayoutPreference();
   }
 
   @override
