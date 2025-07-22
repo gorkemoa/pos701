@@ -19,26 +19,35 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
+  bool _isRedirecting = false; // Yönlendirme flag'i
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Kullanıcı bilgilerini yükle
       final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+      final statisticsViewModel = Provider.of<StatisticsViewModel>(context, listen: false);
+      // Kullanıcı bilgilerini yükle
+      bool userLoaded = true;
       if (userViewModel.userInfo == null) {
-        // Kullanıcı bilgilerinin yüklenmesini bekle
-        await userViewModel.loadUserInfo();
+        userLoaded = await userViewModel.loadUserInfo();
       }
-      
+      // Eğer kullanıcı bilgisi yüklenemediyse (ör. token expired, başka cihazdan giriş vs.) login'e yönlendir
+      if (mounted && !userLoaded && !_isRedirecting) {
+        _isRedirecting = true;
+        final apiService = Provider.of<ApiService>(context, listen: false);
+        await apiService.clearToken();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginView()),
+        );
+        return;
+      }
       // userRank kontrolü yap
       if (mounted && userViewModel.userInfo != null) {
         final String? userRank = userViewModel.userInfo?.userRank;
-        
-        // Eğer userRank 30 ise masa sayfasına yönlendir
         if (userRank == '30') {
           final int compID = userViewModel.userInfo!.compID!;
           final String token = userViewModel.userInfo!.token;
-          
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => TablesView(
@@ -51,12 +60,10 @@ class _HomeViewState extends State<HomeView> {
           return;
         }
       }
-      
       // Kullanıcı bilgileri yüklendikten sonra istatistik verilerini yükle
-      if (mounted) {
-        final statisticsViewModel = Provider.of<StatisticsViewModel>(context, listen: false);
+      if (mounted && userViewModel.userInfo != null) {
         final int compID = userViewModel.userInfo?.compID ?? 0;
-        statisticsViewModel.loadStatistics(compID);
+        await statisticsViewModel.loadStatistics(compID);
       }
     });
   }
@@ -65,24 +72,7 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     final userViewModel = Provider.of<UserViewModel>(context);
     final statisticsViewModel = Provider.of<StatisticsViewModel>(context);
-    
-    // Yetkisiz erişim hatası kontrolü ve login sayfasına yönlendirme
-    if (statisticsViewModel.errorMessage != null && 
-        statisticsViewModel.errorMessage!.contains('Yetkisiz erişim') && 
-        statisticsViewModel.errorMessage!.contains('417')) {
-      // Bir kereden fazla yönlendirmeyi önlemek için gecikmeli çalıştır
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        // Token ve kullanıcı bilgilerini temizle
-        final apiService = Provider.of<ApiService>(context, listen: false);
-        await apiService.clearToken();
-        
-        // Login sayfasına yönlendir
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginView()),
-        );
-      });
-    }
-    
+    // Artık burada istatistik yüklemesinde login'e yönlendirme yok, sadece hata mesajı gösterilecek
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -98,10 +88,7 @@ class _HomeViewState extends State<HomeView> {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () async {
-              // Önce kullanıcı bilgilerini güncelle
               await userViewModel.loadUserInfo();
-              
-              // Sonra güncel compID ile istatistikleri yenile
               final int compID = userViewModel.userInfo?.compID ?? 0;
               statisticsViewModel.refreshStatistics(compID);
             },
@@ -112,7 +99,7 @@ class _HomeViewState extends State<HomeView> {
       body: statisticsViewModel.isLoading
           ? const Center(child: CircularProgressIndicator())
           : statisticsViewModel.errorMessage != null
-              ? Center(child: Text('Hata: ${statisticsViewModel.errorMessage}'))
+              ? Center(child: Text('Hata:  {statisticsViewModel.errorMessage}'))
               : SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),

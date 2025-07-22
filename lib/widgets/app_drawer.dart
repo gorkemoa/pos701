@@ -48,7 +48,7 @@ class _AppDrawerState extends State<AppDrawer> {
                     'Menü | ${userViewModel.userInfo?.company?.compName ?? ''}',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

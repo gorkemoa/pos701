@@ -96,6 +96,48 @@ class ProductViewModel extends ChangeNotifier {
     }
   }
   
+  Future<bool> loadAllProducts(String userToken, int compID, {String searchText = ''}) async {
+    _logger.i('Tüm ürünler yükleniyor. CompID: $compID, Arama: $searchText');
+    _isLoading = true;
+    _errorMessage = null;
+    _searchQuery = searchText;
+    _safeNotifyListeners();
+    try {
+      final response = await _productService.getAllProducts(
+        userToken: userToken,
+        compID: compID,
+        searchText: searchText,
+      );
+      _isLoading = false;
+      if (response.success && response.data != null) {
+        _products = response.data!.products;
+        _filteredProducts = [..._products];
+        _logger.i('Tüm ürünler başarıyla yüklendi. Ürün sayısı: ${_products.length}');
+        _safeNotifyListeners();
+        return true;
+      } else {
+        if (response.error == false && response.success == false) {
+          _products = [];
+          _filteredProducts = [];
+          _logger.i('Hiç ürün bulunmuyor.');
+          _safeNotifyListeners();
+          return true;
+        } else {
+          _errorMessage = 'Tüm ürünler yüklenemedi';
+          _logger.w('Tüm ürünler yükleme başarısız: ${response.error}');
+          _safeNotifyListeners();
+          return false;
+        }
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().contains('Oturumunuz sona erdi') ? 'Oturumunuz sona erdi. Lütfen tekrar giriş yapın.' : 'Bir hata oluştu: ${e.toString()}';
+      _logger.e('Tüm ürünler yüklenirken hata oluştu', e);
+      _safeNotifyListeners();
+      return false;
+    }
+  }
+  
   Product? getProductById(int id) {
     try {
       return _products.firstWhere((product) => product.proID == id);

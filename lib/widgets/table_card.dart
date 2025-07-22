@@ -1514,15 +1514,17 @@ class TableCard extends StatelessWidget {
           }
         });
       },
+
+      //masa rengi aktif / pasif
       onLongPress: table.isActive ? () => _showTableOptions(context) : null,
       child: Container(
         margin: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: table.isActive ? const Color.fromARGB(255, 97, 205, 101).withOpacity(0.9) : Colors.white,
           borderRadius: borderRadius,
           border: Border.all(
             color: table.isActive 
-                ? primaryColor.withOpacity(0.8)
+                ? Colors.white.withOpacity(0.8)
                 : Colors.grey.shade300,
             width: table.isActive ? 1.5 : 1,
           ),
@@ -1551,7 +1553,7 @@ class TableCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: table.isActive ? Colors.black87 : Colors.grey.shade700,
+                        color: table.isActive ? Colors.white : Colors.grey.shade700,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 1,
@@ -1564,7 +1566,7 @@ class TableCard extends StatelessWidget {
                           table.orderAmount,
                           style: TextStyle(
                             fontSize: 10,
-                            color: primaryColor,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -1580,7 +1582,7 @@ class TableCard extends StatelessWidget {
                           '→ ${mainTable!.tableName}',
                           style: TextStyle(
                             fontSize: 8,
-                            color: Colors.blue.shade700,
+                            color: table.isActive ? Colors.white70 : Colors.blue.shade700,
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 1,
@@ -1595,17 +1597,16 @@ class TableCard extends StatelessWidget {
             // Aktif masa için sağ üst köşede menü ikonu
             if (table.isActive)
               Positioned(
-                top: 1,
-                right: 1,
+                top: -10,
+                right: -10,
                 child: IconButton(
-                  icon: Icon(Icons.more_vert, size: 16, color: Colors.grey.shade600),
+                  icon: Icon(Icons.more_vert, size: 16, color: Colors.white),
                   padding: EdgeInsets.zero,
                   constraints: BoxConstraints.tight(const Size(24, 24)),
                   onPressed: () => _showTableOptions(context),
                   tooltip: 'Masa İşlemleri',
                 ),
               ),
-            
             // Ana masa etiketi (yalnızca ikon)
             if (table.isMerged)
               Positioned(
@@ -1616,10 +1617,10 @@ class TableCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.9),
+                      color: table.isActive ? Colors.white : primaryColor.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Icon(Icons.people_alt, color: Colors.white, size: 12),
+                    child: Icon(Icons.people_alt, color: table.isActive ? primaryColor : Colors.white, size: 12),
                   ),
                 ),
               ),

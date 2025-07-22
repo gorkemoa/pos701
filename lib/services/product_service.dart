@@ -147,4 +147,49 @@ class ProductService {
       throw Exception('Ürün detayları alınırken hata oluştu: Kullanıcı bilgileri yüklenemedi. Hata: $e');
     }
   }
+
+  Future<ProductResponse> getAllProducts({
+    required String userToken,
+    required int compID,
+    String searchText = '',
+  }) async {
+    try {
+      final url = '${AppConstants.baseUrl}${AppConstants.allProductsEndpoint}';
+      _logger.d('Tüm Ürünler API isteği: $url');
+      final requestBody = {
+        'userToken': userToken,
+        'compID': compID,
+        if (searchText.isNotEmpty) 'searchText': searchText,
+      };
+      _logger.d('İstek verileri: $requestBody');
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+        },
+        body: jsonEncode(requestBody),
+      );
+      _logger.d('Tüm Ürünler yanıtı alındı. Status: ${response.statusCode}');
+      _logger.d('HTTP Durum Kodu: ${response.statusCode}');
+      _logger.d('Yanıt Başlıkları: ${response.headers}');
+      _logger.d('Ham yanıt içeriği: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 410) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        _logger.d('Ham yanıt tipi: ${jsonResponse.runtimeType}');
+        _logger.d('Ham yanıt içeriği: $jsonResponse');
+        final productResponse = ProductResponse.fromJson(jsonResponse);
+        return productResponse;
+      } else if (response.statusCode == 401) {
+        _logger.w('HTTP 401: Yetkisiz erişim');
+        throw Exception('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+      } else {
+        _logger.w('HTTP ${response.statusCode} hatası: Tüm ürünler alınamadı');
+        throw Exception('HTTP ${response.statusCode}: Tüm ürünler alınamadı');
+      }
+    } catch (e) {
+      _logger.e('Tüm ürünler alınırken hata oluştu', e);
+      throw Exception('Tüm ürünler alınırken hata oluştu: $e');
+    }
+  }
 }

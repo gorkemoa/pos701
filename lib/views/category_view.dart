@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/models/user_model.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
@@ -16,6 +15,7 @@ import 'package:pos701/viewmodels/customer_viewmodel.dart';
 import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;  // Sipariş için CustomerAddress sınıfı
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos701/viewmodels/order_viewmodel.dart';
 
 class CategoryView extends StatefulWidget {
   final int compID;
@@ -64,16 +64,39 @@ class _CategoryViewState extends State<CategoryView> {
     super.initState();
     _categoryViewModel = CategoryViewModel(ProductService());
     _productViewModel = ProductViewModel(ProductService());
-    
-    // Widget ağacı oluşturulduktan sonra sepeti temizle
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Sepeti temizle ve masa doluysa ürünleri sepete ekle
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
       basketViewModel.clearBasket();
+      // Masa doluysa ve orderID varsa, ürünleri sepete otomatik ekle
+      if (widget.orderID != null && basketViewModel.isEmpty) {
+        final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+        final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+        final userToken = userViewModel.userInfo?.userToken ?? widget.userToken;
+        final compID = userViewModel.userInfo?.compID ?? widget.compID;
+        final success = await orderViewModel.getSiparisDetayi(
+          userToken: userToken,
+          compID: compID,
+          orderID: widget.orderID!,
+        );
+        if (success && orderViewModel.orderDetail != null) {
+          final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
+          for (var item in sepetItems) {
+            if (item.opID > 0) {
+              basketViewModel.addProductWithOpID(
+                item.product,
+                item.proQty,
+                item.opID,
+                proNote: item.proNote,
+                isGift: item.isGift,
+              );
+            }
+          }
+        }
+      }
     });
-    
     // Arama alanını dinlemeye başla
     _searchController.addListener(_filterProducts);
-    
     _loadCategories();
     _loadLayoutPreference();
   }
@@ -131,9 +154,28 @@ class _CategoryViewState extends State<CategoryView> {
   }
 
   // Ürünleri arama metni ile filtrele
-  void _filterProducts() {
-    final String searchText = _searchController.text.trim().toLowerCase();
-    _productViewModel.filterProductsByName(searchText);
+  void _filterProducts() async {
+    final String searchText = _searchController.text.trim();
+    if (searchText.isNotEmpty) {
+      // Tüm ürünlerde arama yap
+      final success = await _productViewModel.loadAllProducts(
+        widget.userToken,
+        widget.compID,
+        searchText: searchText,
+      );
+      if (!success && _productViewModel.errorMessage != null && _productViewModel.errorMessage!.contains('Oturumunuz sona erdi')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } else {
+      // Seçili kategoriye geri dön
+      if (_selectedCategory != null) {
+        await _loadProducts(_selectedCategory!.catID, _selectedCategory!.catName);
+      }
+    }
   }
 
   // Tasarım tercihini değiştir ve kaydet
@@ -340,65 +382,7 @@ class _CategoryViewState extends State<CategoryView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Arama Çubuğu ve Tasarım Değiştirici
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Ürün arayın...',
-                            prefixIcon: const Icon(Icons.search),
-                            // Sadece temizleme butonu
-                            suffixIcon: _searchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _filterProducts();
-                                    },
-                                  )
-                                : null,
-                            hintStyle: const TextStyle(fontSize: 14),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: Colors.grey.shade300),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          onChanged: (value) {
-                            setState(() {});
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Tasarım değiştirme kısa yolu
-                      Container(
-                        height: 44,
-                        width: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: IconButton(
-                          tooltip: _isVerticalLayout ? 'Klasik tasarıma geç' : 'Dikey tasarıma geç',
-                          icon: Icon(_isVerticalLayout ? Icons.view_module : Icons.view_agenda,
-                              color: Color(AppConstants.primaryColorValue)),
-                          onPressed: _toggleLayoutPreference,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildSearchBarWithLayoutSwitcher(),
                 // Kategoriler Bölümü
                 _buildCategoriesSection(categoryViewModel),
                 // Ürünler Bölümü
@@ -439,66 +423,10 @@ class _CategoryViewState extends State<CategoryView> {
         if (!categoryViewModel.hasCategories) {
           return const Center(child: Text('Kategori bulunamadı'));
         }
-        // --- YENİ: Üstte arama çubuğu ve tasarım değiştirme ikonu ---
+        // ---  Sol kategori, ortada ayraç, sağda ürünler ve sepet ---
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Ürün arayın...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _filterProducts();
-                                },
-                              )
-                            : null,
-                        hintStyle: const TextStyle(fontSize: 14),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      onChanged: (value) {
-                        setState(() {});
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    height: 44,
-                    width: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: IconButton(
-                      tooltip: _isVerticalLayout ? 'Klasik tasarıma geç' : 'Dikey tasarıma geç',
-                      icon: Icon(_isVerticalLayout ? Icons.view_module : Icons.view_agenda,
-                          color: Color(AppConstants.primaryColorValue)),
-                      onPressed: _toggleLayoutPreference,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // --- YENİ: Sol kategori, ortada ayraç, sağda ürünler ve sepet ---
+            _buildSearchBarWithLayoutSwitcher(),
             Expanded(
               child: Row(
                 children: [
@@ -545,8 +473,8 @@ class _CategoryViewState extends State<CategoryView> {
                               category.catName,
                               style: TextStyle(
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? Color(int.parse(category.catColor.replaceFirst('#', '0xFF'))) : Colors.black87,
-                                fontSize: 12,
+                                color: isSelected ? Colors.black : Colors.black87,
+                                fontSize: 11,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -579,7 +507,7 @@ class _CategoryViewState extends State<CategoryView> {
                           return const Center(child: Text('Bu kategoride ürün yok.'));
                         }
                         return ListView.builder(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.only(left: 8, right: 10, top: 0, bottom: 0),
                           itemCount: productViewModel.products.length,
                           itemBuilder: (context, index) {
                             final product = productViewModel.products[index];
@@ -587,55 +515,109 @@ class _CategoryViewState extends State<CategoryView> {
                             final int quantity = basketViewModel.getProductQuantity(product);
                             return Card(
                               margin: const EdgeInsets.symmetric(vertical: 4),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                title: Text(
-                                  product.proName, 
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  '₺${product.proPrice.replaceAll(" TL", "")}',
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                trailing: quantity > 0
-                                    ? Container(
-                                        width: 80,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade100,
-                                          borderRadius: BorderRadius.circular(1),
-                                          border: Border.all(color: Color(AppConstants.primaryColorValue).withOpacity(0.2)),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              child: SizedBox(
+                                height: 74, // Sabit yükseklik
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 0),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      // Sol: Ürün adı ve fiyat
+                                      Expanded(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            SizedBox(
-                                              width: 24,
-                                              height: 24,
-                                              child: IconButton(
-                                                padding: EdgeInsets.zero,
-                                                iconSize: 16,
-                                                icon: const Icon(Icons.remove),
-                                                color: Color(AppConstants.primaryColorValue),
-                                                onPressed: () {
-                                                  basketViewModel.decreaseProduct(product);
-                                                },
-                                                tooltip: 'Azalt',
-                                              ),
-                                            ),
                                             Text(
-                                              '$quantity',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(AppConstants.primaryColorValue),
-                                                fontSize: 12,
-                                              ),
+                                              product.proName.toUpperCase(),
+                                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                            SizedBox(
-                                              width: 24,
-                                              height: 24,
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '₺${product.proPrice.replaceAll(" TL", "")}',
+                                              style: const TextStyle(fontSize: 11),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Sağ: Dikey buton grubu
+                                      quantity > 0
+                                          ? Container(
+                                              width: 32,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey.shade100,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: Color(AppConstants.primaryColorValue).withOpacity(0.2)),
+                                              ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  // + Butonu
+                                                  Container(
+                                                    width: 20,
+                                                    height: 20,
+                                                    margin: const EdgeInsets.only(top: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Color(AppConstants.primaryColorValue).withOpacity(0.15),
+                                                      shape: BoxShape.circle,
+                                                    
+                                                    ),
+                                                    child: IconButton(
+                                                      padding: EdgeInsets.zero,
+                                                      iconSize: 16,
+                                                      icon: const Icon(Icons.add),
+                                                      color: Color(AppConstants.primaryColorValue),
+                                                      onPressed: () {
+                                                        basketViewModel.addProduct(product, opID: 0);
+                                                      },
+                                                      tooltip: 'Arttır',
+                                                    ),
+                                                  ),
+                                                  Padding(
+                                                    padding: const EdgeInsets.symmetric(vertical: 1),
+                                                    child: Text(
+                                                      '$quantity',
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.w400,
+                                                        color: Color(AppConstants.primaryColorValue),
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  // - Butonu
+                                                  Container(
+                                                    width: 20,
+                                                    height: 20,
+                                                    margin: const EdgeInsets.only(bottom: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Color(AppConstants.primaryColorValue).withOpacity(0.15),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: IconButton(
+                                                      padding: EdgeInsets.zero,
+                                                      iconSize: 16,
+                                                      icon: const Icon(Icons.remove),
+                                                      color: Color(AppConstants.primaryColorValue),
+                                                      onPressed: () {
+                                                        basketViewModel.decreaseProduct(product);
+                                                      },
+                                                      tooltip: 'Azalt',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          : Container(
+                                              width: 32,
+                                              height: 32,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey.shade100,
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: Color(AppConstants.primaryColorValue).withOpacity(0.2)),
+                                              ),
                                               child: IconButton(
                                                 padding: EdgeInsets.zero,
                                                 iconSize: 16,
@@ -644,31 +626,12 @@ class _CategoryViewState extends State<CategoryView> {
                                                 onPressed: () {
                                                   basketViewModel.addProduct(product, opID: 0);
                                                 },
-                                                tooltip: 'Arttır',
+                                                tooltip: 'Ekle',
                                               ),
                                             ),
-                                          ],
-                                        ),
-                                      )
-                                    : Container(
-                                        width: 32,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade100,
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: Color(AppConstants.primaryColorValue).withOpacity(0.2)),
-                                        ),
-                                        child: IconButton(
-                                          padding: EdgeInsets.zero,
-                                          iconSize: 16,
-                                          icon: const Icon(Icons.add),
-                                          color: Color(AppConstants.primaryColorValue),
-                                          onPressed: () {
-                                            basketViewModel.addProduct(product, opID: 0);
-                                          },
-                                          tooltip: 'Ekle',
-                                        ),
-                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             );
                           },
@@ -849,10 +812,10 @@ class _CategoryViewState extends State<CategoryView> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
               child: Text(
-                category.catName.toUpperCase(),
+                category.catName,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: isSelected ? 12 : 11,
+                  fontSize: isSelected ? 13 : 12,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w700, // Seçilmeyen kategoriler için daha kalın font
                   shadows: [
                     Shadow(
@@ -927,8 +890,8 @@ class _CategoryViewState extends State<CategoryView> {
                         child: Text(
                           product.proName.toUpperCase(),
                           style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 3,
@@ -3071,6 +3034,67 @@ class _CategoryViewState extends State<CategoryView> {
         content: Text(_isWaiter == 1 ? 'Garsoniye ücreti eklendi' : 'Garsoniye ücreti kaldırıldı'),
         backgroundColor: _isWaiter == 1 ? Colors.green : Colors.orange,
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Arama çubuğu ve tasarım değiştirme kısa yolu widget'ı
+  Widget _buildSearchBarWithLayoutSwitcher() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 9.5),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Ürün arayın...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterProducts();
+                        },
+                      )
+                    : null,
+                hintStyle: const TextStyle(fontSize: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              onChanged: (value) {
+                setState(() {});
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Tasarım değiştirme kısa yolu
+          Container(
+            height: 44,
+            width: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: IconButton(
+              tooltip: _isVerticalLayout ? 'Klasik tasarıma geç' : 'Dikey tasarıma geç',
+              icon: Icon(_isVerticalLayout ? Icons.view_module : Icons.list,
+                  color: Color(AppConstants.primaryColorValue)),
+              onPressed: _toggleLayoutPreference,
+            ),
+          ),
+        ],
       ),
     );
   }
