@@ -6,6 +6,7 @@ import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:provider/provider.dart';
+import 'package:pos701/views/tables_view.dart'; // Added import for TablesView
 
 class PaymentView extends StatefulWidget {
   final String userToken;
@@ -289,7 +290,17 @@ class _PaymentViewState extends State<PaymentView> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop();
+        // Tam ödeme başarılıysa TablesView'a yönlendir
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => TablesView(
+              userToken: widget.userToken,
+              compID: widget.compID,
+              title: 'Masalar',
+            ),
+          ),
+          (route) => false,
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -313,7 +313,7 @@ class _CategoryViewState extends State<CategoryView> {
               ),
               Expanded(
                 child: InkWell(
-                  onTap: widget.orderID != null ? _showPaymentDialog : null,
+                  onTap: widget.orderID != null ? _goToBasket : null,
                   child: Container(
                     color: Color(AppConstants.primaryColorValue),
                     child: Center(

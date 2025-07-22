@@ -406,6 +406,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           tableID: table.tableID,
           orderID: table.isActive ? table.orderID : null,
           tableName: table.tableName,
+          
         ),
       ),
     );
