@@ -4,6 +4,7 @@ import 'package:pos701/views/home_view.dart';
 import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/views/kitchen_view.dart';
 import 'package:pos701/views/settings_view.dart';
+import 'package:pos701/views/patron_statistics_view.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:pos701/services/auth_service.dart';
@@ -144,6 +145,23 @@ class _AppDrawerState extends State<AppDrawer> {
                         ),
                       ],
                     ),
+                  _buildDrawerItem(
+                    icon: Icons.bar_chart,
+                    title: 'Patron İstatistikleri',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PatronStatisticsView(
+                            userToken: userViewModel.userInfo?.userToken ?? '',
+                            compID: userViewModel.userInfo?.compID ?? 0,
+                            title: 'Patron İstatistikleri',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   _buildDrawerItem(
                     icon: Icons.print,
                     title: 'Yazıcı Tanımlama',

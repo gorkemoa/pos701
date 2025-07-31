@@ -28,17 +28,24 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = 1  // Android için manuel versiyon kodu
-        versionName = "1.0.2"  // Android için manuel versiyon adı - pubspec.yaml ile senkronize
+        versionCode = 2  // Android için manuel versiyon kodu
+        versionName = "1.0.3"  // Android için manuel versiyon adı - pubspec.yaml ile senkronize
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("upload.keystore")
+            storePassword = "office701"
+            keyAlias = "upload"
+            keyPassword = "office701"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     

@@ -23,6 +23,7 @@ import 'package:pos701/services/customer_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
 import 'package:pos701/viewmodels/notification_viewmodel.dart';
+import 'package:pos701/viewmodels/boss_statistics_viewmodel.dart';
 import 'package:pos701/firebase_options.dart';
 
 // Global navigator key - 403 hatası durumunda login'e yönlendirme için
@@ -124,6 +125,10 @@ void main() async {
             Provider.of<FirebaseMessagingService>(context, listen: false),
           ),
           update: (_, messagingService, previous) => previous ?? NotificationViewModel(messagingService),
+        ),
+        // Boss Statistics ViewModel ekle
+        ChangeNotifierProvider<BossStatisticsViewModel>(
+          create: (_) => BossStatisticsViewModel(),
         ),
       ],
       child: MaterialApp(

@@ -112,28 +112,28 @@ class _HomeViewState extends State<HomeView> {
                           value: statisticsViewModel.statistics?.totalAmount ?? '',
                           title: statisticsViewModel.statistics?.totalAmountText ?? '',
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 0),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.expenseCardColor),
                           icon: Icons.currency_exchange,
                           value: statisticsViewModel.statistics?.totalExpenseAmount ?? '',
                           title: statisticsViewModel.statistics?.totalExpenseAmountText ?? '',
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 0),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.orderCardColor),
                           icon: Icons.coffee,
                           value: statisticsViewModel.statistics?.totalOpenAmount ?? '',
                           title: statisticsViewModel.statistics?.totalOpenAmountText ?? '',
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 0),
                         DashboardCard(
                           backgroundColor: Color(AppConstants.customerCardColor),
                           icon: Icons.people,
                           value: '${statisticsViewModel.statistics?.totalGuest}',
                           title: statisticsViewModel.statistics?.totalGuestText ?? '',
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 14),
                         
                         Container(
                           height: 450,

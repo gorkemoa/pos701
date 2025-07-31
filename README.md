@@ -82,7 +82,7 @@ Firebase push bildirimlerini kullanabilmek için aşağıdaki adımları tamamla
 2. "Proje Ekle" seçeneğini tıklayın ve yeni bir proje oluşturun
 3. Projenize bir ad verin (örn. "POS701") ve oluşturmayı tamamlayın
 4. Proje panelinizde, Android uygulamanızı eklemek için Android simgesini seçin
-5. Paket adını girin: `com.office701.pos701` (veya kendi paket adınızı)
+5. Paket adını girin: `com.office701.pos701app` (veya kendi paket adınızı)
 6. (İsteğe bağlı) SHA-1 parmak izini ekleyin (kimlik doğrulama kullanıyorsanız gerekli)
 7. "Uygulamayı Kaydet" butonuna tıklayın
 
