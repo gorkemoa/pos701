@@ -36,6 +36,9 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
   bool _isCustomDateRange = false;
+  
+  // Grafik için yeni state'ler
+  int? _touchedIndex;
 
   final List<String> _tabs = ['Raporlar', 'Grafik'];
   final List<String> _periods = ['Bugün', 'Dün', 'Bu Hafta', 'Bu Ay', 'Bu Yıl'];
@@ -648,13 +651,30 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
                     color: Colors.grey[700],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 25),
                 Expanded(
                   child: PieChart(
                     PieChartData(
                       sectionsSpace: 2,
-                      centerSpaceRadius: 40,
+                      centerSpaceRadius: 35,
                       sections: _buildPieChartSections(allGraphics, totalAmount),
+                      pieTouchData: PieTouchData(
+                        touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                          setState(() {
+                            if (pieTouchResponse?.touchedSection != null) {
+                              final touchedIndex = pieTouchResponse!.touchedSection!.touchedSectionIndex;
+                              // Aynı dilime tekrar tıklandığında eski haline dön
+                              if (_touchedIndex == touchedIndex) {
+                                _touchedIndex = null;
+                              } else {
+                                _touchedIndex = touchedIndex;
+                              }
+                            } else {
+                              _touchedIndex = null;
+                            }
+                          });
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -693,14 +713,15 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
       final index = entry.key;
       final graphic = entry.value;
       final percentage = totalAmount > 0 ? (graphic.numericAmount / totalAmount) * 100 : 0.0;
+      final isTouched = _touchedIndex == index;
       
       return PieChartSectionData(
         color: colors[index % colors.length],
         value: graphic.numericAmount,
-        title: '${percentage.toStringAsFixed(1)}%',
-        radius: 80,
-        titleStyle: const TextStyle(
-          fontSize: 12,
+        title: isTouched ? graphic.date : '${percentage.toStringAsFixed(1)}%',
+        radius: isTouched ? 90 : 80,
+        titleStyle: TextStyle(
+          fontSize: isTouched ? 10 : 12,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
