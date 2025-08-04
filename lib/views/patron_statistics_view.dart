@@ -7,12 +7,13 @@ import 'package:pos701/viewmodels/boss_statistics_viewmodel.dart';
 import 'package:pos701/models/boss_statistics_model.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:intl/intl.dart';
+import 'package:pos701/views/statistics_detail_view.dart';
+import 'package:pos701/widgets/app_drawer.dart';
 
 class PatronStatisticsView extends StatefulWidget {
   final String userToken;
   final int compID;
   final String title;
-
 
   const PatronStatisticsView({
     Key? key,
@@ -23,19 +24,21 @@ class PatronStatisticsView extends StatefulWidget {
 
   @override
   State<PatronStatisticsView> createState() => _PatronStatisticsViewState();
-
-    
 }
 
 class _PatronStatisticsViewState extends State<PatronStatisticsView> {
   int _selectedTabIndex = 0;
   int _selectedPeriodIndex = 0;
   final _logger = AppLogger();
+  
+  // Tarih filtresi için yeni state'ler
+  DateTime? _selectedStartDate;
+  DateTime? _selectedEndDate;
+  bool _isCustomDateRange = false;
 
   final List<String> _tabs = ['Raporlar', 'Grafik'];
   final List<String> _periods = ['Bugün', 'Dün', 'Bu Hafta', 'Bu Ay', 'Bu Yıl'];
 
-  // İkon mapping'i
   final Map<String, IconData> _iconMapping = {
     'Kapatılan Siparişler': Icons.check_circle,
     'Nakit Ödemeler': Icons.money,
@@ -57,7 +60,6 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
 
   @override
   void initState() {
-
     super.initState();
     _logger.i('🚀 Patron Statistics View: initState çağrıldı');
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,18 +70,35 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
 
   void _loadStatistics() {
     _logger.i('🔄 Patron Statistics View: Veri yükleme başlatılıyor...');
-    _logger.d('📋 Seçili periyot: ${_periods[_selectedPeriodIndex]} (index: $_selectedPeriodIndex)');
     
     final viewModel = Provider.of<BossStatisticsViewModel>(context, listen: false);
-    final dateRange = _getDateRangeForPeriod(_selectedPeriodIndex);
+    Map<String, String> dateRange;
+    String order;
     
-    _logger.d('📅 Tarih aralığı: ${dateRange['startDate']} - ${dateRange['endDate']}');
+    if (_isCustomDateRange && _selectedStartDate != null && _selectedEndDate != null) {
+      // Özel tarih aralığı kullanılıyor
+      final formatter = DateFormat('dd.MM.yyyy');
+      dateRange = {
+        'startDate': formatter.format(_selectedStartDate!),
+        'endDate': formatter.format(_selectedEndDate!),
+      };
+      order = 'custom'; // API'de özel tarih aralığı için
+      _logger.d('📅 Özel tarih aralığı: ${_formatDateRangeForDisplay(_selectedStartDate!, _selectedEndDate!)}');
+    } else {
+      // Standart periyot kullanılıyor
+      dateRange = _getDateRangeForPeriod(_selectedPeriodIndex);
+      order = _getOrderForPeriod(_selectedPeriodIndex);
+      _logger.d('📋 Seçili periyot: ${_periods[_selectedPeriodIndex]} (index: $_selectedPeriodIndex)');
+      _logger.d('📅 Tarih aralığı: ${_formatDateRangeForDisplay(DateFormat('dd.MM.yyyy').parse(dateRange['startDate']!), DateFormat('dd.MM.yyyy').parse(dateRange['endDate']!))}');
+      _logger.d('📅 Order: $order');
+    }
     
     viewModel.fetchBossStatistics(
       userToken: widget.userToken,
       compID: widget.compID,
       startDate: dateRange['startDate']!,
       endDate: dateRange['endDate']!,
+      order: order,
     );
   }
 
@@ -128,241 +147,374 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
     }
   }
 
+  String _formatDateForDisplay(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    
+    if (dateOnly == today) {
+      return 'Bugün';
+    } else if (dateOnly == yesterday) {
+      return 'Dün';
+    } else {
+      final formatter = DateFormat('dd MMMM yyyy', 'tr_TR');
+      return formatter.format(date);
+    }
+  }
+
+  String _formatDateRangeForDisplay(DateTime startDate, DateTime endDate) {
+    final startFormatted = _formatDateForDisplay(startDate);
+    final endFormatted = _formatDateForDisplay(endDate);
+    
+    if (startFormatted == endFormatted) {
+      return startFormatted;
+    } else {
+      return '$startFormatted - $endFormatted';
+    }
+  }
+
+  String _getOrderForPeriod(int periodIndex) {
+    switch (periodIndex) {
+      case 0: // Bugün
+        return 'today';
+      case 1: // Dün
+        return 'today';
+      case 2: // Bu Hafta
+        return 'week';
+      case 3: // Bu Ay
+        return 'month';
+      case 4: // Bu Yıl
+        return 'year';
+      default:
+        return 'today';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-
     final userViewModel = Provider.of<UserViewModel>(context);
-    final authService = Provider.of<AuthService>(context, listen: false);
     final Color primaryColor = Color(AppConstants.primaryColorValue);
     
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
+      drawer: const AppDrawer(),
+      appBar: _buildAppBar(userViewModel, primaryColor),
       body: Column(
         children: [
-          // Header Section
-          Container(
-            color: primaryColor,
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  // Title Bar
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        Expanded(
-                          child: Consumer<BossStatisticsViewModel>(
-                            builder: (context, viewModel, child) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    userViewModel.userInfo?.company?.compName ?? '',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.filter_list, color: Colors.white),
-                          onPressed: () {},
-                        ),
-                      
-                      ],
-                    ),
-                  ),
-                  // Navigation Tabs
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: _tabs.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        String tab = entry.value;
-                        bool isSelected = index == _selectedTabIndex;
-                        
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectedTabIndex = index;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: isSelected ? Colors.orange : Colors.transparent,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                tab,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _buildPeriodSelector(primaryColor),
+          Expanded(
+            child: _buildStatisticsContent(),
           ),
-          // Period Selection Tabs
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: _periods.asMap().entries.map((entry) {
-                int index = entry.key;
-                String period = entry.value;
-                bool isSelected = index == _selectedPeriodIndex;
-                
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedPeriodIndex = index;
-                      });
-                      _loadStatistics();
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: isSelected ? primaryColor : Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: isSelected ? primaryColor : Colors.grey.shade300,
-                        ),
-                      ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(UserViewModel userViewModel, Color primaryColor) {
+    return AppBar(
+      backgroundColor: primaryColor,
+      elevation: 0,
+      centerTitle: true,
+      title: _isCustomDateRange ? Text(
+        _formatDateRangeForDisplay(_selectedStartDate!, _selectedEndDate!),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ) : Text(
+        userViewModel.userInfo?.company?.compName ?? '',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(48),
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 0),
+          child: Row(
+            children: _tabs.asMap().entries.map((entry) {
+              int index = entry.key;
+              String tab = entry.value;
+              bool isSelected = index == _selectedTabIndex;
+              
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedTabIndex = index;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
                       child: Text(
-                        period,
-                        textAlign: TextAlign.center,
+                        tab,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.grey.shade700,
-                          fontSize: 12,
+                          color: isSelected ? primaryColor : Colors.white,
+                          fontSize: 14,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(
+            Icons.filter_list, 
+            color: Colors.black87,
+          ),
+          onPressed: () => _showDateRangePicker(),
+        ),
+        // Tarih filtresi aktifse temizleme butonu
+        if (_isCustomDateRange)
+          IconButton(
+            icon: const Icon(
+              Icons.clear,
+              color: Colors.black,
+            ),
+            onPressed: _clearDateFilter,
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodSelector(Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Row(
+        children: _periods.asMap().entries.map((entry) {
+          int index = entry.key;
+          String period = entry.value;
+          bool isSelected = index == _selectedPeriodIndex && !_isCustomDateRange;
+          
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedPeriodIndex = index;
+                  _isCustomDateRange = false;
+                  _selectedStartDate = null;
+                  _selectedEndDate = null;
+                });
+                _loadStatistics();
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? primaryColor : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? primaryColor : Colors.grey[300]!,
+                    width: 1,
+                  ),
+                  boxShadow: isSelected ? [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ] : null,
+                ),
+                                 child: Column(
+                   mainAxisAlignment: MainAxisAlignment.center,
+                   children: [
+                     Text(
+                       period,
+                       textAlign: TextAlign.center,
+                       style: TextStyle(
+                         color: isSelected ? Colors.white : Colors.grey[700],
+                         fontSize: 12,
+                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                       ),
+                     ),
+                     if (_isCustomDateRange && _selectedStartDate != null && _selectedEndDate != null && isSelected)
+                       Padding(
+                         padding: const EdgeInsets.only(top: 4),
+                         child: Text(
+                           _formatDateRangeForDisplay(_selectedStartDate!, _selectedEndDate!),
+                           textAlign: TextAlign.center,
+                           style: const TextStyle(
+                             color: Colors.white,
+                             fontSize: 8,
+                             fontWeight: FontWeight.normal,
+                           ),
+                         ),
+                       ),
+                   ],
+                 ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Future<void> _showDateRangePicker() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: _selectedStartDate != null && _selectedEndDate != null
+          ? DateTimeRange(start: _selectedStartDate!, end: _selectedEndDate!)
+          : null,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Color(AppConstants.primaryColorValue),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black87,
             ),
           ),
-          // Main Content - Statistics Cards
-          Expanded(
-            child: Consumer<BossStatisticsViewModel>(
-              builder: (context, viewModel, child) {
-                if (viewModel.isLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
+          child: child!,
+        );
+      },
+    );
 
-                if (viewModel.errorMessage != null) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Hata',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          viewModel.errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            viewModel.clearError();
-                            _loadStatistics();
-                          },
-                          child: const Text('Tekrar Dene'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+    if (picked != null) {
+      setState(() {
+        _selectedStartDate = picked.start;
+        _selectedEndDate = picked.end;
+        _isCustomDateRange = true;
+      });
+      _loadStatistics();
+    }
+  }
 
-                if (viewModel.statistics.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.bar_chart,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'Veri Bulunamadı',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+  void _clearDateFilter() {
+    setState(() {
+      _isCustomDateRange = false;
+      _selectedStartDate = null;
+      _selectedEndDate = null;
+    });
+    _loadStatistics();
+  }
 
-                return Container(
-                  padding: const EdgeInsets.all(8),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 6,
-                      mainAxisSpacing: 6,
-                      childAspectRatio: 1.1,
-                    ),
-                    itemCount: viewModel.statistics.length,
-                    itemBuilder: (context, index) {
-                      final statistic = viewModel.statistics[index];
-                      return _buildStatisticsCard(statistic);
-                    },
-                  ),
-                );
-              },
+  Widget _buildStatisticsContent() {
+    return Consumer<BossStatisticsViewModel>(
+      builder: (context, viewModel, child) {
+        if (viewModel.isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (viewModel.errorMessage != null) {
+          return _buildErrorWidget(viewModel);
+        }
+
+        if (viewModel.statistics.isEmpty) {
+          return _buildEmptyWidget();
+        }
+
+        // Tab bar'a göre içeriği değiştir
+        switch (_selectedTabIndex) {
+          case 0: // Raporlar
+            return _buildStatisticsGrid(viewModel);
+          case 1: // Grafik
+            return _buildChartView(viewModel);
+          default:
+            return _buildStatisticsGrid(viewModel);
+        }
+      },
+    );
+  }
+
+  Widget _buildErrorWidget(BossStatisticsViewModel viewModel) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Hata',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              viewModel.errorMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              viewModel.clearError();
+              _loadStatistics();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(AppConstants.primaryColorValue),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Tekrar Dene'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.bar_chart,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Veri Bulunamadı',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Seçili periyot için istatistik verisi bulunmuyor',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
             ),
           ),
         ],
@@ -370,53 +522,172 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
     );
   }
 
-  Widget _buildStatisticsCard(BossStatisticsModel statistic) {
-    final iconData = _iconMapping[statistic.title] ?? Icons.help_outline;
-    
+  Widget _buildStatisticsGrid(BossStatisticsViewModel viewModel) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.3,
+        ),
+        itemCount: viewModel.statistics.length,
+        itemBuilder: (context, index) {
+          final statistic = viewModel.statistics[index];
+          return _buildStatisticsCard(statistic);
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatisticsCard(BossStatisticsModel statistic) {
+    final Color primaryColor = Color(AppConstants.primaryColorValue);
+    final iconData = _iconMapping[statistic.statisticsTitle] ?? Icons.help_outline;
+    
+    return GestureDetector(
+      onTap: () => _showStatisticsDetail(statistic),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  iconData,
+                  size: 24,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                statistic.statisticsTitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                statistic.statisticsAmount,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartView(BossStatisticsViewModel viewModel) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.bar_chart,
+                  size: 48,
+                  color: Color(AppConstants.primaryColorValue),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Grafik Görünümü',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Grafik özelliği yakında eklenecek',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              iconData,
-              size: 28,
-              color: Colors.orange,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              statistic.title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              statistic.amount,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-          ],
+    );
+  }
+
+  void _showStatisticsDetail(BossStatisticsModel statistic) {
+    _logger.i('📊 İstatistik detayı açılıyor: ${statistic.statisticsTitle}');
+    
+    Map<String, String> dateRange;
+    String order;
+    
+    if (_isCustomDateRange && _selectedStartDate != null && _selectedEndDate != null) {
+      // Özel tarih aralığı kullanılıyor
+      final formatter = DateFormat('dd.MM.yyyy');
+      dateRange = {
+        'startDate': formatter.format(_selectedStartDate!),
+        'endDate': formatter.format(_selectedEndDate!),
+      };
+      order = 'custom';
+    } else {
+      // Standart periyot kullanılıyor
+      dateRange = _getDateRangeForPeriod(_selectedPeriodIndex);
+      order = _getOrderForPeriod(_selectedPeriodIndex);
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StatisticsDetailView(
+          userToken: widget.userToken,
+          compID: widget.compID,
+          statistic: statistic,
+          startDate: dateRange['startDate']!,
+          endDate: dateRange['endDate']!,
+          order: order,
         ),
       ),
     );

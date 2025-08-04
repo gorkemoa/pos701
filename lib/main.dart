@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:pos701/viewmodels/order_list_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/views/login_view.dart';
@@ -135,6 +136,16 @@ void main() async {
         navigatorKey: navigatorKey,
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
+        locale: const Locale('tr', 'TR'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('tr', 'TR'),
+          Locale('en', 'US'),
+        ],
         theme: ThemeData(
           primaryColor: Color(AppConstants.primaryColorValue),
           colorScheme: ColorScheme.fromSeed(

@@ -36,7 +36,7 @@ class _AppDrawerState extends State<AppDrawer> {
         children: [
           Container(
             color: primaryColor,
-            height: 190,
+            height: 163,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             alignment: Alignment.center,
             child: SafeArea(
