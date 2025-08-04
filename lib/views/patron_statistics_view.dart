@@ -9,6 +9,7 @@ import 'package:pos701/utils/app_logger.dart';
 import 'package:intl/intl.dart';
 import 'package:pos701/views/statistics_detail_view.dart';
 import 'package:pos701/widgets/app_drawer.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class PatronStatisticsView extends StatefulWidget {
   final String userToken;
@@ -202,7 +203,8 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
       appBar: _buildAppBar(userViewModel, primaryColor),
       body: Column(
         children: [
-          _buildPeriodSelector(primaryColor),
+          // Periyot seçiciyi sadece raporlar sekmesinde göster
+          if (_selectedTabIndex == 0) _buildPeriodSelector(primaryColor),
           Expanded(
             child: _buildStatisticsContent(),
           ),
@@ -250,10 +252,12 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
                     });
                   },
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       color: isSelected ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        topRight: Radius.circular(8),
+                      ),
                     ),
                     child: Center(
                       child: Text(
@@ -607,6 +611,189 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
   }
 
   Widget _buildChartView(BossStatisticsViewModel viewModel) {
+    final allGraphics = viewModel.graphics;
+    final totalAmount = viewModel.totalGraphicAmount;
+    
+    if (allGraphics.isEmpty) {
+      return _buildEmptyChartWidget();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Pasta Grafiği
+          Container(
+            height: 300,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '1 Haftalık Satış Dağılımı',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: PieChart(
+                    PieChartData(
+                      sectionsSpace: 2,
+                      centerSpaceRadius: 40,
+                      sections: _buildPieChartSections(allGraphics, totalAmount),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Grafik Açıklamaları
+          _buildChartLegend(allGraphics),
+        ],
+      ),
+    );
+  }
+
+  List<PieChartSectionData> _buildPieChartSections(
+    List<BossStatisticsGraphicModel> graphics,
+    double totalAmount,
+  ) {
+    final List<Color> colors = [
+      Color(AppConstants.primaryColorValue),
+      Colors.orange,
+      Colors.green,
+      Colors.red,
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+    ];
+
+    // Sadece sıfır olmayan değerleri filtrele
+    final nonZeroGraphics = graphics.where((graphic) => graphic.numericAmount > 0).toList();
+    
+    return nonZeroGraphics.asMap().entries.map((entry) {
+      final index = entry.key;
+      final graphic = entry.value;
+      final percentage = totalAmount > 0 ? (graphic.numericAmount / totalAmount) * 100 : 0.0;
+      
+      return PieChartSectionData(
+        color: colors[index % colors.length],
+        value: graphic.numericAmount,
+        title: '${percentage.toStringAsFixed(1)}%',
+        radius: 80,
+        titleStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildChartLegend(List<BossStatisticsGraphicModel> graphics) {
+    final List<Color> colors = [
+      Color(AppConstants.primaryColorValue),
+      Colors.orange,
+      Colors.green,
+      Colors.red,
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.amber,
+      Colors.cyan,
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Grafik Açıklaması',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...graphics.asMap().entries.map((entry) {
+            final index = entry.key;
+            final graphic = entry.value;
+            final isZero = graphic.numericAmount == 0.0;
+            final color = isZero ? Colors.grey[300]! : colors[index % colors.length];
+            
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      graphic.date,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isZero ? Colors.grey[500] : Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                  Text(
+                    graphic.amount,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isZero ? Colors.grey[500] : Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyChartWidget() {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -628,22 +815,22 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
             child: Column(
               children: [
                 Icon(
-                  Icons.bar_chart,
+                  Icons.pie_chart,
                   size: 48,
-                  color: Color(AppConstants.primaryColorValue),
+                  color: Colors.grey[400],
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Grafik Görünümü',
+                  'Grafik Verisi Yok',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
+                    color: Colors.grey[600],
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Grafik özelliği yakında eklenecek',
+                  'Seçili periyot için grafik verisi bulunmuyor',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[500],

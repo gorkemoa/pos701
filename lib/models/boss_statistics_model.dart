@@ -30,6 +30,45 @@ class BossStatisticsModel {
   String get amount => statisticsAmount;
 }
 
+class BossStatisticsGraphicModel {
+  final String sortDate;
+  final String date;
+  final String amount;
+
+  BossStatisticsGraphicModel({
+    required this.sortDate,
+    required this.date,
+    required this.amount,
+  });
+
+  factory BossStatisticsGraphicModel.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsGraphicModel(
+      sortDate: json['sortDate'] ?? '',
+      date: json['date'] ?? '',
+      amount: json['amount'] ?? '0,00 TL',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'sortDate': sortDate,
+      'date': date,
+      'amount': amount,
+    };
+  }
+
+  // Pasta grafiği için sayısal değer döndürür
+  double get numericAmount {
+    try {
+      // "1.595,00 TL" formatından sayısal değer çıkarır
+      String cleanAmount = amount.replaceAll(' TL', '').replaceAll('.', '').replaceAll(',', '.');
+      return double.tryParse(cleanAmount) ?? 0.0;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+}
+
 class BossStatisticsResponse {
   final bool error;
   final bool success;
@@ -52,15 +91,21 @@ class BossStatisticsResponse {
 
 class BossStatisticsData {
   final List<BossStatisticsModel> statistics;
+  final List<BossStatisticsGraphicModel> graphics;
 
   BossStatisticsData({
     required this.statistics,
+    required this.graphics,
   });
 
   factory BossStatisticsData.fromJson(Map<String, dynamic> json) {
     return BossStatisticsData(
       statistics: (json['statistics'] as List<dynamic>?)
               ?.map((item) => BossStatisticsModel.fromJson(item))
+              .toList() ??
+          [],
+      graphics: (json['graphics'] as List<dynamic>?)
+              ?.map((item) => BossStatisticsGraphicModel.fromJson(item))
               .toList() ??
           [],
     );

@@ -8,6 +8,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   final _logger = AppLogger();
   
   List<BossStatisticsModel> _statistics = [];
+  List<BossStatisticsGraphicModel> _graphics = [];
   bool _isLoading = false;
   String? _errorMessage;
   String _startDate = '';
@@ -20,6 +21,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   BossStatisticsDetailData? _detailData;
 
   List<BossStatisticsModel> get statistics => _statistics;
+  List<BossStatisticsGraphicModel> get graphics => _graphics;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get startDate => _startDate;
@@ -30,6 +32,11 @@ class BossStatisticsViewModel extends ChangeNotifier {
   bool get isDetailLoading => _isDetailLoading;
   String? get detailErrorMessage => _detailErrorMessage;
   BossStatisticsDetailData? get detailData => _detailData;
+
+  // Grafik verileri için yardımcı metodlar
+  double get totalGraphicAmount {
+    return _graphics.fold(0.0, (sum, graphic) => sum + graphic.numericAmount);
+  }
 
   void setDateRange(String startDate, String endDate) {
     _startDate = startDate;
@@ -62,10 +69,12 @@ class BossStatisticsViewModel extends ChangeNotifier {
 
       if (response.success && !response.error) {
         _statistics = response.data.statistics;
+        _graphics = response.data.graphics;
         _startDate = startDate;
         _endDate = endDate;
-        _logger.i('✅ Boss Statistics ViewModel: Veri başarıyla alındı. ${_statistics.length} adet istatistik');
+        _logger.i('✅ Boss Statistics ViewModel: Veri başarıyla alındı. ${_statistics.length} adet istatistik, ${_graphics.length} adet grafik verisi');
         _logger.d('📊 İstatistikler: ${_statistics.map((s) => '${s.statisticsTitle}: ${s.statisticsAmount}').join(', ')}');
+        _logger.d('📈 Grafik Verileri: ${_graphics.map((g) => '${g.date}: ${g.amount}').join(', ')}');
       } else {
         _logger.e('❌ Boss Statistics ViewModel: API başarısız response');
         _errorMessage = 'Veri alınamadı';
@@ -136,6 +145,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
 
   void reset() {
     _statistics = [];
+    _graphics = [];
     _isLoading = false;
     _errorMessage = null;
     _startDate = '';
