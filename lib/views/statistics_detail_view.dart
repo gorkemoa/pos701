@@ -253,6 +253,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         child: Column(
                           children: [
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
                                   Icons.summarize,
@@ -266,6 +267,10 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: primaryColor,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.grey.shade600,
+                                    decorationThickness: 0.4,
+                                    decorationStyle: TextDecorationStyle.solid,
                                   ),
                                 ),
                               ],
@@ -275,6 +280,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                               children: [
                                 Expanded(
                                   child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Text(
                                         'Toplam Adet',
@@ -302,6 +308,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                                 ),
                                 Expanded(
                                   child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Text(
                                         'Toplam Tutar',

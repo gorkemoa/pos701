@@ -2,11 +2,13 @@ class BossStatisticsModel {
   final String statisticsKey;
   final String statisticsTitle;
   final String statisticsAmount;
+  final String statisticsIcon;
 
   BossStatisticsModel({
     required this.statisticsKey,
     required this.statisticsTitle,
     required this.statisticsAmount,
+    required this.statisticsIcon,
   });
 
   factory BossStatisticsModel.fromJson(Map<String, dynamic> json) {
@@ -14,6 +16,7 @@ class BossStatisticsModel {
       statisticsKey: json['statisticsKey'] ?? '',
       statisticsTitle: json['statisticsTitle'] ?? '',
       statisticsAmount: json['statisticsAmount'] ?? '0,00 TL',
+      statisticsIcon: json['statisticsIcon'] ?? '',
     );
   }
 
@@ -22,6 +25,7 @@ class BossStatisticsModel {
       'statisticsKey': statisticsKey,
       'statisticsTitle': statisticsTitle,
       'statisticsAmount': statisticsAmount,
+      'statisticsIcon': statisticsIcon,
     };
   }
 

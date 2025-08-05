@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 import 'package:pos701/views/statistics_detail_view.dart';
 import 'package:pos701/widgets/app_drawer.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PatronStatisticsView extends StatefulWidget {
   final String userToken;
@@ -39,28 +41,14 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
   
   // Grafik için yeni state'ler
   int? _touchedIndex;
+  
+  // Görünüm değiştirme için state
+  bool _isGridView = true;
 
   final List<String> _tabs = ['Raporlar', 'Grafik'];
   final List<String> _periods = ['Bugün', 'Dün', 'Bu Hafta', 'Bu Ay', 'Bu Yıl'];
 
-  final Map<String, IconData> _iconMapping = {
-    'Kapatılan Siparişler': Icons.check_circle,
-    'Nakit Ödemeler': Icons.money,
-    'Açık Masalar': Icons.table_restaurant,
-    'Açık Paketler': Icons.shopping_cart,
-    'Ürün Satışları': Icons.restaurant,
-    'Hediye Ürünler': Icons.card_giftcard,
-    'Giderler': Icons.trending_down,
-    'Gelirler': Icons.trending_up,
-    'Zayiatlar': Icons.delete_outline,
-    'Kasa Tahsilatı': Icons.account_balance_wallet,
-    'Kapalı Siparişler': Icons.check_circle_outline,
-    'Garson Performansı': Icons.people,
-    'Departman Satışları': Icons.business,
-    'İptaller': Icons.cancel,
-    'İkram İndirimleri': Icons.local_offer,
-    'İade Edilenler': Icons.undo,
-  };
+
 
   @override
   void initState() {
@@ -68,8 +56,35 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
     _logger.i('🚀 Patron Statistics View: initState çağrıldı');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logger.d('📱 Patron Statistics View: Post frame callback çalıştırılıyor');
+      _loadCachedSettings();
       _loadStatistics();
     });
+  }
+
+  Future<void> _loadCachedSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _isGridView = prefs.getBool('patron_stats_grid_view') ?? true;
+        _selectedTabIndex = prefs.getInt('patron_stats_selected_tab') ?? 0;
+        _selectedPeriodIndex = prefs.getInt('patron_stats_selected_period') ?? 0;
+      });
+      _logger.d('📱 Cache\'den ayarlar yüklendi: grid=$_isGridView, tab=$_selectedTabIndex, period=$_selectedPeriodIndex');
+    } catch (e) {
+      _logger.e('❌ Cache ayarları yüklenirken hata: $e');
+    }
+  }
+
+  Future<void> _saveCachedSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('patron_stats_grid_view', _isGridView);
+      await prefs.setInt('patron_stats_selected_tab', _selectedTabIndex);
+      await prefs.setInt('patron_stats_selected_period', _selectedPeriodIndex);
+      _logger.d('💾 Ayarlar cache\'e kaydedildi: grid=$_isGridView, tab=$_selectedTabIndex, period=$_selectedPeriodIndex');
+    } catch (e) {
+      _logger.e('❌ Cache ayarları kaydedilirken hata: $e');
+    }
   }
 
   void _loadStatistics() {
@@ -253,6 +268,7 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
                     setState(() {
                       _selectedTabIndex = index;
                     });
+                    _saveCachedSettings();
                   },
                   child: Container(
                     decoration: BoxDecoration(
@@ -280,6 +296,20 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
         ),
       ),
       actions: [
+        // Görünüm değiştirme ikonu (sadece raporlar sekmesinde göster)
+        if (_selectedTabIndex == 0)
+          IconButton(
+            icon: Icon(
+              _isGridView ? Icons.view_list : Icons.grid_view,
+              color: Colors.black87,
+            ),
+            onPressed: () {
+              setState(() {
+                _isGridView = !_isGridView;
+              });
+              _saveCachedSettings();
+            },
+          ),
         IconButton(
           icon: Icon(
             Icons.filter_list, 
@@ -318,6 +348,7 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
                   _selectedStartDate = null;
                   _selectedEndDate = null;
                 });
+                _saveCachedSettings();
                 _loadStatistics();
               },
               child: Container(
@@ -402,6 +433,7 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
         _selectedEndDate = picked.end;
         _isCustomDateRange = true;
       });
+      _saveCachedSettings();
       _loadStatistics();
     }
   }
@@ -412,7 +444,43 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
       _selectedStartDate = null;
       _selectedEndDate = null;
     });
+    _saveCachedSettings();
     _loadStatistics();
+  }
+
+  Widget _buildIconWidget(String iconUrl, Color primaryColor) {
+    if (iconUrl.toLowerCase().endsWith('.svg')) {
+      // SVG dosyası için
+      return SvgPicture.network(
+        iconUrl,
+        width: 24,
+        height: 24,
+        colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn),
+       
+      );
+    } else {
+      // Normal resim dosyası için
+      return Image.network(
+        iconUrl,
+        width: 24,
+        height: 24,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            Icons.help_outline,
+            size: 24,
+            color: primaryColor,
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return SizedBox(
+            width: 24,
+            height: 24,
+           
+          );
+        },
+      );
+    }
   }
 
   Widget _buildStatisticsContent() {
@@ -435,11 +503,11 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
         // Tab bar'a göre içeriği değiştir
         switch (_selectedTabIndex) {
           case 0: // Raporlar
-            return _buildStatisticsGrid(viewModel);
+            return _isGridView ? _buildStatisticsGrid(viewModel) : _buildStatisticsList(viewModel);
           case 1: // Grafik
             return _buildChartView(viewModel);
           default:
-            return _buildStatisticsGrid(viewModel);
+            return _isGridView ? _buildStatisticsGrid(viewModel) : _buildStatisticsList(viewModel);
         }
       },
     );
@@ -548,9 +616,21 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
     );
   }
 
+  Widget _buildStatisticsList(BossStatisticsViewModel viewModel) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: ListView.builder(
+        itemCount: viewModel.statistics.length,
+        itemBuilder: (context, index) {
+          final statistic = viewModel.statistics[index];
+          return _buildStatisticsListItem(statistic);
+        },
+      ),
+    );
+  }
+
   Widget _buildStatisticsCard(BossStatisticsModel statistic) {
     final Color primaryColor = Color(AppConstants.primaryColorValue);
-    final iconData = _iconMapping[statistic.statisticsTitle] ?? Icons.help_outline;
     
     return GestureDetector(
       onTap: () => _showStatisticsDetail(statistic),
@@ -572,18 +652,13 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  iconData,
-                  size: 24,
-                  color: primaryColor,
-                ),
-              ),
+              statistic.statisticsIcon.isNotEmpty
+                  ? _buildIconWidget(statistic.statisticsIcon, primaryColor)
+                  : Icon(
+                      Icons.help_outline,
+                      size: 24,
+                      color: primaryColor,
+                    ),
               const SizedBox(height: 12),
               Text(
                 statistic.statisticsTitle,
@@ -605,6 +680,81 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatisticsListItem(BossStatisticsModel statistic) {
+    final Color primaryColor = Color(AppConstants.primaryColorValue);
+    
+    return GestureDetector(
+      onTap: () => _showStatisticsDetail(statistic),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[100]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              // İkon - daha küçük
+              Container(
+                width: 32,
+                height: 32,
+                child: Center(
+                  child: statistic.statisticsIcon.isNotEmpty
+                      ? _buildIconWidget(statistic.statisticsIcon, primaryColor)
+                      : Icon(
+                          Icons.help_outline,
+                          size: 16,
+                          color: primaryColor,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // İsim - sol tarafta
+              Expanded(
+                child: Text(
+                  statistic.statisticsTitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Fiyat - sağ tarafta
+              Text(
+                statistic.statisticsAmount,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[900],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Ok ikonu
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 12,
+                color: Colors.grey[300],
               ),
             ],
           ),
@@ -743,6 +893,14 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
       Colors.cyan,
     ];
 
+    // Sıfır olmayan değerlerin indekslerini bul
+    final nonZeroIndices = <int>[];
+    for (int i = 0; i < graphics.length; i++) {
+      if (graphics[i].numericAmount > 0) {
+        nonZeroIndices.add(i);
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -773,7 +931,15 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
             final index = entry.key;
             final graphic = entry.value;
             final isZero = graphic.numericAmount == 0.0;
-            final color = isZero ? Colors.grey[300]! : colors[index % colors.length];
+            
+            // Sıfır olmayan değerler için pasta grafiğindeki aynı renk indeksini kullan
+            Color color;
+            if (isZero) {
+              color = Colors.grey[300]!;
+            } else {
+              final nonZeroIndex = nonZeroIndices.indexOf(index);
+              color = colors[nonZeroIndex % colors.length];
+            }
             
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
