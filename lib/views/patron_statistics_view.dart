@@ -296,20 +296,6 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
         ),
       ),
       actions: [
-        // Görünüm değiştirme ikonu (sadece raporlar sekmesinde göster)
-        if (_selectedTabIndex == 0)
-          IconButton(
-            icon: Icon(
-              _isGridView ? Icons.view_list : Icons.grid_view,
-              color: Colors.black87,
-            ),
-            onPressed: () {
-              setState(() {
-                _isGridView = !_isGridView;
-              });
-              _saveCachedSettings();
-            },
-          ),
         IconButton(
           icon: Icon(
             Icons.filter_list, 
@@ -325,6 +311,20 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
               color: Colors.black,
             ),
             onPressed: _clearDateFilter,
+          ),
+        // Görünüm değiştirme ikonu (sadece raporlar sekmesinde göster)
+        if (_selectedTabIndex == 0)
+          IconButton(
+            icon: Icon(
+              _isGridView ? Icons.view_list : Icons.grid_view,
+              color: Colors.black87,
+            ),
+            onPressed: () {
+              setState(() {
+                _isGridView = !_isGridView;
+              });
+              _saveCachedSettings();
+            },
           ),
       ],
     );
