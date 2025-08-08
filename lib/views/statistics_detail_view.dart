@@ -191,7 +191,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                   );
                 }
 
-                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty) {
+                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty && viewModel.cashOrderStatistics.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -435,11 +435,225 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           ],
                         ),
                       ),
+                    // Nakit ödeme özeti kartı
+                    if (viewModel.cashOrderData != null)
+                      Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.payment,
+                                  color: primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Nakit Ödeme Özeti',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.grey.shade600,
+                                    decorationThickness: 0.4,
+                                    decorationStyle: TextDecorationStyle.solid,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Sipariş',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${viewModel.cashOrderData!.totalCount}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Tutar',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.cashOrderData!.totalAmount,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Sipariş Tutarı',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.cashOrderData!.totalOrderAmount,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'İndirim Tutarı',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.cashOrderData!.totalDiscountAmount,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Ödenen Tutar',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.cashOrderData!.totalPaidAmount,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Kalan Tutar',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.cashOrderData!.totalRemainingAmount,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     // Detay listesi
                     Expanded(
-                      child: viewModel.isOrderDetail
-                          ? _buildOrderListView(viewModel)
-                          : _buildDetailListView(viewModel),
+                      child: viewModel.isCashOrderDetail
+                          ? _buildCashOrderListView(viewModel)
+                          : viewModel.isOrderDetail
+                              ? _buildOrderListView(viewModel)
+                              : _buildDetailListView(viewModel),
                     ),
                   ],
                 );
@@ -609,6 +823,138 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           ),
                         ),
                     ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCashOrderListView(BossStatisticsViewModel viewModel) {
+    final Color primaryColor = Color(AppConstants.primaryColorValue);
+    
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: viewModel.cashOrderStatistics.length,
+      itemBuilder: (context, index) {
+        final order = viewModel.cashOrderStatistics[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.payment,
+                      color: primaryColor,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sipariş #${order.orderCode}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          order.orderDate,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        order.orderAmount,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      if (order.orderDiscount != '0,00 TL')
+                        Text(
+                          'İndirim: ${order.orderDiscount}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Net Tutar: ${order.netOrderAmount}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Ödenen: ${order.paidAmount}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'Kalan: ${order.remainingAmount}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: order.remainingAmount.startsWith('-') 
+                          ? Colors.green 
+                          : order.remainingAmount == '0,00 TL'
+                              ? Colors.grey.shade600
+                              : Colors.orange,
+                    ),
                   ),
                 ],
               ),
