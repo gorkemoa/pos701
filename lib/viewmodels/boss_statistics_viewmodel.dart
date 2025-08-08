@@ -18,13 +18,16 @@ class BossStatisticsViewModel extends ChangeNotifier {
   List<BossStatisticsDetailModel> _detailStatistics = [];
   List<BossStatisticsOrderModel> _orderStatistics = [];
   List<BossStatisticsCashOrderModel> _cashOrderStatistics = [];
+  List<BossStatisticsProductModel> _productStatistics = [];
   bool _isDetailLoading = false;
   String? _detailErrorMessage;
   BossStatisticsDetailData? _detailData;
   BossStatisticsOrderData? _orderData;
   BossStatisticsCashOrderData? _cashOrderData;
+  BossStatisticsProductData? _productData;
   bool _isOrderDetail = false;
   bool _isCashOrderDetail = false;
+  bool _isProductDetail = false;
 
   List<BossStatisticsModel> get statistics => _statistics;
   List<BossStatisticsGraphicModel> get graphics => _graphics;
@@ -37,13 +40,16 @@ class BossStatisticsViewModel extends ChangeNotifier {
   List<BossStatisticsDetailModel> get detailStatistics => _detailStatistics;
   List<BossStatisticsOrderModel> get orderStatistics => _orderStatistics;
   List<BossStatisticsCashOrderModel> get cashOrderStatistics => _cashOrderStatistics;
+  List<BossStatisticsProductModel> get productStatistics => _productStatistics;
   bool get isDetailLoading => _isDetailLoading;
   String? get detailErrorMessage => _detailErrorMessage;
   BossStatisticsDetailData? get detailData => _detailData;
   BossStatisticsOrderData? get orderData => _orderData;
   BossStatisticsCashOrderData? get cashOrderData => _cashOrderData;
+  BossStatisticsProductData? get productData => _productData;
   bool get isOrderDetail => _isOrderDetail;
   bool get isCashOrderDetail => _isCashOrderDetail;
+  bool get isProductDetail => _isProductDetail;
 
   // Grafik verileri için yardımcı metodlar
   double get totalGraphicAmount {
@@ -117,10 +123,37 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _detailErrorMessage = null;
     _isOrderDetail = detailEndpoint == 'orderListDetail';
     _isCashOrderDetail = filterKey == 'cashAmount';
+    _isProductDetail = filterKey == 'productAmount';
     notifyListeners();
 
     try {
-      if (_isCashOrderDetail) {
+      if (_isProductDetail) {
+        // Ürün detayları için
+        final response = await _service.getBossStatisticsProductDetail(
+          userToken: userToken,
+          compID: compID,
+          startDate: startDate,
+          endDate: endDate,
+          order: order,
+          filterKey: filterKey,
+          detailEndpoint: detailEndpoint,
+        );
+
+        if (response.success && !response.error) {
+          _productStatistics = response.data.statistics;
+          _productData = response.data;
+          _detailStatistics = [];
+          _detailData = null;
+          _orderStatistics = [];
+          _orderData = null;
+          _cashOrderStatistics = [];
+          _cashOrderData = null;
+          _logger.i('✅ Boss Statistics Product Detail ViewModel: Ürün detay veri başarıyla alındı. ${_productStatistics.length} adet ürün');
+        } else {
+          _logger.e('❌ Boss Statistics Product Detail ViewModel: API başarısız response');
+          _detailErrorMessage = 'Ürün detay veri alınamadı';
+        }
+      } else if (_isCashOrderDetail) {
         // Nakit ödemeler için
         final response = await _service.getBossStatisticsCashOrderDetail(
           userToken: userToken,
@@ -139,6 +172,8 @@ class BossStatisticsViewModel extends ChangeNotifier {
           _orderData = null;
           _detailStatistics = [];
           _detailData = null;
+          _productStatistics = [];
+          _productData = null;
           _logger.i('✅ Boss Statistics Cash Order Detail ViewModel: Nakit ödeme detay veri başarıyla alındı. ${_cashOrderStatistics.length} adet sipariş');
         } else {
           _logger.e('❌ Boss Statistics Cash Order Detail ViewModel: API başarısız response');
@@ -163,6 +198,8 @@ class BossStatisticsViewModel extends ChangeNotifier {
           _detailData = null;
           _cashOrderStatistics = [];
           _cashOrderData = null;
+          _productStatistics = [];
+          _productData = null;
           _logger.i('✅ Boss Statistics Order Detail ViewModel: Sipariş detay veri başarıyla alındı. ${_orderStatistics.length} adet sipariş');
         } else {
           _logger.e('❌ Boss Statistics Order Detail ViewModel: API başarısız response');
@@ -187,6 +224,8 @@ class BossStatisticsViewModel extends ChangeNotifier {
           _orderData = null;
           _cashOrderStatistics = [];
           _cashOrderData = null;
+          _productStatistics = [];
+          _productData = null;
           _logger.i('✅ Boss Statistics Detail ViewModel: Detay veri başarıyla alındı. ${_detailStatistics.length} adet detay');
           _logger.d('📊 Detay İstatistikler: ${_detailStatistics.map((s) => '${s.title}: ${s.count} adet, ${s.amount}').join(', ')}');
         } else {
@@ -228,13 +267,16 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _detailStatistics = [];
     _orderStatistics = [];
     _cashOrderStatistics = [];
+    _productStatistics = [];
     _isDetailLoading = false;
     _detailErrorMessage = null;
     _detailData = null;
     _orderData = null;
     _cashOrderData = null;
+    _productData = null;
     _isOrderDetail = false;
     _isCashOrderDetail = false;
+    _isProductDetail = false;
     notifyListeners();
   }
 } 

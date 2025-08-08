@@ -422,4 +422,86 @@ class BossStatisticsCashOrderData {
       totalRemainingAmount: json['totalRemainingAmount'] ?? '0,00 TL',
     );
   }
+}
+
+class BossStatisticsProductModel {
+  final String productName;
+  final String productUnit;
+  final String productPrice;
+  final int productQuantity;
+  final String productTotalAmount;
+
+  BossStatisticsProductModel({
+    required this.productName,
+    required this.productUnit,
+    required this.productPrice,
+    required this.productQuantity,
+    required this.productTotalAmount,
+  });
+
+  factory BossStatisticsProductModel.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsProductModel(
+      productName: json['productName'] ?? '',
+      productUnit: json['productUnit'] ?? '',
+      productPrice: json['productPrice'] ?? '0,00 TL',
+      productQuantity: json['productQuantity'] ?? 0,
+      productTotalAmount: json['productTotalAmount'] ?? '0,00 TL',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'productName': productName,
+      'productUnit': productUnit,
+      'productPrice': productPrice,
+      'productQuantity': productQuantity,
+      'productTotalAmount': productTotalAmount,
+    };
+  }
+}
+
+class BossStatisticsProductResponse {
+  final bool error;
+  final bool success;
+  final BossStatisticsProductData data;
+
+  BossStatisticsProductResponse({
+    required this.error,
+    required this.success,
+    required this.data,
+  });
+
+  factory BossStatisticsProductResponse.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsProductResponse(
+      error: json['error'] ?? false,
+      success: json['success'] ?? false,
+      data: BossStatisticsProductData.fromJson(json['data'] ?? {}),
+    );
+  }
+}
+
+class BossStatisticsProductData {
+  final List<BossStatisticsProductModel> statistics;
+  final int totalCount;
+  final int totalQuantity;
+  final String totalAmount;
+
+  BossStatisticsProductData({
+    required this.statistics,
+    required this.totalCount,
+    required this.totalQuantity,
+    required this.totalAmount,
+  });
+
+  factory BossStatisticsProductData.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsProductData(
+      statistics: (json['statistics'] as List<dynamic>?)
+              ?.map((item) => BossStatisticsProductModel.fromJson(item))
+              .toList() ??
+          [],
+      totalCount: json['totalCount'] ?? 0,
+      totalQuantity: json['totalQuantity'] ?? 0,
+      totalAmount: json['totalAmount'] ?? '0,00 TL',
+    );
+  }
 } 

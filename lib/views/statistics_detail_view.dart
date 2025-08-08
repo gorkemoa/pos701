@@ -191,7 +191,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                   );
                 }
 
-                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty && viewModel.cashOrderStatistics.isEmpty) {
+                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty && viewModel.cashOrderStatistics.isEmpty && viewModel.productStatistics.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -647,13 +647,143 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           ],
                         ),
                       ),
+                    // Ürün satışları özeti kartı
+                    if (viewModel.productData != null)
+                      Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.inventory,
+                                  color: primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Ürün Satışları Özeti',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.grey.shade600,
+                                    decorationThickness: 0.4,
+                                    decorationStyle: TextDecorationStyle.solid,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Ürün',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${viewModel.productData!.totalCount}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Miktar',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${viewModel.productData!.totalQuantity}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Tutar',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.productData!.totalAmount,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     // Detay listesi
                     Expanded(
-                      child: viewModel.isCashOrderDetail
-                          ? _buildCashOrderListView(viewModel)
-                          : viewModel.isOrderDetail
-                              ? _buildOrderListView(viewModel)
-                              : _buildDetailListView(viewModel),
+                      child: viewModel.isProductDetail
+                          ? _buildProductListView(viewModel)
+                          : viewModel.isCashOrderDetail
+                              ? _buildCashOrderListView(viewModel)
+                              : viewModel.isOrderDetail
+                                  ? _buildOrderListView(viewModel)
+                                  : _buildDetailListView(viewModel),
                     ),
                   ],
                 );
@@ -689,20 +819,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
           ),
           child: Row(
             children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  Icons.analytics,
-                  color: primaryColor,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 12),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -767,19 +884,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      Icons.receipt,
-                      color: primaryColor,
-                      size: 16,
-                    ),
-                  ),
+      
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -956,6 +1061,94 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                               : Colors.orange,
                     ),
                   ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProductListView(BossStatisticsViewModel viewModel) {
+    final Color primaryColor = Color(AppConstants.primaryColorValue);
+    
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: viewModel.productStatistics.length,
+      itemBuilder: (context, index) {
+        final product = viewModel.productStatistics[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.productName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                       
+                      ],
+                    ),
+                  ),
+
+                    Text(
+                      product.productTotalAmount,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+              ),
+              const SizedBox(height: 5),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Birim Fiyat: ${product.productPrice}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Satış Miktarı: ${product.productQuantity} adet',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                 
                 ],
               ),
             ],
