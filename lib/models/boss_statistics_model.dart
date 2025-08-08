@@ -504,4 +504,91 @@ class BossStatisticsProductData {
       totalAmount: json['totalAmount'] ?? '0,00 TL',
     );
   }
+}
+
+class BossStatisticsExpenseModel {
+  final int id;
+  final String title;
+  final String paymentType;
+  final String description;
+  final String amount;
+  final String date;
+  final int userID;
+
+  BossStatisticsExpenseModel({
+    required this.id,
+    required this.title,
+    required this.paymentType,
+    required this.description,
+    required this.amount,
+    required this.date,
+    required this.userID,
+  });
+
+  factory BossStatisticsExpenseModel.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsExpenseModel(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      paymentType: json['paymentType'] ?? '',
+      description: json['description'] ?? '',
+      amount: json['amount'] ?? '0,00 TL',
+      date: json['date'] ?? '',
+      userID: json['userID'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'paymentType': paymentType,
+      'description': description,
+      'amount': amount,
+      'date': date,
+      'userID': userID,
+    };
+  }
+}
+
+class BossStatisticsExpenseResponse {
+  final bool error;
+  final bool success;
+  final BossStatisticsExpenseData data;
+
+  BossStatisticsExpenseResponse({
+    required this.error,
+    required this.success,
+    required this.data,
+  });
+
+  factory BossStatisticsExpenseResponse.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsExpenseResponse(
+      error: json['error'] ?? false,
+      success: json['success'] ?? false,
+      data: BossStatisticsExpenseData.fromJson(json['data'] ?? {}),
+    );
+  }
+}
+
+class BossStatisticsExpenseData {
+  final List<BossStatisticsExpenseModel> statistics;
+  final int totalCount;
+  final String totalAmount;
+
+  BossStatisticsExpenseData({
+    required this.statistics,
+    required this.totalCount,
+    required this.totalAmount,
+  });
+
+  factory BossStatisticsExpenseData.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsExpenseData(
+      statistics: (json['statistics'] as List<dynamic>?)
+              ?.map((item) => BossStatisticsExpenseModel.fromJson(item))
+              .toList() ??
+          [],
+      totalCount: json['totalCount'] ?? 0,
+      totalAmount: json['totalAmount'] ?? '0,00 TL',
+    );
+  }
 } 
