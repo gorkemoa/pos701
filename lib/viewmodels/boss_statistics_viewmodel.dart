@@ -130,7 +130,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _isOrderDetail = detailEndpoint == 'orderListDetail';
     _isCashOrderDetail = filterKey == 'cashAmount';
     _isProductDetail = filterKey == 'productAmount' || filterKey == 'giftProductAmount';
-    _isExpenseDetail = filterKey == 'expenseAmount';
+    _isExpenseDetail = filterKey == 'expenseAmount' || filterKey == 'incomeAmount';
     notifyListeners();
 
     try {

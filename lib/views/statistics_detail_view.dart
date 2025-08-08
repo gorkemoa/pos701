@@ -779,7 +779,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           ],
                         ),
                       ),
-                    // Personel giderleri özeti kartı
+                    // Personel giderleri/Gelirler özeti kartı
                     if (viewModel.expenseData != null)
                       Container(
                         margin: const EdgeInsets.all(12),
@@ -801,13 +801,17 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.person,
+                                  widget.statistic.statisticsKey == 'incomeAmount' 
+                                      ? Icons.trending_up 
+                                      : Icons.person,
                                   color: primaryColor,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Personel Giderleri Özeti',
+                                  widget.statistic.statisticsKey == 'incomeAmount' 
+                                      ? 'Gelirler Özeti'
+                                      : 'Personel Giderleri Özeti',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -828,7 +832,9 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Text(
-                                        'Toplam Gider',
+                                        widget.statistic.statisticsKey == 'incomeAmount' 
+                                            ? 'Toplam Gelir'
+                                            : 'Toplam Gider',
                                         style: TextStyle(
                                           fontSize: 10,
                                           color: Colors.grey.shade600,
@@ -1253,6 +1259,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
 
   Widget _buildExpenseListView(BossStatisticsViewModel viewModel) {
     final Color primaryColor = Color(AppConstants.primaryColorValue);
+    final bool isIncome = widget.statistic.statisticsKey == 'incomeAmount';
     
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1278,20 +1285,6 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      color: primaryColor,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1325,13 +1318,14 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           color: primaryColor,
                         ),
                       ),
-                      Text(
-                        expense.paymentType,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey.shade500,
+                      if (!isIncome) // Sadece giderler için paymentType göster
+                        Text(
+                          expense.paymentType,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ],
