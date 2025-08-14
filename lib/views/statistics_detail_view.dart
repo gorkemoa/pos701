@@ -187,7 +187,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                   );
                 }
 
-                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty && viewModel.cashOrderStatistics.isEmpty && viewModel.productStatistics.isEmpty && viewModel.expenseStatistics.isEmpty && viewModel.cashierStatistics.isEmpty && viewModel.waiterStatistics.isEmpty) {
+                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty && viewModel.cashOrderStatistics.isEmpty && viewModel.productStatistics.isEmpty && viewModel.expenseStatistics.isEmpty && viewModel.cashierStatistics.isEmpty && viewModel.waiterStatistics.isEmpty && viewModel.categoryStatistics.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -332,7 +332,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         ),
                       ),
                     // Sipariş özeti kartı
-                    if (viewModel.orderData != null)
+                    if (viewModel.orderData != null && viewModel.isOrderDetail)
                       Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(16),
@@ -432,7 +432,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         ),
                       ),
                     // Nakit ödeme özeti kartı
-                    if (viewModel.cashOrderData != null)
+                    if (viewModel.cashOrderData != null && viewModel.isCashOrderDetail)
                       Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(16),
@@ -644,7 +644,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         ),
                       ),
                     // Ürün satışları özeti kartı
-                    if (viewModel.productData != null)
+                    if (viewModel.productData != null && viewModel.isProductDetail)
                       Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(16),
@@ -776,7 +776,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         ),
                       ),
                     // Kasiyer özeti kartı
-                    if (viewModel.cashierData != null)
+                    if (viewModel.cashierData != null && viewModel.isCashierDetail)
                       Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(16),
@@ -904,7 +904,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         ),
                       ),
                     // Garson özeti kartı
-                    if (viewModel.waiterData != null)
+                    if (viewModel.waiterData != null && viewModel.isWaiterDetail)
                       Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(16),
@@ -1003,8 +1003,108 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           ],
                         ),
                       ),
+                    // Kategori özeti kartı
+                    if (viewModel.categoryData != null && viewModel.isCategoryDetail)
+                      Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.category,
+                                  color: primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Kategori Özeti',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.grey.shade600,
+                                    decorationThickness: 0.4,
+                                    decorationStyle: TextDecorationStyle.solid,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Kategori',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${viewModel.categoryData!.totalCount}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Tutar',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.categoryData!.totalAmount,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     // Personel giderleri/Gelirler/Zayi özeti kartı
-                    if (viewModel.expenseData != null)
+                    if (viewModel.expenseData != null && viewModel.isExpenseDetail)
                       Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(16),
@@ -1117,7 +1217,9 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                       ),
                     // Detay listesi
                     Expanded(
-                      child: viewModel.isWaiterDetail
+                      child: viewModel.isCategoryDetail
+                          ? _buildCategoryListView(viewModel)
+                          : viewModel.isWaiterDetail
                           ? _buildWaiterListView(viewModel)
                           : viewModel.isCashierDetail
                           ? _buildCashierListView(viewModel)
@@ -1587,13 +1689,13 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
               ),
               if (expense.description.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Container(
+                                Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                                  decoration: BoxDecoration(
                     color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
                   child: Text(
                     expense.description,
                     style: TextStyle(
@@ -1666,43 +1768,43 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         Icons.payments,
                         size: 18,
                         color: accentColor,
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
                       cashier.paymentTypeName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
                       'İşlem: ${cashier.paymentCount}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
                 cashier.totalAmount,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
     );
   }
 
@@ -1746,9 +1848,9 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: primaryColor,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
               ),
               const SizedBox(height: 6),
               Row(
@@ -1808,6 +1910,74 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryListView(BossStatisticsViewModel viewModel) {
+    final Color primaryColor = Color(AppConstants.primaryColorValue);
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: viewModel.categoryStatistics.length,
+      itemBuilder: (context, index) {
+        final c = viewModel.categoryStatistics[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.label_important, color: primaryColor, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      c.categoryName,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Text(
+                    c.totalAmount,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                      'İndirim: ${c.totalDiscount}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                    ),
+
+         
+                    Text(
+                      'İkram: ${c.totalGifts}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                    ),
+                
+                ],
+          ),
+        ],
+      ),
         );
       },
     );

@@ -22,6 +22,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   List<BossStatisticsExpenseModel> _expenseStatistics = [];
   List<BossStatisticsCashierModel> _cashierStatistics = [];
   List<BossStatisticsWaiterModel> _waiterStatistics = [];
+  List<BossStatisticsCategoryModel> _categoryStatistics = [];
   bool _isDetailLoading = false;
   String? _detailErrorMessage;
   BossStatisticsDetailData? _detailData;
@@ -31,12 +32,14 @@ class BossStatisticsViewModel extends ChangeNotifier {
   BossStatisticsExpenseData? _expenseData;
   BossStatisticsCashierData? _cashierData;
   BossStatisticsWaiterData? _waiterData;
+  BossStatisticsCategoryData? _categoryData;
   bool _isOrderDetail = false;
   bool _isCashOrderDetail = false;
   bool _isProductDetail = false;
   bool _isExpenseDetail = false;
   bool _isCashierDetail = false;
   bool _isWaiterDetail = false;
+  bool _isCategoryDetail = false;
 
   List<BossStatisticsModel> get statistics => _statistics;
   List<BossStatisticsGraphicModel> get graphics => _graphics;
@@ -53,6 +56,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   List<BossStatisticsExpenseModel> get expenseStatistics => _expenseStatistics;
   List<BossStatisticsCashierModel> get cashierStatistics => _cashierStatistics;
   List<BossStatisticsWaiterModel> get waiterStatistics => _waiterStatistics;
+  List<BossStatisticsCategoryModel> get categoryStatistics => _categoryStatistics;
   bool get isDetailLoading => _isDetailLoading;
   String? get detailErrorMessage => _detailErrorMessage;
   BossStatisticsDetailData? get detailData => _detailData;
@@ -62,12 +66,14 @@ class BossStatisticsViewModel extends ChangeNotifier {
   BossStatisticsExpenseData? get expenseData => _expenseData;
   BossStatisticsCashierData? get cashierData => _cashierData;
   BossStatisticsWaiterData? get waiterData => _waiterData;
+  BossStatisticsCategoryData? get categoryData => _categoryData;
   bool get isOrderDetail => _isOrderDetail;
   bool get isCashOrderDetail => _isCashOrderDetail;
   bool get isProductDetail => _isProductDetail;
   bool get isExpenseDetail => _isExpenseDetail;
   bool get isCashierDetail => _isCashierDetail;
   bool get isWaiterDetail => _isWaiterDetail;
+  bool get isCategoryDetail => _isCategoryDetail;
 
   // Grafik verileri için yardımcı metodlar
   double get totalGraphicAmount {
@@ -145,10 +151,44 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _isExpenseDetail = filterKey == 'expenseAmount' || filterKey == 'incomeAmount' || filterKey == 'wasteAmount';
     _isCashierDetail = detailEndpoint == 'cashierDetail' || filterKey == 'cashierAmount';
     _isWaiterDetail = detailEndpoint == 'waiterDetail' || filterKey == 'waiterPerformance';
+    _isCategoryDetail = detailEndpoint == 'categoryDetail' || filterKey == 'categoryAmount';
     notifyListeners();
 
     try {
-      if (_isWaiterDetail) {
+      if (_isCategoryDetail) {
+        final response = await _service.getBossStatisticsCategoryDetail(
+          userToken: userToken,
+          compID: compID,
+          startDate: startDate,
+          endDate: endDate,
+          order: order,
+          filterKey: filterKey,
+          detailEndpoint: detailEndpoint,
+        );
+
+        if (response.success && !response.error) {
+          _categoryStatistics = response.data.statistics;
+          _categoryData = response.data;
+          _waiterStatistics = [];
+          _waiterData = null;
+          _cashierStatistics = [];
+          _cashierData = null;
+          _detailStatistics = [];
+          _detailData = null;
+          _orderStatistics = [];
+          _orderData = null;
+          _cashOrderStatistics = [];
+          _cashOrderData = null;
+          _productStatistics = [];
+          _productData = null;
+          _expenseStatistics = [];
+          _expenseData = null;
+          _logger.i('✅ Boss Statistics Category Detail ViewModel: Kategori detay verisi başarıyla alındı. ${_categoryStatistics.length} kategori');
+        } else {
+          _logger.e('❌ Boss Statistics Category Detail ViewModel: API başarısız response');
+          _detailErrorMessage = 'Kategori detay veri alınamadı';
+        }
+      } else if (_isWaiterDetail) {
         final response = await _service.getBossStatisticsWaiterDetail(
           userToken: userToken,
           compID: compID,
@@ -386,6 +426,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _expenseStatistics = [];
     _cashierStatistics = [];
     _waiterStatistics = [];
+    _categoryStatistics = [];
     _isDetailLoading = false;
     _detailErrorMessage = null;
     _detailData = null;
@@ -395,12 +436,14 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _expenseData = null;
     _cashierData = null;
     _waiterData = null;
+    _categoryData = null;
     _isOrderDetail = false;
     _isCashOrderDetail = false;
     _isProductDetail = false;
     _isExpenseDetail = false;
     _isCashierDetail = false;
     _isWaiterDetail = false;
+    _isCategoryDetail = false;
     notifyListeners();
   }
 } 

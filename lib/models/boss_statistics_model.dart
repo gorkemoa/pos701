@@ -796,3 +796,89 @@ class BossStatisticsWaiterData {
     );
   }
 }
+
+// Category detail models
+class BossStatisticsCategoryModel {
+  final int categoryID;
+  final String categoryName;
+  final String totalAmount;
+  final String totalDiscount;
+  final String totalGifts;
+
+  BossStatisticsCategoryModel({
+    required this.categoryID,
+    required this.categoryName,
+    required this.totalAmount,
+    required this.totalDiscount,
+    required this.totalGifts,
+  });
+
+  factory BossStatisticsCategoryModel.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsCategoryModel(
+      categoryID: json['categoryID'] ?? 0,
+      categoryName: json['categoryName'] ?? '',
+      totalAmount: json['totalAmount'] ?? '0,00 TL',
+      totalDiscount: json['totalDiscount'] ?? '0,00 TL',
+      totalGifts: json['totalGifts'] ?? '0,00 TL',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'categoryID': categoryID,
+      'categoryName': categoryName,
+      'totalAmount': totalAmount,
+      'totalDiscount': totalDiscount,
+      'totalGifts': totalGifts,
+    };
+  }
+}
+
+class BossStatisticsCategoryResponse {
+  final bool error;
+  final bool success;
+  final BossStatisticsCategoryData data;
+
+  BossStatisticsCategoryResponse({
+    required this.error,
+    required this.success,
+    required this.data,
+  });
+
+  factory BossStatisticsCategoryResponse.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsCategoryResponse(
+      error: json['error'] ?? false,
+      success: json['success'] ?? false,
+      data: BossStatisticsCategoryData.fromJson(json['data'] ?? {}),
+    );
+  }
+}
+
+class BossStatisticsCategoryData {
+  final List<BossStatisticsCategoryModel> statistics;
+  final int totalCount;
+  final String totalAmount;
+  final String totalDiscounts;
+  final String totalGifts;
+
+  BossStatisticsCategoryData({
+    required this.statistics,
+    required this.totalCount,
+    required this.totalAmount,
+    required this.totalDiscounts,
+    required this.totalGifts,
+  });
+
+  factory BossStatisticsCategoryData.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsCategoryData(
+      statistics: (json['statistics'] as List<dynamic>?)
+              ?.map((item) => BossStatisticsCategoryModel.fromJson(item))
+              .toList() ??
+          [],
+      totalCount: json['totalCount'] ?? 0,
+      totalAmount: json['totalAmount'] ?? '0,00 TL',
+      totalDiscounts: json['totalDiscounts'] ?? '0,00 TL',
+      totalGifts: json['totalGifts'] ?? '0,00 TL',
+    );
+  }
+}
