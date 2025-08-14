@@ -514,6 +514,10 @@ class BossStatisticsExpenseModel {
   final String amount;
   final String date;
   final int userID;
+  // Zayi için ek alanlar
+  final String personName;
+  final int quantity;
+  final String productInfo;
 
   BossStatisticsExpenseModel({
     required this.id,
@@ -523,6 +527,9 @@ class BossStatisticsExpenseModel {
     required this.amount,
     required this.date,
     required this.userID,
+    this.personName = '',
+    this.quantity = 0,
+    this.productInfo = '',
   });
 
   factory BossStatisticsExpenseModel.fromJson(Map<String, dynamic> json) {
@@ -534,6 +541,9 @@ class BossStatisticsExpenseModel {
       amount: json['amount'] ?? '0,00 TL',
       date: json['date'] ?? '',
       userID: json['userID'] ?? 0,
+      personName: json['personName'] ?? '',
+      quantity: json['quantity'] ?? 0,
+      productInfo: json['productInfo'] ?? '',
     );
   }
 
@@ -546,6 +556,9 @@ class BossStatisticsExpenseModel {
       'amount': amount,
       'date': date,
       'userID': userID,
+      'personName': personName,
+      'quantity': quantity,
+      'productInfo': productInfo,
     };
   }
 }
@@ -592,3 +605,90 @@ class BossStatisticsExpenseData {
     );
   }
 } 
+
+// Cashier detail models
+class BossStatisticsCashierModel {
+  final int paymentTypeID;
+  final String paymentTypeName;
+  final String paymentTypeColor;
+  final String paymentTypeImage;
+  final int paymentCount;
+  final String totalAmount;
+
+  BossStatisticsCashierModel({
+    required this.paymentTypeID,
+    required this.paymentTypeName,
+    required this.paymentTypeColor,
+    required this.paymentTypeImage,
+    required this.paymentCount,
+    required this.totalAmount,
+  });
+
+  factory BossStatisticsCashierModel.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsCashierModel(
+      paymentTypeID: json['paymentTypeID'] ?? 0,
+      paymentTypeName: json['paymentTypeName'] ?? '',
+      paymentTypeColor: json['paymentTypeColor'] ?? '#000000',
+      paymentTypeImage: json['paymentTypeImage'] ?? '',
+      paymentCount: json['paymentCount'] ?? 0,
+      totalAmount: json['totalAmount'] ?? '0,00 TL',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'paymentTypeID': paymentTypeID,
+      'paymentTypeName': paymentTypeName,
+      'paymentTypeColor': paymentTypeColor,
+      'paymentTypeImage': paymentTypeImage,
+      'paymentCount': paymentCount,
+      'totalAmount': totalAmount,
+    };
+  }
+}
+
+class BossStatisticsCashierResponse {
+  final bool error;
+  final bool success;
+  final BossStatisticsCashierData data;
+
+  BossStatisticsCashierResponse({
+    required this.error,
+    required this.success,
+    required this.data,
+  });
+
+  factory BossStatisticsCashierResponse.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsCashierResponse(
+      error: json['error'] ?? false,
+      success: json['success'] ?? false,
+      data: BossStatisticsCashierData.fromJson(json['data'] ?? {}),
+    );
+  }
+}
+
+class BossStatisticsCashierData {
+  final List<BossStatisticsCashierModel> statistics;
+  final int totalTypes;
+  final int totalCount;
+  final String totalAmount;
+
+  BossStatisticsCashierData({
+    required this.statistics,
+    required this.totalTypes,
+    required this.totalCount,
+    required this.totalAmount,
+  });
+
+  factory BossStatisticsCashierData.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsCashierData(
+      statistics: (json['statistics'] as List<dynamic>?)
+              ?.map((item) => BossStatisticsCashierModel.fromJson(item))
+              .toList() ??
+          [],
+      totalTypes: json['totalTypes'] ?? 0,
+      totalCount: json['totalCount'] ?? 0,
+      totalAmount: json['totalAmount'] ?? '0,00 TL',
+    );
+  }
+}

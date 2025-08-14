@@ -20,6 +20,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   List<BossStatisticsCashOrderModel> _cashOrderStatistics = [];
   List<BossStatisticsProductModel> _productStatistics = [];
   List<BossStatisticsExpenseModel> _expenseStatistics = [];
+  List<BossStatisticsCashierModel> _cashierStatistics = [];
   bool _isDetailLoading = false;
   String? _detailErrorMessage;
   BossStatisticsDetailData? _detailData;
@@ -27,10 +28,12 @@ class BossStatisticsViewModel extends ChangeNotifier {
   BossStatisticsCashOrderData? _cashOrderData;
   BossStatisticsProductData? _productData;
   BossStatisticsExpenseData? _expenseData;
+  BossStatisticsCashierData? _cashierData;
   bool _isOrderDetail = false;
   bool _isCashOrderDetail = false;
   bool _isProductDetail = false;
   bool _isExpenseDetail = false;
+  bool _isCashierDetail = false;
 
   List<BossStatisticsModel> get statistics => _statistics;
   List<BossStatisticsGraphicModel> get graphics => _graphics;
@@ -45,6 +48,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   List<BossStatisticsCashOrderModel> get cashOrderStatistics => _cashOrderStatistics;
   List<BossStatisticsProductModel> get productStatistics => _productStatistics;
   List<BossStatisticsExpenseModel> get expenseStatistics => _expenseStatistics;
+  List<BossStatisticsCashierModel> get cashierStatistics => _cashierStatistics;
   bool get isDetailLoading => _isDetailLoading;
   String? get detailErrorMessage => _detailErrorMessage;
   BossStatisticsDetailData? get detailData => _detailData;
@@ -52,10 +56,12 @@ class BossStatisticsViewModel extends ChangeNotifier {
   BossStatisticsCashOrderData? get cashOrderData => _cashOrderData;
   BossStatisticsProductData? get productData => _productData;
   BossStatisticsExpenseData? get expenseData => _expenseData;
+  BossStatisticsCashierData? get cashierData => _cashierData;
   bool get isOrderDetail => _isOrderDetail;
   bool get isCashOrderDetail => _isCashOrderDetail;
   bool get isProductDetail => _isProductDetail;
   bool get isExpenseDetail => _isExpenseDetail;
+  bool get isCashierDetail => _isCashierDetail;
 
   // Grafik verileri için yardımcı metodlar
   double get totalGraphicAmount {
@@ -130,11 +136,41 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _isOrderDetail = detailEndpoint == 'orderListDetail';
     _isCashOrderDetail = filterKey == 'cashAmount';
     _isProductDetail = filterKey == 'productAmount' || filterKey == 'giftProductAmount';
-    _isExpenseDetail = filterKey == 'expenseAmount' || filterKey == 'incomeAmount';
+    _isExpenseDetail = filterKey == 'expenseAmount' || filterKey == 'incomeAmount' || filterKey == 'wasteAmount';
+    _isCashierDetail = detailEndpoint == 'cashierDetail' || filterKey == 'cashierAmount';
     notifyListeners();
 
     try {
-      if (_isExpenseDetail) {
+      if (_isCashierDetail) {
+        final response = await _service.getBossStatisticsCashierDetail(
+          userToken: userToken,
+          compID: compID,
+          startDate: startDate,
+          endDate: endDate,
+          order: order,
+          filterKey: filterKey,
+          detailEndpoint: detailEndpoint,
+        );
+
+        if (response.success && !response.error) {
+          _cashierStatistics = response.data.statistics;
+          _cashierData = response.data;
+          _detailStatistics = [];
+          _detailData = null;
+          _orderStatistics = [];
+          _orderData = null;
+          _cashOrderStatistics = [];
+          _cashOrderData = null;
+          _productStatistics = [];
+          _productData = null;
+          _expenseStatistics = [];
+          _expenseData = null;
+          _logger.i('✅ Boss Statistics Cashier Detail ViewModel: Kasiyer detay veri başarıyla alındı. ${_cashierStatistics.length} adet ödeme tipi');
+        } else {
+          _logger.e('❌ Boss Statistics Cashier Detail ViewModel: API başarısız response');
+          _detailErrorMessage = 'Kasiyer detay veri alınamadı';
+        }
+      } else if (_isExpenseDetail) {
         // Personel giderleri için
         final response = await _service.getBossStatisticsExpenseDetail(
           userToken: userToken,
@@ -310,6 +346,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _cashOrderStatistics = [];
     _productStatistics = [];
     _expenseStatistics = [];
+    _cashierStatistics = [];
     _isDetailLoading = false;
     _detailErrorMessage = null;
     _detailData = null;
@@ -317,10 +354,12 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _cashOrderData = null;
     _productData = null;
     _expenseData = null;
+    _cashierData = null;
     _isOrderDetail = false;
     _isCashOrderDetail = false;
     _isProductDetail = false;
     _isExpenseDetail = false;
+    _isCashierDetail = false;
     notifyListeners();
   }
 } 

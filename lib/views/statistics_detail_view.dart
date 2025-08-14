@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pos701/services/auth_service.dart';
-import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/viewmodels/boss_statistics_viewmodel.dart';
@@ -64,8 +62,6 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    final userViewModel = Provider.of<UserViewModel>(context);
-    final authService = Provider.of<AuthService>(context, listen: false);
     final Color primaryColor = Color(AppConstants.primaryColorValue);
     
     return Scaffold(
@@ -191,7 +187,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                   );
                 }
 
-                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty && viewModel.cashOrderStatistics.isEmpty && viewModel.productStatistics.isEmpty && viewModel.expenseStatistics.isEmpty) {
+                if (viewModel.detailStatistics.isEmpty && viewModel.orderStatistics.isEmpty && viewModel.cashOrderStatistics.isEmpty && viewModel.productStatistics.isEmpty && viewModel.expenseStatistics.isEmpty && viewModel.cashierStatistics.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -779,7 +775,135 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           ],
                         ),
                       ),
-                    // Personel giderleri/Gelirler özeti kartı
+                    // Kasiyer özeti kartı
+                    if (viewModel.cashierData != null)
+                      Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.point_of_sale,
+                                  color: primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Kasiyer Özeti',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Colors.grey.shade600,
+                                    decorationThickness: 0.4,
+                                    decorationStyle: TextDecorationStyle.solid,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Ödeme Tipi',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${viewModel.cashierData!.totalTypes}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam İşlem',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${viewModel.cashierData!.totalCount}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey.shade300,
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'Toplam Tutar',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        viewModel.cashierData!.totalAmount,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    // Personel giderleri/Gelirler/Zayi özeti kartı
                     if (viewModel.expenseData != null)
                       Container(
                         margin: const EdgeInsets.all(12),
@@ -803,7 +927,9 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                                 Icon(
                                   widget.statistic.statisticsKey == 'incomeAmount' 
                                       ? Icons.trending_up 
-                                      : Icons.person,
+                                      : widget.statistic.statisticsKey == 'wasteAmount'
+                                          ? Icons.warning
+                                          : Icons.person,
                                   color: primaryColor,
                                   size: 20,
                                 ),
@@ -811,7 +937,9 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                                 Text(
                                   widget.statistic.statisticsKey == 'incomeAmount' 
                                       ? 'Gelirler Özeti'
-                                      : 'Personel Giderleri Özeti',
+                                      : widget.statistic.statisticsKey == 'wasteAmount'
+                                          ? 'Zayi Özeti'
+                                          : 'Personel Giderleri Özeti',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -834,7 +962,9 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                                       Text(
                                         widget.statistic.statisticsKey == 'incomeAmount' 
                                             ? 'Toplam Gelir'
-                                            : 'Toplam Gider',
+                                            : widget.statistic.statisticsKey == 'wasteAmount'
+                                                ? 'Toplam Zayi'
+                                                : 'Toplam Gider',
                                         style: TextStyle(
                                           fontSize: 10,
                                           color: Colors.grey.shade600,
@@ -887,7 +1017,9 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                       ),
                     // Detay listesi
                     Expanded(
-                      child: viewModel.isExpenseDetail
+                      child: viewModel.isCashierDetail
+                          ? _buildCashierListView(viewModel)
+                          : viewModel.isExpenseDetail
                           ? _buildExpenseListView(viewModel)
                           : viewModel.isProductDetail
                               ? _buildProductListView(viewModel)
@@ -911,26 +1043,26 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
     final Color primaryColor = Color(AppConstants.primaryColorValue);
     
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      itemCount: viewModel.detailStatistics.length,
-      itemBuilder: (context, index) {
-        final detail = viewModel.detailStatistics[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: viewModel.detailStatistics.length,
+                        itemBuilder: (context, index) {
+                          final detail = viewModel.detailStatistics[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
 
               Expanded(
                 child: Column(
@@ -980,7 +1112,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
+                                  decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
@@ -1026,7 +1158,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: primaryColor,
+                                    color: primaryColor,
                         ),
                       ),
                       if (order.orderDiscount != '0,00 TL')
@@ -1075,37 +1207,37 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
                           'Sipariş #${order.orderCode}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
                           order.orderDate,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
+                                Text(
                         order.orderAmount,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
                         ),
                       ),
                       if (order.orderDiscount != '0,00 TL')
@@ -1158,11 +1290,11 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-        );
-      },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
     );
   }
 
@@ -1260,6 +1392,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
   Widget _buildExpenseListView(BossStatisticsViewModel viewModel) {
     final Color primaryColor = Color(AppConstants.primaryColorValue);
     final bool isIncome = widget.statistic.statisticsKey == 'incomeAmount';
+    final bool isWaste = widget.statistic.statisticsKey == 'wasteAmount';
     
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1290,7 +1423,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          expense.title,
+                          isWaste ? expense.personName : expense.title,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -1304,6 +1437,26 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                             color: Colors.grey.shade600,
                           ),
                         ),
+                        if (isWaste) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Miktar: ${expense.quantity} adet',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                          if (expense.productInfo.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Ürün: ${expense.productInfo}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ],
                       ],
                     ),
                   ),
@@ -1318,7 +1471,7 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
                           color: primaryColor,
                         ),
                       ),
-                      if (!isIncome) // Sadece giderler için paymentType göster
+                      if (!isIncome && !isWaste) // Sadece giderler için paymentType göster
                         Text(
                           expense.paymentType,
                           style: TextStyle(
@@ -1354,4 +1507,100 @@ class _StatisticsDetailViewState extends State<StatisticsDetailView> {
       },
     );
   }
-}
+
+  Widget _buildCashierListView(BossStatisticsViewModel viewModel) {
+    final Color primaryColor = Color(AppConstants.primaryColorValue);
+    Color parseHexColor(String hex) {
+      try {
+        String cleaned = hex.replaceAll('#', '');
+        if (cleaned.length == 6) {
+          cleaned = 'FF$cleaned';
+        }
+        return Color(int.parse(cleaned, radix: 16));
+      } catch (_) {
+        return primaryColor.withOpacity(0.1);
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      itemCount: viewModel.cashierStatistics.length,
+      itemBuilder: (context, index) {
+        final cashier = viewModel.cashierStatistics[index];
+        final accentColor = parseHexColor(cashier.paymentTypeColor);
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                child: cashier.paymentTypeImage.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          cashier.paymentTypeImage,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.payments,
+                            size: 18,
+                            color: accentColor,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.payments,
+                        size: 18,
+                        color: accentColor,
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cashier.paymentTypeName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'İşlem: ${cashier.paymentCount}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                cashier.totalAmount,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+} 
