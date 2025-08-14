@@ -692,3 +692,107 @@ class BossStatisticsCashierData {
     );
   }
 }
+
+// Waiter performance models
+class BossStatisticsWaiterModel {
+  final int waiterID;
+  final String waiterName;
+  final int totalCustomers;
+  final int tableOrders;
+  final double avgCustomersPerTable;
+  final double avgOrdersPerTable;
+  final String totalGifts;
+  final String tableSales;
+  final String orderDiscounts;
+  final String netSales;
+
+  BossStatisticsWaiterModel({
+    required this.waiterID,
+    required this.waiterName,
+    required this.totalCustomers,
+    required this.tableOrders,
+    required this.avgCustomersPerTable,
+    required this.avgOrdersPerTable,
+    required this.totalGifts,
+    required this.tableSales,
+    required this.orderDiscounts,
+    required this.netSales,
+  });
+
+  factory BossStatisticsWaiterModel.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsWaiterModel(
+      waiterID: json['waiterID'] ?? 0,
+      waiterName: json['waiterName'] ?? '',
+      totalCustomers: json['totalCustomers'] ?? 0,
+      tableOrders: json['tableOrders'] ?? 0,
+      avgCustomersPerTable: (json['avgCustomersPerTable'] is num)
+          ? (json['avgCustomersPerTable'] as num).toDouble()
+          : 0.0,
+      avgOrdersPerTable: (json['avgOrdersPerTable'] is num)
+          ? (json['avgOrdersPerTable'] as num).toDouble()
+          : 0.0,
+      totalGifts: json['totalGifts'] ?? '0,00 TL',
+      tableSales: json['tableSales'] ?? '0,00 TL',
+      orderDiscounts: json['orderDiscounts'] ?? '0,00 TL',
+      netSales: json['netSales'] ?? '0,00 TL',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'waiterID': waiterID,
+      'waiterName': waiterName,
+      'totalCustomers': totalCustomers,
+      'tableOrders': tableOrders,
+      'avgCustomersPerTable': avgCustomersPerTable,
+      'avgOrdersPerTable': avgOrdersPerTable,
+      'totalGifts': totalGifts,
+      'tableSales': tableSales,
+      'orderDiscounts': orderDiscounts,
+      'netSales': netSales,
+    };
+  }
+}
+
+class BossStatisticsWaiterResponse {
+  final bool error;
+  final bool success;
+  final BossStatisticsWaiterData data;
+
+  BossStatisticsWaiterResponse({
+    required this.error,
+    required this.success,
+    required this.data,
+  });
+
+  factory BossStatisticsWaiterResponse.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsWaiterResponse(
+      error: json['error'] ?? false,
+      success: json['success'] ?? false,
+      data: BossStatisticsWaiterData.fromJson(json['data'] ?? {}),
+    );
+  }
+}
+
+class BossStatisticsWaiterData {
+  final List<BossStatisticsWaiterModel> statistics;
+  final int totalCount;
+  final String totalAmount;
+
+  BossStatisticsWaiterData({
+    required this.statistics,
+    required this.totalCount,
+    required this.totalAmount,
+  });
+
+  factory BossStatisticsWaiterData.fromJson(Map<String, dynamic> json) {
+    return BossStatisticsWaiterData(
+      statistics: (json['statistics'] as List<dynamic>?)
+              ?.map((item) => BossStatisticsWaiterModel.fromJson(item))
+              .toList() ??
+          [],
+      totalCount: json['totalCount'] ?? 0,
+      totalAmount: json['totalAmount'] ?? '0,00 TL',
+    );
+  }
+}
