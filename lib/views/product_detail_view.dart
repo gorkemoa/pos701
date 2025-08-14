@@ -196,21 +196,42 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     
     // Geçerli satırın miktarını bul
     var existingQuantity = 1;
+    var existingItem = basketViewModel.items.firstWhere(
+      (item) => item.lineId == lineId,
+      orElse: () => basketViewModel.items.first,
+    );
     try {
-      existingQuantity = basketViewModel.items
-          .firstWhere((item) => item.lineId == lineId).proQty;
+      existingQuantity = existingItem.proQty;
     } catch (e) {
       // Satır bulunamadıysa 1 adet olarak devam et
     }
     
-    // Satırı güncelle - yeni product bilgileriyle
-    basketViewModel.updateSpecificLine(
-      lineId, 
-      product, 
-      existingQuantity,
-      proNote: _noteController.text,
-      isGift: _isGift,
-    );
+    // Eğer miktar 2+ ve ikram seçili ise yalnızca 1 adedi ikram yap (satırı böl)
+    if (_isGift && existingQuantity > 1) {
+      // Önce mevcut satırı ikram olmayan ve miktarı 1 azaltılmış hale getir
+      basketViewModel.updateSpecificLine(
+        lineId,
+        product,
+        existingQuantity - 1,
+        proNote: _noteController.text,
+        isGift: false,
+      );
+      // Ardından 1 adet yeni satır olarak ikram ekle
+      basketViewModel.addProduct(
+        product,
+        proNote: _noteController.text,
+        isGift: true,
+      );
+    } else {
+      // Satırı güncelle - yeni product bilgileriyle
+      basketViewModel.updateSpecificLine(
+        lineId, 
+        product, 
+        existingQuantity,
+        proNote: _noteController.text,
+        isGift: _isGift,
+      );
+    }
     
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -233,6 +254,29 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         final existingItem = basketViewModel.items.firstWhere(
           (item) => item.product.proID == oldProID,
         );
+        // Eğer miktar 2+ ve ikram seçili ise yalnızca 1 adedi ikram yap (satırı böl)
+        if (_isGift && existingItem.proQty > 1) {
+          basketViewModel.updateSpecificLine(
+            existingItem.lineId,
+            product,
+            existingItem.proQty - 1,
+            proNote: _noteController.text,
+            isGift: false,
+          );
+          basketViewModel.addProduct(
+            product,
+            proNote: _noteController.text,
+            isGift: true,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ürün bilgileri güncellendi'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.of(context).pop();
+          return;
+        }
         
         // Not güncelle
         basketViewModel.updateProductNote(existingItem.lineId, _noteController.text);
@@ -263,6 +307,31 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         final existingItem = basketViewModel.items.firstWhere(
           (item) => item.product.proID == oldProID,
         );
+        // Eğer miktar 2+ ve ikram seçili ise yalnızca 1 adedi ikram yap (satırı böl)
+        if (_isGift && existingItem.proQty > 1) {
+          // Mevcut satırı (eski porsiyon) miktarını 1 azalt, ikram değil
+          basketViewModel.updateSpecificLine(
+            existingItem.lineId,
+            existingItem.product,
+            existingItem.proQty - 1,
+            proNote: existingItem.proNote,
+            isGift: false,
+          );
+          // Yeni porsiyonu 1 adet ikram olarak ekle
+          basketViewModel.addProduct(
+            product,
+            proNote: _noteController.text,
+            isGift: true,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ürün bilgileri güncellendi'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.of(context).pop();
+          return;
+        }
         
         // Satırı güncelle - yeni porsiyon, not ve ikram bilgileriyle
         basketViewModel.updateSpecificLine(
