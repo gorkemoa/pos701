@@ -67,7 +67,7 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
       setState(() {
         _isGridView = prefs.getBool('patron_stats_grid_view') ?? true;
         _selectedTabIndex = prefs.getInt('patron_stats_selected_tab') ?? 0;
-        _selectedPeriodIndex = prefs.getInt('patron_stats_selected_period') ?? 0;
+        _selectedPeriodIndex = 0; // Her zaman "Bugün" seçili olsun
       });
       _logger.d('📱 Cache\'den ayarlar yüklendi: grid=$_isGridView, tab=$_selectedTabIndex, period=$_selectedPeriodIndex');
     } catch (e) {
@@ -80,7 +80,7 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('patron_stats_grid_view', _isGridView);
       await prefs.setInt('patron_stats_selected_tab', _selectedTabIndex);
-      await prefs.setInt('patron_stats_selected_period', _selectedPeriodIndex);
+      // Periyot seçimi cache'lenmez, her zaman "Bugün" olarak başlar
       _logger.d('💾 Ayarlar cache\'e kaydedildi: grid=$_isGridView, tab=$_selectedTabIndex, period=$_selectedPeriodIndex');
     } catch (e) {
       _logger.e('❌ Cache ayarları kaydedilirken hata: $e');
