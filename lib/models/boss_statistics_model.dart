@@ -241,6 +241,9 @@ class BossStatisticsOrderModel {
   final String orderDiscount;
   final String orderDate;
   final String userID;
+  // İade için ek alanlar
+  final String netOrderAmount;
+  final String refundedAmount;
 
   BossStatisticsOrderModel({
     required this.orderID,
@@ -249,6 +252,8 @@ class BossStatisticsOrderModel {
     required this.orderDiscount,
     required this.orderDate,
     required this.userID,
+    this.netOrderAmount = '',
+    this.refundedAmount = '',
   });
 
   factory BossStatisticsOrderModel.fromJson(Map<String, dynamic> json) {
@@ -259,6 +264,8 @@ class BossStatisticsOrderModel {
       orderDiscount: json['orderDiscount'] ?? '0,00 TL',
       orderDate: json['orderDate'] ?? '',
       userID: json['userID']?.toString() ?? '',
+      netOrderAmount: json['netOrderAmount'] ?? '',
+      refundedAmount: json['refundedAmount'] ?? '',
     );
   }
 
@@ -270,6 +277,8 @@ class BossStatisticsOrderModel {
       'orderDiscount': orderDiscount,
       'orderDate': orderDate,
       'userID': userID,
+      'netOrderAmount': netOrderAmount,
+      'refundedAmount': refundedAmount,
     };
   }
 }
@@ -350,11 +359,18 @@ class BossStatisticsOrderData {
   final List<BossStatisticsOrderModel> statistics;
   final int totalCount;
   final String totalAmount;
+  // İade için ek alanlar
+  final String totalOrderAmount;
+  final String totalDiscountAmount;
+  final String totalRefundedAmount;
 
   BossStatisticsOrderData({
     required this.statistics,
     required this.totalCount,
     required this.totalAmount,
+    this.totalOrderAmount = '',
+    this.totalDiscountAmount = '',
+    this.totalRefundedAmount = '',
   });
 
   factory BossStatisticsOrderData.fromJson(Map<String, dynamic> json) {
@@ -365,6 +381,9 @@ class BossStatisticsOrderData {
           [],
       totalCount: json['totalCount'] ?? 0,
       totalAmount: json['totalAmount'] ?? '0,00 TL',
+      totalOrderAmount: json['totalOrderAmount'] ?? '',
+      totalDiscountAmount: json['totalDiscountAmount'] ?? '',
+      totalRefundedAmount: json['totalRefundedAmount'] ?? '',
     );
   }
 }

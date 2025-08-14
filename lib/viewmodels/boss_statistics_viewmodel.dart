@@ -40,6 +40,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   bool _isCashierDetail = false;
   bool _isWaiterDetail = false;
   bool _isCategoryDetail = false;
+  bool _isRefundDetail = false;
 
   List<BossStatisticsModel> get statistics => _statistics;
   List<BossStatisticsGraphicModel> get graphics => _graphics;
@@ -74,6 +75,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
   bool get isCashierDetail => _isCashierDetail;
   bool get isWaiterDetail => _isWaiterDetail;
   bool get isCategoryDetail => _isCategoryDetail;
+  bool get isRefundDetail => _isRefundDetail;
 
   // Grafik verileri için yardımcı metodlar
   double get totalGraphicAmount {
@@ -152,6 +154,7 @@ class BossStatisticsViewModel extends ChangeNotifier {
     _isCashierDetail = detailEndpoint == 'cashierDetail' || filterKey == 'cashierAmount';
     _isWaiterDetail = detailEndpoint == 'waiterDetail' || filterKey == 'waiterPerformance';
     _isCategoryDetail = detailEndpoint == 'categoryDetail' || filterKey == 'categoryAmount';
+    _isRefundDetail = filterKey == 'refundAmount';
     notifyListeners();
 
     try {
