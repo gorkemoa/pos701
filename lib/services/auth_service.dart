@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:pos701/models/user_model.dart';
 import 'package:pos701/models/login_model.dart';
 import 'package:pos701/models/api_response_model.dart';
@@ -126,7 +127,7 @@ class AuthService {
       
       final data = {
         "userToken": token,
-        "platform": "ios", // Gerçek platform bilgisiyle değiştirilmeli
+        "platform": Platform.isIOS ? "ios" : "android", 
         "version": AppConstants.appVersion
       };
       
