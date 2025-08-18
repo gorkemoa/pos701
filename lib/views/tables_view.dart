@@ -121,6 +121,17 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Responsive tasarım için ekran boyutlarını al
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isTablet = screenSize.width > 600;
+    final bool isLargeTablet = screenSize.width > 900;
+    
+    // Responsive boyutlar
+    final double titleFontSize = isLargeTablet ? 22 : isTablet ? 20 : 16;
+    final double iconSize = isLargeTablet ? 32 : isTablet ? 30 : 24;
+    final double buttonFontSize = isLargeTablet ? 10 : isTablet ? 9 : 8;
+    final double tabFontSize = isLargeTablet ? 16 : isTablet ? 14 : 12;
+    
     return ChangeNotifierProvider.value(
       value: _viewModel,
       child: Consumer<TablesViewModel>(
@@ -134,10 +145,16 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           if (viewModel.errorMessage != null) {
             return Scaffold(
               appBar: AppBar(
-               title: Text(widget.title , style: const TextStyle(color: Colors.white),),
+               title: Text(
+                 widget.title, 
+                 style: TextStyle(
+                   color: Colors.white,
+                   fontSize: titleFontSize,
+                 ),
+               ),
                 backgroundColor: Color(AppConstants.primaryColorValue),
                 leading: IconButton(
-                  icon: Icon(Icons.chevron_left, size: 30),
+                  icon: Icon(Icons.chevron_left, size: iconSize),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -148,26 +165,34 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                   children: [
                     Icon(
                       Icons.error_outline,
-                      size: 48,
+                      size: isTablet ? 64 : 48,
                       color: Colors.red.shade300,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: isTablet ? 24 : 16),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      padding: EdgeInsets.symmetric(horizontal: isTablet ? 48.0 : 32.0),
                       child: Text(
                         'Hata: ${viewModel.errorMessage}',
-                        style: const TextStyle(fontSize: 16),
+                        style: TextStyle(
+                          fontSize: isTablet ? 20 : 16,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: isTablet ? 32 : 24),
                     ElevatedButton(
                       onPressed: _loadData,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(AppConstants.primaryColorValue),
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 40 : 32, 
+                          vertical: isTablet ? 16 : 12
+                        ),
                       ),
-                      child: const Text('Yeniden Dene', style: TextStyle(fontSize: 16)),
+                      child: Text(
+                        'Yeniden Dene', 
+                        style: TextStyle(fontSize: isTablet ? 18 : 16)
+                      ),
                     ),
                   ],
                 ),
@@ -180,15 +205,24 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
           if (regions.isEmpty) {
             return Scaffold(
               appBar: AppBar(
-                title: Text(widget.title , style: TextStyle(color: Colors.white),),
+                title: Text(
+                  widget.title, 
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: titleFontSize,
+                  ),
+                ),
                 backgroundColor: Color(AppConstants.primaryColorValue),
                 leading: IconButton(
-                  icon: Icon(Icons.chevron_left, size: 30),
+                  icon: Icon(Icons.chevron_left, size: iconSize),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.refresh),
+                    icon: Icon(
+                      Icons.refresh,
+                      size: isTablet ? 28 : 24,
+                    ),
                     onPressed: _loadData,
                   ),
                 ],
@@ -200,26 +234,42 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                   children: [
                     Icon(
                       Icons.table_bar,
-                      size: 72,
+                      size: isTablet ? 96 : 72,
                       color: Colors.grey.shade400,
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
+                    SizedBox(height: isTablet ? 24 : 16),
+                    Text(
                       'Bölge bulunamadı',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: isTablet ? 22 : 18, 
+                        fontWeight: FontWeight.bold
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: isTablet ? 12 : 8),
+                    Text(
                       'Henüz bölge eklenmemiş veya görüntüleme izniniz bulunmuyor.',
                       textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isTablet ? 16 : 14,
+                      ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: isTablet ? 32 : 24),
                     ElevatedButton.icon(
                       onPressed: _loadData,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Yeniden Dene'),
+                      icon: Icon(
+                        Icons.refresh,
+                        size: isTablet ? 24 : 20,
+                      ),
+                      label: Text(
+                        'Yeniden Dene',
+                        style: TextStyle(fontSize: isTablet ? 16 : 14),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(AppConstants.primaryColorValue),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 32 : 24,
+                          vertical: isTablet ? 16 : 12,
+                        ),
                       ),
                     ),
                   ],
@@ -239,42 +289,76 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
 
           return Scaffold(
             appBar: AppBar(
-              title: Text(widget.title , style: const TextStyle(color: Colors.white),),
+              title: Text(
+                widget.title, 
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: titleFontSize,
+                ),
+              ),
               backgroundColor: Color(AppConstants.primaryColorValue),
               actions: [
                 // Destek İste butonu - ekran görüntüsündeki gibi
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTablet ? 12.0 : 8.0, 
+                    vertical: isTablet ? 12.0 : 8.0
+                  ),
                   child: ElevatedButton.icon(
                     onPressed: () {
                       // Destek işlevi
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Destek İletişim'),
+                          title: Text(
+                            'Destek İletişim',
+                            style: TextStyle(fontSize: isTablet ? 20 : 17),
+                          ),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text('Telefon: +90 555 123 4567'),
-                              SizedBox(height: 8),
-                              Text('E-posta: destek@pos701.com'),
+                            children: [
+                              Text(
+                                'Telefon: +90 555 123 4567',
+                                style: TextStyle(fontSize: isTablet ? 16 : 14),
+                              ),
+                              SizedBox(height: isTablet ? 12 : 8),
+                              Text(
+                                'E-posta: destek@pos701.com',
+                                style: TextStyle(fontSize: isTablet ? 16 : 14),
+                              ),
                             ],
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Kapat'),
+                              child: Text(
+                                'Kapat',
+                                style: TextStyle(fontSize: isTablet ? 16 : 14),
+                              ),
                             ),
                           ],
                         ),
                       );
                     },
-                    icon: const Icon(Icons.support_agent, color: Colors.white),
-                    label: const Text('Destek İste', style: TextStyle(color: Colors.white, fontSize: 8)),
+                    icon: Icon(
+                      Icons.support_agent, 
+                      color: Colors.white,
+                      size: isTablet ? 20 : 16,
+                    ),
+                    label: Text(
+                      'Destek İste', 
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontSize: buttonFontSize
+                      )
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black26,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isTablet ? 12 : 8, 
+                        vertical: isTablet ? 6 : 2
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -283,11 +367,17 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                 ),
             
                 IconButton(
-                  icon: const Icon(Icons.refresh),
+                  icon: Icon(
+                    Icons.refresh,
+                    size: isTablet ? 28 : 24,
+                  ),
                   onPressed: _loadData,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.more_vert),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: isTablet ? 28 : 24,
+                  ),
                   onPressed: () {
                     // iOS tarzında BottomSheet göster
                     showModalBottomSheet(
@@ -308,15 +398,21 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                               Container(
                                 width: 40,
                                 height: 4,
-                                margin: const EdgeInsets.symmetric(vertical: 12),
+                                margin: EdgeInsets.symmetric(vertical: isTablet ? 16 : 12),
                                 decoration: BoxDecoration(
                                   color: Colors.grey[300],
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                               ListTile(
-                                leading: const Icon(Icons.receipt_long),
-                                title: const Text('Tüm Siparişler' , style: TextStyle(fontSize: 12),),
+                                leading: Icon(
+                                  Icons.receipt_long,
+                                  size: isTablet ? 24 : 20,
+                                ),
+                                title: Text(
+                                  'Tüm Siparişler', 
+                                  style: TextStyle(fontSize: isTablet ? 16 : 12)
+                                ),
                                 onTap: () {
                                   Navigator.pop(context);
                                   // Sipariş Listesi sayfasına yönlendir
@@ -331,7 +427,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                                   );
                                 },
                               ),
-                              const SizedBox(height: 28),
+                              SizedBox(height: isTablet ? 32 : 28),
                             ],
                           ),
                         );
@@ -345,6 +441,8 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
                 isScrollable: true,
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white70,
+                labelStyle: TextStyle(fontSize: tabFontSize),
+                unselectedLabelStyle: TextStyle(fontSize: tabFontSize),
                 tabs: regions.map((region) => Tab(
                   text: '${region.regionName} (${region.totalOrder})',
                 )).toList(),
@@ -353,15 +451,25 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
             drawer: const AppDrawer(),
             body: TabBarView(
               controller: _tabController,
-              children: regions.map((region) => _buildTablesGrid(region)).toList(),
+              children: regions.map((region) => _buildTablesGrid(region, isTablet)).toList(),
             ),
             floatingActionButton: FloatingActionButton.extended(
               onPressed: () {
-                _handleFloatingActionButton(context);
+                _handleFloatingActionButton(context, isTablet);
               },
               backgroundColor: Color(AppConstants.primaryColorValue),
-              icon: const Icon(Icons.add , color: Colors.white,),
-              label: const Text('Yeni Sipariş', style: TextStyle(color: Colors.white),),
+              icon: Icon(
+                Icons.add, 
+                color: Colors.white,
+                size: isTablet ? 28 : 24,
+              ),
+              label: Text(
+                'Yeni Sipariş', 
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isTablet ? 16 : 14,
+                ),
+              ),
             ),
           );
         },
@@ -369,13 +477,20 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTablesGrid(Region region) {
+  Widget _buildTablesGrid(Region region, bool isTablet) {
+    // Responsive grid ayarları
+    final int crossAxisCount = isTablet ? 4 : 3;
+    final double childAspectRatio = isTablet ? 1.6 : 1.4;
+    final double padding = isTablet ? 16.0 : 8.0;
+    
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: EdgeInsets.all(padding),
       child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 1.4,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: childAspectRatio,
+          crossAxisSpacing: isTablet ? 16 : 8,
+          mainAxisSpacing: isTablet ? 16 : 8,
         ),
         itemCount: region.tables.length,
         itemBuilder: (context, index) {
@@ -412,7 +527,7 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
     );
   }
 
-  void _handleFloatingActionButton(BuildContext context) {
+  void _handleFloatingActionButton(BuildContext context, bool isTablet) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -431,16 +546,26 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
+                margin: EdgeInsets.symmetric(vertical: isTablet ? 16 : 12),
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.delivery_dining, color: Colors.orange),
-                title: const Text('Paket Sipariş'),
-                subtitle: const Text('Müşteriye teslim edilecek paket siparişleri oluşturun'),
+                leading: Icon(
+                  Icons.delivery_dining, 
+                  color: Colors.orange,
+                  size: isTablet ? 28 : 24,
+                ),
+                title: Text(
+                  'Paket Sipariş',
+                  style: TextStyle(fontSize: isTablet ? 18 : 16),
+                ),
+                subtitle: Text(
+                  'Müşteriye teslim edilecek paket siparişleri oluşturun',
+                  style: TextStyle(fontSize: isTablet ? 14 : 12),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -460,15 +585,25 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
               ),
               const Divider(),
               ListTile(
-                leading: const Icon(Icons.takeout_dining, color: Colors.green),
-                title: const Text('Gel-Al Sipariş'),
-                subtitle: const Text('Müşterinin gelip alacağı siparişleri oluşturun'),
+                leading: Icon(
+                  Icons.takeout_dining, 
+                  color: Colors.green,
+                  size: isTablet ? 28 : 24,
+                ),
+                title: Text(
+                  'Gel-Al Sipariş',
+                  style: TextStyle(fontSize: isTablet ? 18 : 16),
+                ),
+                subtitle: Text(
+                  'Müşterinin gelip alacağı siparişleri oluşturun',
+                  style: TextStyle(fontSize: isTablet ? 14 : 12),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _handleGelAlOrder();
                 },
               ),
-              const SizedBox(height: 28),
+              SizedBox(height: isTablet ? 32 : 28),
             ],
           ),
         );

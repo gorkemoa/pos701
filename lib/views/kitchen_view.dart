@@ -133,10 +133,21 @@ class _KitchenViewState extends State<KitchenView> {
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Color(AppConstants.primaryColorValue);
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isTablet = screenWidth > 600;
+    final bool isLargeTablet = screenWidth > 900;
+    final double appBarTitleSize = isLargeTablet ? 20 : (isTablet ? 18 : 16);
+    final EdgeInsets listPadding = EdgeInsets.all(isTablet ? 12 : 8);
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(
+          widget.title,
+          style: TextStyle(
+            fontSize: appBarTitleSize,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -226,11 +237,11 @@ class _KitchenViewState extends State<KitchenView> {
               }
             },
             child: ListView.builder(
-              padding: const EdgeInsets.all(8),
+              padding: listPadding,
               itemCount: kitchenViewModel.orders.length,
               itemBuilder: (context, index) {
                 final order = kitchenViewModel.orders[index];
-                return _buildOrderCard(context, order);
+                return _buildOrderCard(context, order, isTablet, isLargeTablet);
               },
             ),
           );
@@ -239,46 +250,52 @@ class _KitchenViewState extends State<KitchenView> {
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, KitchenOrder order) {
+  Widget _buildOrderCard(BuildContext context, KitchenOrder order, bool isTablet, bool isLargeTablet) {
     final Color primaryColor = Color(AppConstants.primaryColorValue);
+    final double headerIconSize = isLargeTablet ? 24 : (isTablet ? 22 : 20);
+    final double userFontSize = isLargeTablet ? 17 : (isTablet ? 16 : 15);
+    final double tableFontSize = isLargeTablet ? 15 : (isTablet ? 14 : 13);
+    final double orderInfoFont = isLargeTablet ? 17 : (isTablet ? 16 : 15);
+    final double buttonVPad = isLargeTablet ? 16 : (isTablet ? 14 : 12);
+    final double cardMargin = isTablet ? 18 : 16;
     
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: cardMargin),
       elevation: 4,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: isTablet ? 20 : 16, vertical: isTablet ? 14 : 12),
             color: primaryColor,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.person, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
+                    Icon(Icons.person, color: Colors.white, size: headerIconSize),
+                    SizedBox(width: isTablet ? 10 : 8),
                     Text(
                       order.userName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: userFontSize,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isTablet ? 6 : 4),
                 Row(
                   children: [
-                    const Icon(Icons.table_bar, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
+                    Icon(Icons.table_bar, color: Colors.white, size: headerIconSize),
+                    SizedBox(width: isTablet ? 10 : 8),
                     Text(
                       order.tableName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: tableFontSize,
                       ),
                     ),
                   ],
@@ -287,21 +304,21 @@ class _KitchenViewState extends State<KitchenView> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isTablet ? 20 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   order.orderInfo,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: TextStyle(
+                    fontSize: orderInfoFont,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isTablet ? 10 : 8),
                 const Divider(),
-                ...order.products.map((product) => _buildProductItem(context, product, order)).toList(),
-                const SizedBox(height: 8),
+                ...order.products.map((product) => _buildProductItem(context, product, order, isTablet, isLargeTablet)).toList(),
+                SizedBox(height: isTablet ? 10 : 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -349,11 +366,11 @@ class _KitchenViewState extends State<KitchenView> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: EdgeInsets.symmetric(vertical: buttonVPad),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: isTablet ? 20 : 16),
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
@@ -364,7 +381,7 @@ class _KitchenViewState extends State<KitchenView> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: EdgeInsets.symmetric(vertical: buttonVPad),
                         ),
                       ),
                     ),
@@ -378,7 +395,7 @@ class _KitchenViewState extends State<KitchenView> {
     );
   }
 
-  Widget _buildProductItem(BuildContext context, KitchenProduct product, KitchenOrder order) {
+  Widget _buildProductItem(BuildContext context, KitchenProduct product, KitchenOrder order, bool isTablet, bool isLargeTablet) {
     // Ürün hazırlanma süresini al
     String elapsedTimeStr = formatElapsedTime(product.proTime);
     
@@ -401,8 +418,12 @@ class _KitchenViewState extends State<KitchenView> {
       // Hata durumunda varsayılan renk
     }
     
+    final double timeFont = isLargeTablet ? 15 : (isTablet ? 14 : 13);
+    final double rowVPad = isTablet ? 10 : 8;
+    final double productFont = isLargeTablet ? 14 : (isTablet ? 13 : 13);
+    final double actionIconSize = isLargeTablet ? 22 : (isTablet ? 20 : 18);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: rowVPad),
       child: Row(
         children: [
           Container(
@@ -410,21 +431,21 @@ class _KitchenViewState extends State<KitchenView> {
               color: timeColor,
               borderRadius: BorderRadius.circular(4),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: isTablet ? 10 : 8, vertical: isTablet ? 6 : 4),
             child: Text(
               elapsedTimeStr,
-              style: const TextStyle(
-                fontSize: 13,
+              style: TextStyle(
+                fontSize: timeFont,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isTablet ? 20 : 16),
           Expanded(
             child: Text(
               '${product.proQty} ${product.proUnit} - ${product.proName}',
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: productFont),
             ),
           ),
           Container(
@@ -433,7 +454,7 @@ class _KitchenViewState extends State<KitchenView> {
               borderRadius: BorderRadius.circular(4),
             ),
             child: IconButton(
-              icon: const Icon(Icons.check, color: Colors.white),
+              icon: Icon(Icons.check, color: Colors.white, size: actionIconSize),
               onPressed: () {
                 // Kullanıcı bilgilerini kontrol et
                 String token = widget.userToken;

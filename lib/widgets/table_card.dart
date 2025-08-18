@@ -28,6 +28,16 @@ class TableCard extends StatelessWidget {
   void _showTableOptions(BuildContext context) {
     final TablesViewModel viewModel = Provider.of<TablesViewModel>(context, listen: false);
     
+    // Responsive tasarım için ekran boyutlarını al
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isTablet = screenSize.width > 600;
+    final bool isLargeTablet = screenSize.width > 900;
+    
+    // Responsive boyutlar
+    final double titleFontSize = isLargeTablet ? 20 : isTablet ? 18 : 17;
+    final double optionFontSize = isLargeTablet ? 16 : isTablet ? 15 : 14;
+    final double iconSize = isLargeTablet ? 20 : isTablet ? 18 : 18;
+    final double padding = isLargeTablet ? 12.0 : isTablet ? 10.0 : 8.0;
     
     // Debug: Birleştirilmiş masa bilgisini konsola yazdir
     debugPrint('Masa bilgisi: ID=${table.tableID}, İsim=${table.tableName}');
@@ -54,16 +64,16 @@ class TableCard extends StatelessWidget {
       builder: (bottomSheetContext) => SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            padding: EdgeInsets.symmetric(vertical: padding),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: isTablet ? 16 : 12),
                   child: Text(
                     'Masa & Sipariş İşlemleri',
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: titleFontSize,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -81,6 +91,7 @@ class TableCard extends StatelessWidget {
                       _handleFastPay(context, viewModel);
                     });
                   },
+                  isTablet: isTablet,
                 ),
                 const Divider(),
                 _optionButton(
@@ -95,6 +106,7 @@ class TableCard extends StatelessWidget {
                       _handleCancelOrder(context, viewModel);
                     });
                   },
+                  isTablet: isTablet,
                 ),
                 const Divider(),
                 _optionButton(
@@ -110,12 +122,13 @@ class TableCard extends StatelessWidget {
                       _handleTableChange(context, viewModel);
                     });
                   },
+                  isTablet: isTablet,
                 ),
                 const Divider(),
                 // Masa birleştirilmiş ise hem "Masaları Ayır" hem de "Masaları Birleştir" düğmeleri göster
                 if (table.isMerged)
                   Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    margin: EdgeInsets.symmetric(vertical: isTablet ? 6 : 4),
                     decoration: BoxDecoration(
                       color: Colors.orange.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -134,6 +147,7 @@ class TableCard extends StatelessWidget {
                           _handleTableUnmerge(context, viewModel);
                         });
                       },
+                      isTablet: isTablet,
                     ),
                   ),
 
@@ -152,6 +166,7 @@ class TableCard extends StatelessWidget {
                         _handleTableMerge(context, viewModel);
                       });
                     },
+                    isTablet: isTablet,
                   ),
                   const Divider(),
                 ],
@@ -167,6 +182,7 @@ class TableCard extends StatelessWidget {
                       _handleOrderTransfer(context, viewModel);
                     });
                   },
+                  isTablet: isTablet,
                 ),
                 const Divider(),
                 _optionButton(
@@ -178,14 +194,25 @@ class TableCard extends StatelessWidget {
                     Navigator.pop(bottomSheetContext);
                     // Yazdırma işlemi
                   },
+                  isTablet: isTablet,
                 ),
                 const Divider(),
                 TextButton.icon(
                   onPressed: () {
                     Navigator.pop(bottomSheetContext);
                   },
-                  icon: const Icon(Icons.arrow_back, color: Colors.blue, size: 20),
-                  label: const Text('Vazgeç', style: TextStyle(color: Colors.blue, fontSize: 15)),
+                  icon: Icon(
+                    Icons.arrow_back, 
+                    color: Colors.blue, 
+                    size: isTablet ? 24 : 20
+                  ),
+                  label: Text(
+                    'Vazgeç', 
+                    style: TextStyle(
+                      color: Colors.blue, 
+                      fontSize: isTablet ? 17 : 15
+                    )
+                  ),
                 ),
               ],
             ),
@@ -1457,18 +1484,25 @@ class TableCard extends StatelessWidget {
     required Color iconColor,
     required String text,
     required VoidCallback onTap,
+    required bool isTablet,
   }) {
+    final double iconSize = isTablet ? 20 : 18;
+    final double textFontSize = isTablet ? 16 : 14;
+    
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        padding: EdgeInsets.symmetric(
+          vertical: isTablet ? 10.0 : 8.0, 
+          horizontal: isTablet ? 20.0 : 16.0
+        ),
         child: Row(
           children: [
-            Icon(icon, color: iconColor, size: 18),
-            const SizedBox(width: 10),
+            Icon(icon, color: iconColor, size: iconSize),
+            SizedBox(width: isTablet ? 12 : 10),
             Text(
               text,
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: textFontSize),
             ),
           ],
         ),
@@ -1478,7 +1512,22 @@ class TableCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(12);
+    // Responsive tasarım için ekran boyutlarını al
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isTablet = screenSize.width > 600;
+    final bool isLargeTablet = screenSize.width > 900;
+    
+    // Responsive boyutlar
+    final double tableNameFontSize = isLargeTablet ? 16 : isTablet ? 14 : 12;
+    final double orderAmountFontSize = isLargeTablet ? 14 : isTablet ? 12 : 10;
+    final double linkedTableFontSize = isLargeTablet ? 12 : isTablet ? 10 : 8;
+    final double margin = isLargeTablet ? 10.0 : isTablet ? 8.0 : 6.0;
+    final double padding = isLargeTablet ? 8.0 : isTablet ? 6.0 : 4.0;
+    final double borderRadius = isLargeTablet ? 16.0 : isTablet ? 14.0 : 12.0;
+    final double iconSize = isLargeTablet ? 20.0 : isTablet ? 18.0 : 16.0;
+    final double peopleIconSize = isLargeTablet ? 16.0 : isTablet ? 14.0 : 12.0;
+    
+    final borderRadiusValue = BorderRadius.circular(borderRadius);
     final primaryColor = Color(AppConstants.primaryColorValue);
     
     // Bu masanın hangi ana masaya bağlı olduğunu kontrol et
@@ -1518,10 +1567,10 @@ class TableCard extends StatelessWidget {
       //masa rengi aktif / pasif
       onLongPress: table.isActive ? () => _showTableOptions(context) : null,
       child: Container(
-        margin: const EdgeInsets.all(6),
+        margin: EdgeInsets.all(margin),
         decoration: BoxDecoration(
           color: table.isActive ? const Color.fromARGB(255, 97, 205, 101).withOpacity(0.9) : Colors.white,
-          borderRadius: borderRadius,
+          borderRadius: borderRadiusValue,
           border: Border.all(
             color: table.isActive 
                 ? Colors.white.withOpacity(0.8)
@@ -1542,7 +1591,7 @@ class TableCard extends StatelessWidget {
           children: [
             // Ana içerik
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 6.0),
+              padding: EdgeInsets.symmetric(horizontal: padding, vertical: padding + 2),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1551,7 +1600,7 @@ class TableCard extends StatelessWidget {
                     Text(
                       table.tableName,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: tableNameFontSize,
                         fontWeight: FontWeight.w600,
                         color: table.isActive ? Colors.white : Colors.grey.shade700,
                       ),
@@ -1561,11 +1610,11 @@ class TableCard extends StatelessWidget {
                     ),
                     if (table.isActive && table.orderAmount.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                        padding: EdgeInsets.only(top: isTablet ? 4 : 2),
                         child: Text(
                           table.orderAmount,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: orderAmountFontSize,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1577,11 +1626,11 @@ class TableCard extends StatelessWidget {
                     // Yan masa ise bağlı olduğu ana masayı göster
                     if (isSideTable)
                       Padding(
-                        padding: const EdgeInsets.only(top: 1),
+                        padding: EdgeInsets.only(top: isTablet ? 2 : 1),
                         child: Text(
                           '→ ${mainTable!.tableName}',
                           style: TextStyle(
-                            fontSize: 8,
+                            fontSize: linkedTableFontSize,
                             color: table.isActive ? Colors.white70 : Colors.blue.shade700,
                           ),
                           textAlign: TextAlign.center,
@@ -1597,12 +1646,16 @@ class TableCard extends StatelessWidget {
             // Aktif masa için sağ üst köşede menü ikonu
             if (table.isActive)
               Positioned(
-                top: -10,
-                right: -10,
+                top: isTablet ? -12 : -10,
+                right: isTablet ? -12 : -10,
                 child: IconButton(
-                  icon: Icon(Icons.more_vert, size: 16, color: Colors.white),
+                  icon: Icon(
+                    Icons.more_vert, 
+                    size: iconSize, 
+                    color: Colors.white
+                  ),
                   padding: EdgeInsets.zero,
-                  constraints: BoxConstraints.tight(const Size(24, 24)),
+                  constraints: BoxConstraints.tight(Size(iconSize + 8, iconSize + 8)),
                   onPressed: () => _showTableOptions(context),
                   tooltip: 'Masa İşlemleri',
                 ),
@@ -1610,17 +1663,21 @@ class TableCard extends StatelessWidget {
             // Ana masa etiketi (yalnızca ikon)
             if (table.isMerged)
               Positioned(
-                top: 3,
-                left: 3,
+                top: isTablet ? 4 : 3,
+                left: isTablet ? 4 : 3,
                 child: Tooltip(
                   message: 'Ana masa - ${table.mergedTableIDs.length} masa birleştirildi',
                   child: Container(
-                    padding: const EdgeInsets.all(2),
+                    padding: EdgeInsets.all(isTablet ? 3 : 2),
                     decoration: BoxDecoration(
                       color: table.isActive ? Colors.white : primaryColor.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(Icons.people_alt, color: table.isActive ? primaryColor : Colors.white, size: 12),
+                    child: Icon(
+                      Icons.people_alt, 
+                      color: table.isActive ? primaryColor : Colors.white, 
+                      size: peopleIconSize
+                    ),
                   ),
                 ),
               ),
@@ -1629,6 +1686,4 @@ class TableCard extends StatelessWidget {
       ),
     );
   }
-
-  
 }

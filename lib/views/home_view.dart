@@ -72,21 +72,44 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     final userViewModel = Provider.of<UserViewModel>(context);
     final statisticsViewModel = Provider.of<StatisticsViewModel>(context);
+    
+    // Responsive tasarım için ekran boyutlarını al
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isTablet = screenSize.width > 600;
+    final bool isLargeTablet = screenSize.width > 900;
+    
+    // Responsive boyutlar
+    final double cardHeight = isLargeTablet ? 500 : isTablet ? 450 : 450;
+    final double chartHeight = isLargeTablet ? 500 : isTablet ? 450 : 380;
+    final double padding = isLargeTablet ? 24.0 : isTablet ? 20.0 : 16.0;
+    final double cardSpacing = isLargeTablet ? 20.0 : isTablet ? 16.0 : 14.0;
+    
     // Artık burada istatistik yüklemesinde login'e yönlendirme yok, sadece hata mesajı gösterilecek
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Anasayfa / ${userViewModel.userInfo?.userFirstname ?? ''}',
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: isTablet ? 20 : 16,
+          ),
         ),
         backgroundColor: Color(AppConstants.primaryColorValue),
         actions: [
           IconButton(
-            icon: const Icon(Icons.receipt_long, color: Colors.white),
+            icon: Icon(
+              Icons.receipt_long, 
+              color: Colors.white,
+              size: isTablet ? 28 : 24,
+            ),
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: Icon(
+              Icons.refresh, 
+              color: Colors.white,
+              size: isTablet ? 28 : 24,
+            ),
             onPressed: () async {
               await userViewModel.loadUserInfo();
               final int compID = userViewModel.userInfo?.compID ?? 0;
@@ -99,107 +122,276 @@ class _HomeViewState extends State<HomeView> {
       body: statisticsViewModel.isLoading
           ? const Center(child: CircularProgressIndicator())
           : statisticsViewModel.errorMessage != null
-              ? Center(child: Text('Hata:  {statisticsViewModel.errorMessage}'))
+              ? Center(child: Text('Hata: ${statisticsViewModel.errorMessage}'))
               : SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(padding),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        DashboardCard(
-                          backgroundColor: Color(AppConstants.incomeCardColor),
-                          icon: Icons.payments,
-                          value: statisticsViewModel.statistics?.totalAmount ?? '',
-                          title: statisticsViewModel.statistics?.totalAmountText ?? '',
-                        ),
-                        const SizedBox(height: 0),
-                        DashboardCard(
-                          backgroundColor: Color(AppConstants.expenseCardColor),
-                          icon: Icons.currency_exchange,
-                          value: statisticsViewModel.statistics?.totalExpenseAmount ?? '',
-                          title: statisticsViewModel.statistics?.totalExpenseAmountText ?? '',
-                        ),
-                        const SizedBox(height: 0),
-                        DashboardCard(
-                          backgroundColor: Color(AppConstants.orderCardColor),
-                          icon: Icons.coffee,
-                          value: statisticsViewModel.statistics?.totalOpenAmount ?? '',
-                          title: statisticsViewModel.statistics?.totalOpenAmountText ?? '',
-                        ),
-                        const SizedBox(height: 0),
-                        DashboardCard(
-                          backgroundColor: Color(AppConstants.customerCardColor),
-                          icon: Icons.people,
-                          value: '${statisticsViewModel.statistics?.totalGuest}',
-                          title: statisticsViewModel.statistics?.totalGuestText ?? '',
-                        ),
-                        const SizedBox(height: 14),
-                        
-                        Container(
-                          height: 450,
-                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                spreadRadius: 1,
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        // Dashboard kartları - tablet için yan yana dizilim
+                        if (isTablet)
+                          Row(
                             children: [
-                              const Text(
-                                'Günlük Satış Grafiği',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: DashboardCard(
+                                  backgroundColor: Color(AppConstants.incomeCardColor),
+                                  icon: Icons.payments,
+                                  value: statisticsViewModel.statistics?.totalAmount ?? '',
+                                  title: statisticsViewModel.statistics?.totalAmountText ?? '',
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 16,
-                                    height: 16,
-                                    decoration: BoxDecoration(
-                                      color: Color(AppConstants.chartLineColor),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Bugün',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 40),
+                              SizedBox(width: cardSpacing),
                               Expanded(
-                                child: _buildSalesChart(statisticsViewModel),
+                                child: DashboardCard(
+                                  backgroundColor: Color(AppConstants.expenseCardColor),
+                                  icon: Icons.currency_exchange,
+                                  value: statisticsViewModel.statistics?.totalExpenseAmount ?? '',
+                                  title: statisticsViewModel.statistics?.totalExpenseAmountText ?? '',
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              DashboardCard(
+                                backgroundColor: Color(AppConstants.incomeCardColor),
+                                icon: Icons.payments,
+                                value: statisticsViewModel.statistics?.totalAmount ?? '',
+                                title: statisticsViewModel.statistics?.totalAmountText ?? '',
+                              ),
+                              const SizedBox(height: 0),
+                              DashboardCard(
+                                backgroundColor: Color(AppConstants.expenseCardColor),
+                                icon: Icons.currency_exchange,
+                                value: statisticsViewModel.statistics?.totalExpenseAmount ?? '',
+                                title: statisticsViewModel.statistics?.totalExpenseAmountText ?? '',
                               ),
                             ],
                           ),
-                        ),
                         
+                        if (isTablet)
+                          SizedBox(height: cardSpacing)
+                        else
+                          const SizedBox(height: 0),
+                        
+                        if (isTablet)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DashboardCard(
+                                  backgroundColor: Color(AppConstants.orderCardColor),
+                                  icon: Icons.coffee,
+                                  value: statisticsViewModel.statistics?.totalOpenAmount ?? '',
+                                  title: statisticsViewModel.statistics?.totalOpenAmountText ?? '',
+                                ),
+                              ),
+                              SizedBox(width: cardSpacing),
+                              Expanded(
+                                child: DashboardCard(
+                                  backgroundColor: Color(AppConstants.customerCardColor),
+                                  icon: Icons.people,
+                                  value: '${statisticsViewModel.statistics?.totalGuest}',
+                                  title: statisticsViewModel.statistics?.totalGuestText ?? '',
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              DashboardCard(
+                                backgroundColor: Color(AppConstants.orderCardColor),
+                                icon: Icons.coffee,
+                                value: statisticsViewModel.statistics?.totalOpenAmount ?? '',
+                                title: statisticsViewModel.statistics?.totalOpenAmountText ?? '',
+                              ),
+                              const SizedBox(height: 0),
+                              DashboardCard(
+                                backgroundColor: Color(AppConstants.customerCardColor),
+                                icon: Icons.people,
+                                value: '${statisticsViewModel.statistics?.totalGuest}',
+                                title: statisticsViewModel.statistics?.totalGuestText ?? '',
+                              ),
+                            ],
+                          ),
+                        
+                        SizedBox(height: cardSpacing),
+                        
+                        // Grafikler - tablet için yan yana dizilim
+                        if (isTablet)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: cardHeight,
+                                  padding: EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                                  margin: EdgeInsets.only(bottom: cardSpacing),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        spreadRadius: 1,
+                                        blurRadius: 5,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Günlük Satış Grafiği',
+                                        style: TextStyle(
+                                          fontSize: isTablet ? 18 : 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: Color(AppConstants.chartLineColor),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Bugün',
+                                            style: TextStyle(
+                                              fontSize: isTablet ? 16 : 14,
+                                              fontWeight: FontWeight.normal,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 40),
+                                      Expanded(
+                                        child: _buildSalesChart(statisticsViewModel, isTablet),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: cardSpacing),
+                              Expanded(
+                                child: Container(
+                                  height: cardHeight,
+                                  padding: EdgeInsets.all(24),
+                                  margin: EdgeInsets.only(bottom: cardSpacing),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        spreadRadius: 1,
+                                        blurRadius: 5,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: _buildPaymentTypesChart(statisticsViewModel, isTablet),
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Column(
+                            children: [
+                              Container(
+                                height: cardHeight,
+                                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                                margin: EdgeInsets.only(bottom: cardSpacing),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      spreadRadius: 1,
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Günlük Satış Grafiği',
+                                      style: TextStyle(
+                                        fontSize: isTablet ? 18 : 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: Color(AppConstants.chartLineColor),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Bugün',
+                                          style: TextStyle(
+                                            fontSize: isTablet ? 16 : 14,
+                                            fontWeight: FontWeight.normal,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 40),
+                                    Expanded(
+                                      child: _buildSalesChart(statisticsViewModel, isTablet),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              
+                              Container(
+                                height: cardHeight,
+                                padding: EdgeInsets.all(24),
+                                margin: EdgeInsets.only(bottom: cardSpacing),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      spreadRadius: 1,
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: _buildPaymentTypesChart(statisticsViewModel, isTablet),
+                              ),
+                            ],
+                          ),
+                        
+                        // Masa doluluk grafiği - her zaman tam genişlik
                         Container(
-                          height: 450,
-                          padding: const EdgeInsets.all(24),
-                          margin: const EdgeInsets.only(bottom: 24),
+                          height: chartHeight,
+                          padding: EdgeInsets.all(24),
+                          margin: EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                // ignore: deprecated_member_use
                                 color: Colors.black.withOpacity(0.05),
                                 spreadRadius: 1,
                                 blurRadius: 5,
@@ -207,26 +399,7 @@ class _HomeViewState extends State<HomeView> {
                               ),
                             ],
                           ),
-                          child: _buildPaymentTypesChart(statisticsViewModel),
-                        ),
-                        
-                        Container(
-                          height: 380,
-                          padding: const EdgeInsets.all(24),
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                spreadRadius: 1,
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: _buildOccupancyChart(statisticsViewModel),
+                          child: _buildOccupancyChart(statisticsViewModel, isTablet),
                         ),
                       ],
                     ),
@@ -235,7 +408,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
   
-  Widget _buildSalesChart(StatisticsViewModel viewModel) {
+  Widget _buildSalesChart(StatisticsViewModel viewModel, bool isTablet) {
     final List<SalesData> sales = viewModel.statistics?.nowDaySales ?? [];
     
     if (sales.isEmpty) {
@@ -292,8 +465,12 @@ class _HomeViewState extends State<HomeView> {
       horizontalInterval = 1.0; // Minimum interval değeri
     }
     
+    // Responsive font boyutları
+    final double titleFontSize = isTablet ? 12 : 9;
+    final double valueFontSize = isTablet ? 11 : 9;
+    
     return Padding(
-      padding: const EdgeInsets.only(right: 10),
+      padding: EdgeInsets.only(right: isTablet ? 20 : 10),
       child: LineChart(
         LineChartData(
           lineTouchData: LineTouchData(
@@ -304,10 +481,10 @@ class _HomeViewState extends State<HomeView> {
                   final double amount = touchedSpot.y;
                   return LineTooltipItem(
                     '$hour:00\n${amount.toStringAsFixed(1)} TL',
-                    const TextStyle(
+                    TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 9,
+                      fontSize: isTablet ? 12 : 9,
                     ),
                   );
                 }).toList();
@@ -339,7 +516,7 @@ class _HomeViewState extends State<HomeView> {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 24, // Boyutu azalt
+                reservedSize: isTablet ? 32 : 24, // Boyutu azalt
                 interval: 4, // Sadece her 4 saatte bir göster
                 getTitlesWidget: (value, meta) {
                   if (value % 4 == 0 && value <= 24) {
@@ -347,10 +524,10 @@ class _HomeViewState extends State<HomeView> {
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         '${value.toInt()}:00',
-                        style: const TextStyle(
-                          color: Color(0xff72719b),
+                        style: TextStyle(
+                          color: const Color(0xff72719b),
                           fontWeight: FontWeight.normal,
-                          fontSize: 9, // Font boyutu küçültüldü
+                          fontSize: titleFontSize,
                         ),
                       ),
                     );
@@ -363,7 +540,7 @@ class _HomeViewState extends State<HomeView> {
               sideTitles: SideTitles(
                 showTitles: true,
                 interval: horizontalInterval,
-                reservedSize: 40, // Boyutu azalt
+                reservedSize: isTablet ? 50 : 40, // Boyutu azalt
                 getTitlesWidget: (value, meta) {
                   String formattedValue;
                   if (value >= 1000) {
@@ -374,10 +551,10 @@ class _HomeViewState extends State<HomeView> {
                   
                   return Text(
                     formattedValue, 
-                    style: const TextStyle(
-                      color: Color(0xff72719b),
+                    style: TextStyle(
+                      color: const Color(0xff72719b),
                       fontWeight: FontWeight.normal,
-                      fontSize: 9, // Font boyutu küçültüldü
+                      fontSize: valueFontSize,
                     ),
                   );
                 },
@@ -409,13 +586,13 @@ class _HomeViewState extends State<HomeView> {
               isCurved: true,
               curveSmoothness: 0.3, // Eğriyi biraz daha yumuşat
               color: Color(AppConstants.chartLineColor),
-              barWidth: 3, // Çizgi inceltildi
+              barWidth: isTablet ? 4 : 3, // Çizgi inceltildi
               isStrokeCapRound: true,
               dotData: FlDotData(
                 show: false, // Noktaları kaldır, sadece çizgi göster
                 getDotPainter: (spot, percent, barData, index) {
                   return FlDotCirclePainter(
-                    radius: 3, // Nokta boyutu küçültüldü
+                    radius: isTablet ? 4 : 3, // Nokta boyutu küçültüldü
                     color: Color(AppConstants.chartLineColor),
                     strokeWidth: 1, // Kenar çizgisi inceltildi
                     strokeColor: Colors.white,
@@ -441,7 +618,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
   
-  Widget _buildPaymentTypesChart(StatisticsViewModel viewModel) {
+  Widget _buildPaymentTypesChart(StatisticsViewModel viewModel, bool isTablet) {
     final List<PaymentData> payments = viewModel.statistics?.nowDayPayments ?? [];
     
     if (payments.isEmpty) {
@@ -481,24 +658,29 @@ class _HomeViewState extends State<HomeView> {
     // Toplam tutarı hesapla (yüzdeler için)
     final double totalAmount = payments.fold(0.0, (sum, payment) => sum + (payment.amount ?? 0.0));
     
+    // Responsive font boyutları
+    final double titleFontSize = isTablet ? 18 : 16;
+    final double legendFontSize = isTablet ? 10 : 8;
+    final double valueFontSize = isTablet ? 9 : 7;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Ödeme Tipleri',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: titleFontSize,
             fontWeight: FontWeight.bold
           ),
         ),
-        const SizedBox(height: 40),
+        SizedBox(height: isTablet ? 50 : 40),
         
         // Grafik
         Expanded(
           child: BarChart(
             BarChartData(
               alignment: BarChartAlignment.spaceBetween,
-              groupsSpace: 25,
+              groupsSpace: isTablet ? 30 : 25,
               maxY: maxY,
               barTouchData: BarTouchData(
                 enabled: true,
@@ -510,10 +692,10 @@ class _HomeViewState extends State<HomeView> {
                       : '0.0';
                     return BarTooltipItem(
                       '${payment.type}\n${payment.amount?.toStringAsFixed(2)} TL\n%$percentage',
-                      const TextStyle(
+                      TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 10,
+                        fontSize: isTablet ? 12 : 10,
                       ),
                     );
                   },
@@ -530,10 +712,10 @@ class _HomeViewState extends State<HomeView> {
                           padding: const EdgeInsets.only(top: 15),
                           child: Text(
                             payments[value.toInt()].type ?? '',
-                            style: const TextStyle(
-                              fontSize: 9,
+                            style: TextStyle(
+                              fontSize: isTablet ? 11 : 9,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF444444),
+                              color: const Color(0xFF444444),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -543,13 +725,13 @@ class _HomeViewState extends State<HomeView> {
                       }
                       return const SizedBox.shrink();
                     },
-                    reservedSize: 30,
+                    reservedSize: isTablet ? 40 : 30,
                   ),
                 ),
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 60,
+                    reservedSize: isTablet ? 80 : 60,
                     interval: leftTitleInterval,
                     getTitlesWidget: (value, meta) {
                       String formattedValue;
@@ -560,13 +742,13 @@ class _HomeViewState extends State<HomeView> {
                       }
                       
                       return Padding(
-                        padding: const EdgeInsets.only(right: 10),
+                        padding: EdgeInsets.only(right: isTablet ? 15 : 10),
                         child: Text(
                           formattedValue,
-                          style: const TextStyle(
-                            fontSize: 8,
+                          style: TextStyle(
+                            fontSize: isTablet ? 10 : 8,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF666666),
+                            color: const Color(0xFF666666),
                           ),
                         ),
                       );
@@ -607,7 +789,9 @@ class _HomeViewState extends State<HomeView> {
                     ? _hexToColor(payment.color!)
                     : Colors.pink.shade300;
                 
-                final double barWidth = payments.length > 4 ? 12 : payments.length > 2 ? 16 : 22;
+                final double barWidth = isTablet 
+                    ? (payments.length > 4 ? 16 : payments.length > 2 ? 20 : 26)
+                    : (payments.length > 4 ? 12 : payments.length > 2 ? 16 : 22);
 
                 return BarChartGroupData(
                   x: index,
@@ -635,8 +819,8 @@ class _HomeViewState extends State<HomeView> {
         
         // Sadeleştirilmiş tutarlar ve yüzdeler
         Container(
-          margin: const EdgeInsets.only(top: 20),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          margin: EdgeInsets.only(top: isTablet ? 25 : 20),
+          padding: EdgeInsets.symmetric(vertical: isTablet ? 15 : 12, horizontal: isTablet ? 15 : 10),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(10),
@@ -647,13 +831,13 @@ class _HomeViewState extends State<HomeView> {
               // Ödeme tiplerini 2 veya 3'lü gruplarda göster
               for (int i = 0; i < payments.length; i += 3)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 6.0),
+                  padding: EdgeInsets.only(bottom: isTablet ? 8.0 : 6.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       for (int j = i; j < i + 3 && j < payments.length; j++)
                         Expanded(
-                          child: _buildPaymentLegendItem(payments[j], totalAmount),
+                          child: _buildPaymentLegendItem(payments[j], totalAmount, isTablet),
                         ),
                       // Boş alan ekleme (eğer son grupta 3'ten az öğe varsa)
                       if (i + 3 > payments.length)
@@ -670,7 +854,7 @@ class _HomeViewState extends State<HomeView> {
   }
   
   // Ödeme açıklama öğesi
-  Widget _buildPaymentLegendItem(PaymentData payment, double totalAmount) {
+  Widget _buildPaymentLegendItem(PaymentData payment, double totalAmount, bool isTablet) {
     final Color color = payment.color != null && payment.color!.startsWith('#')
         ? _hexToColor(payment.color!)
         : Colors.pink.shade300;
@@ -679,38 +863,41 @@ class _HomeViewState extends State<HomeView> {
         ? ((payment.amount ?? 0.0) / totalAmount * 100)
         : 0.0;
     
+    final double legendFontSize = isTablet ? 10 : 8;
+    final double valueFontSize = isTablet ? 9 : 7;
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: EdgeInsets.symmetric(horizontal: isTablet ? 6.0 : 4.0),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
+            width: isTablet ? 10 : 8,
+            height: isTablet ? 10 : 8,
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 3),
+          SizedBox(width: isTablet ? 5 : 3),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   payment.type ?? 'Bilinmeyen',
-                  style: const TextStyle(
-                    fontSize: 8,
+                  style: TextStyle(
+                    fontSize: legendFontSize,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF333333),
+                    color: const Color(0xFF333333),
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
                 Text(
                   '${payment.amount?.toStringAsFixed(0)} ₺ (%${percentage.toStringAsFixed(0)})',
-                  style: const TextStyle(
-                    fontSize: 7,
-                    color: Color(0xFF666666),
+                  style: TextStyle(
+                    fontSize: valueFontSize,
+                    color: const Color(0xFF666666),
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
@@ -724,7 +911,7 @@ class _HomeViewState extends State<HomeView> {
   }
   
   // Masa doluluk oranını gösteren pasta grafiği 
-  Widget _buildOccupancyChart(StatisticsViewModel viewModel) {
+  Widget _buildOccupancyChart(StatisticsViewModel viewModel, bool isTablet) {
     // Null değerlere karşı güvenli bir şekilde değerleri alalım
     final int totalTables = viewModel.statistics?.totalTables ?? 0;
     final int orderTables = viewModel.statistics?.orderTables ?? 0;
@@ -757,17 +944,24 @@ class _HomeViewState extends State<HomeView> {
     final double occupiedValue = orderTables > 0 ? orderTables.toDouble() : 0.1;
     final double emptyValue = emptyTables > 0 ? emptyTables.toDouble() : 0.1;
     
+    // Responsive font boyutları
+    final double titleFontSize = isTablet ? 18 : 16;
+    final double percentageFontSize = isTablet ? 26 : 22;
+    final double subtitleFontSize = isTablet ? 14 : 12;
+    final double legendFontSize = isTablet ? 10 : 8;
+    final double countFontSize = isTablet ? 14 : 12;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Masa Doluluk Oranı',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: titleFontSize,
             fontWeight: FontWeight.bold
           ),
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: isTablet ? 20 : 15),
         Expanded(
           child: Column(
             children: [
@@ -780,7 +974,7 @@ class _HomeViewState extends State<HomeView> {
                       child: PieChart(
                         PieChartData(
                           sectionsSpace: 2,
-                          centerSpaceRadius: 55,
+                          centerSpaceRadius: isTablet ? 70 : 55,
                           startDegreeOffset: -90,
                           sections: [
                             // Dolu masalar
@@ -788,7 +982,7 @@ class _HomeViewState extends State<HomeView> {
                               color: occupiedColor,
                               value: occupiedValue, // Minimum değer kullanıyoruz
                               title: '',
-                              radius: 50,
+                              radius: isTablet ? 70 : 50,
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                             // Boş masalar
@@ -796,7 +990,7 @@ class _HomeViewState extends State<HomeView> {
                               color: emptyColor,
                               value: emptyValue, // Minimum değer kullanıyoruz
                               title: '',
-                              radius: 50,
+                              radius: isTablet ? 70 : 50,
                               titleStyle: const TextStyle(fontSize: 0),
                             ),
                           ],
@@ -811,18 +1005,18 @@ class _HomeViewState extends State<HomeView> {
                         children: [
                           Text(
                             '${occupancyPercentage.toStringAsFixed(1)}%',
-                            style: const TextStyle(
-                              fontSize: 22,
+                            style: TextStyle(
+                              fontSize: percentageFontSize,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF333333),
+                              color: const Color(0xFF333333),
                             ),
                           ),
-                          const SizedBox(height: 2), // Boşluk azaltıldı
-                          const Text(
+                          SizedBox(height: isTablet ? 4 : 2), // Boşluk azaltıldı
+                          Text(
                             'Doluluk',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF666666),
+                              fontSize: subtitleFontSize,
+                              color: const Color(0xFF666666),
                             ),
                           ),
                         ],
@@ -836,8 +1030,8 @@ class _HomeViewState extends State<HomeView> {
               Expanded(
                 flex: 2, // Açıklama alanına daha az yer ver
                 child: Container(
-                  margin: const EdgeInsets.only(top: 15), // Boşluk azaltıldı
-                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10), // Padding ayarlandı
+                  margin: EdgeInsets.only(top: isTablet ? 20 : 15), // Boşluk azaltıldı
+                  padding: EdgeInsets.symmetric(vertical: isTablet ? 20 : 15, horizontal: isTablet ? 15 : 10), // Padding ayarlandı
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(10),
@@ -850,57 +1044,58 @@ class _HomeViewState extends State<HomeView> {
                         child: _buildTableInfoRow(
                           color: occupiedColor,
                           title: 'Dolu Masalar',
-                          titleStyle: const TextStyle(fontSize: 8),
+                          titleStyle: TextStyle(fontSize: legendFontSize),
                           count: orderTables,
                           percentage: occupancyPercentage,
+                          isTablet: isTablet,
                         ),
                       ),
                       
-                      const SizedBox(width: 20),
+                      SizedBox(width: isTablet ? 25 : 20),
                       
                       // Boş masalar
                       Expanded(
                         child: _buildTableInfoRow(
                           color: emptyColor,
                           title: 'Boş Masalar',
-                           titleStyle: const TextStyle(fontSize: 8),
-
+                          titleStyle: TextStyle(fontSize: legendFontSize),
                           count: emptyTables,
                           percentage: 100 - occupancyPercentage,
+                          isTablet: isTablet,
                         ),
                       ),
                       
-                      const SizedBox(width: 20),
+                      SizedBox(width: isTablet ? 25 : 20),
                       
                       // Toplam masalar
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.table_restaurant,
-                              size: 10,
-                              color: Color(0xFF666666),
+                              size: isTablet ? 14 : 10,
+                              color: const Color(0xFF666666),
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: isTablet ? 15 : 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Toplam Masalar',
                                     style: TextStyle(
-                                      fontSize: 8,
-                                      color: Color(0xFF666666),
+                                      fontSize: legendFontSize,
+                                      color: const Color(0xFF666666),
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
+                                  SizedBox(height: isTablet ? 4 : 2),
                                   Text(
                                     '$totalTables masa',
-                                    style: const TextStyle(
-                                      fontSize: 12,
+                                    style: TextStyle(
+                                      fontSize: countFontSize,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF333333),
+                                      color: const Color(0xFF333333),
                                     ),
                                   ),
                                 ],
@@ -927,18 +1122,21 @@ class _HomeViewState extends State<HomeView> {
     required int count,
     required double percentage,
     TextStyle? titleStyle,
+    required bool isTablet,
   }) {
+    final double countFontSize = isTablet ? 14 : 12;
+    
     return Row(
       children: [
         Container(
-          width: 16,
-          height: 16,
+          width: isTablet ? 20 : 16,
+          height: isTablet ? 20 : 16,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: isTablet ? 15 : 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -946,18 +1144,18 @@ class _HomeViewState extends State<HomeView> {
             children: [
               Text(
                 title,
-                style: titleStyle ?? const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF666666),
+                style: titleStyle ?? TextStyle(
+                  fontSize: isTablet ? 14 : 12,
+                  color: const Color(0xFF666666),
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: isTablet ? 4 : 2),
               Text(
                 '$count masa',
-                style: const TextStyle(
-                  fontSize: 12,
+                style: TextStyle(
+                  fontSize: countFontSize,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF333333),
+                  color: const Color(0xFF333333),
                 ),
               ),
             ],
