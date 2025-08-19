@@ -961,7 +961,7 @@ class _HomeViewState extends State<HomeView> {
             fontWeight: FontWeight.bold
           ),
         ),
-        SizedBox(height: isTablet ? 20 : 15),
+        SizedBox(height: isTablet ? 28 : 16),
         Expanded(
           child: Column(
             children: [
@@ -971,29 +971,31 @@ class _HomeViewState extends State<HomeView> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: PieChart(
-                        PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: isTablet ? 70 : 55,
-                          startDegreeOffset: -90,
-                          sections: [
-                            // Dolu masalar
-                            PieChartSectionData(
-                              color: occupiedColor,
-                              value: occupiedValue, // Minimum değer kullanıyoruz
-                              title: '',
-                              radius: isTablet ? 70 : 50,
-                              titleStyle: const TextStyle(fontSize: 0),
-                            ),
-                            // Boş masalar
-                            PieChartSectionData(
-                              color: emptyColor,
-                              value: emptyValue, // Minimum değer kullanıyoruz
-                              title: '',
-                              radius: isTablet ? 70 : 50,
-                              titleStyle: const TextStyle(fontSize: 0),
-                            ),
-                          ],
+                      child: ClipRect(
+                        child: PieChart(
+                          PieChartData(
+                            sectionsSpace: 2,
+                            centerSpaceRadius: isTablet ? 62 : 52,
+                            startDegreeOffset: -90,
+                            sections: [
+                              // Dolu masalar
+                              PieChartSectionData(
+                                color: occupiedColor,
+                                value: occupiedValue, // Minimum değer kullanıyoruz
+                                title: '',
+                                radius: isTablet ? 42 : 48,
+                                titleStyle: const TextStyle(fontSize: 0),
+                              ),
+                              // Boş masalar
+                              PieChartSectionData(
+                                color: emptyColor,
+                                value: emptyValue, // Minimum değer kullanıyoruz
+                                title: '',
+                                radius: isTablet ? 42 : 48,
+                                titleStyle: const TextStyle(fontSize: 0),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

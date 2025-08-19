@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/constants/app_constants.dart';
@@ -513,6 +512,35 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
     );
   }
 
+  // Grid yerleşimini ekran genişliğine göre ayarlayan yardımcılar
+  int _getGridCrossAxisCount(BuildContext context) {
+    final double width = MediaQuery.of(context).size.width;
+    if (width >= 1200) {
+      return 6; // Büyük tablet ve üstü
+    }
+    if (width >= 900) {
+      return 5; // Tablet
+    }
+    if (width >= 600) {
+      return 4 ; // Büyük telefon / küçük tablet
+    }
+    return 2; // Telefon
+  }
+
+  double _getGridChildAspectRatio(BuildContext context) {
+    final double width = MediaQuery.of(context).size.width;
+    if (width >= 1200) {
+      return 1.4;
+    }
+    if (width >= 900) {
+      return 1.35;
+    }
+    if (width >= 600) {
+      return 1.3;
+    }
+    return 1.25;
+  }
+
   Widget _buildErrorWidget(BossStatisticsViewModel viewModel) {
     return Center(
       child: Column(
@@ -601,11 +629,11 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _getGridCrossAxisCount(context),
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 1.3,
+          childAspectRatio: _getGridChildAspectRatio(context),
         ),
         itemCount: viewModel.statistics.length,
         itemBuilder: (context, index) {

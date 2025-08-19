@@ -18,12 +18,12 @@ class TableCard extends StatelessWidget {
   final int compID;
 
   const TableCard({
-    Key? key,
+    super.key,
     required this.table,
     required this.onTap,
     required this.userToken,
     required this.compID,
-  }) : super(key: key);
+  });
 
   void _showTableOptions(BuildContext context) {
     final TablesViewModel viewModel = Provider.of<TablesViewModel>(context, listen: false);
@@ -754,7 +754,7 @@ class TableCard extends StatelessWidget {
             );
             
             // Yükleniyor overlay'ini kaldır
-            loadingOverlay?.remove();
+            loadingOverlay.remove();
             loadingOverlay = null;
             
             // Küçük bir gecikme ekle
@@ -1628,7 +1628,7 @@ class TableCard extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.only(top: isTablet ? 2 : 1),
                         child: Text(
-                          '→ ${mainTable!.tableName}',
+                          '→ ${mainTable.tableName}',
                           style: TextStyle(
                             fontSize: linkedTableFontSize,
                             color: table.isActive ? Colors.white70 : Colors.blue.shade700,

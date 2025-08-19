@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,12 +37,27 @@ bool _isFirebaseInitialized = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
   
   // Uygulama sabitlerini başlat
    await AppConstants.init();
+  // Cihaz tipine göre (telefon/tablet) oryantasyonu ayarla
+  final ui.FlutterView view = WidgetsBinding.instance.platformDispatcher.views.first;
+  final double logicalWidth = view.physicalSize.width / view.devicePixelRatio;
+  final double logicalHeight = view.physicalSize.height / view.devicePixelRatio;
+  final double shortestSide = logicalWidth < logicalHeight ? logicalWidth : logicalHeight;
+  final bool isTablet = shortestSide >= 600;
+  if (isTablet) {
+    await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  } else {
+    await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
+      DeviceOrientation.portraitUp,
+    ]);
+  }
   
   final logger = AppLogger();
   logger.i('Uygulama başlatılıyor');

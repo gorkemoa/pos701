@@ -4,7 +4,6 @@ import 'package:pos701/viewmodels/order_list_viewmodel.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/models/order_model.dart';
 import 'package:pos701/widgets/app_drawer.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:pos701/main.dart' as app;
 import 'package:pos701/views/payment_view.dart';

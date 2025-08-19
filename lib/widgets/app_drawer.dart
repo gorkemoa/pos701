@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/number_symbols_data.dart';
 import 'package:pos701/views/home_view.dart';
 import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/views/kitchen_view.dart';
