@@ -55,12 +55,6 @@ class _TableUnmergeDialogState extends State<TableUnmergeDialog> {
   }
 
   void _confirmUnmerge() {
-    if (_selectedTables.length == widget.mergedTables.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tüm masalar ayrılamaz. En az bir masa birleşik kalmalı.')),
-      );
-      return;
-    }
 
     // Doğru mantık: Seçilen masalar ayrılacak
     final List<TableItem> tablesToUnmerge = List<TableItem>.from(_selectedTables);
