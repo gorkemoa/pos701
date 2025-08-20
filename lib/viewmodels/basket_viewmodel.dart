@@ -64,7 +64,7 @@ class BasketViewModel extends ChangeNotifier {
     int quantity = 1,
     String? proNote,
     bool isGift = false,
-    int orderPayType = 0, // Paket Sipariş ise Ödeme türü seçilip ilgili ID gönderilmelidir
+    int orderPayType = 0, 
   }) async {
     try {
       developer.log("Sunucuya ürün ekleniyor. Ürün: ${product.proName}, Sipariş: $orderID, Ödeme Türü: $orderPayType");
