@@ -164,7 +164,7 @@ class _LoginViewState extends State<LoginView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 100),
+          const SizedBox(height: 0),
           Text(
             'Kullanıcı adı',
             style: TextStyle(
