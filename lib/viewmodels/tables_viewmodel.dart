@@ -899,20 +899,25 @@ else {
       }
 
       // Birleşik KALACAK masaların yeni listesini oluştur
-      List<int> remainingMergedTables = List<int>.from(mainTable.mergedTableIDs);
-      remainingMergedTables.removeWhere((id) => tablesToUnmerge.contains(id));
+      final List<int> remainingMergedTables = List<int>.from(mainTable.mergedTableIDs)
+        ..removeWhere((id) => tablesToUnmerge.contains(id));
+
+      // Eğer tüm masalar ayrılıyorsa, API'yi unmerged ve boş liste ile çağır
+      final bool isUnmergeAll = remainingMergedTables.isEmpty;
+      final String stepValue = isUnmergeAll ? 'unmerged' : 'merged';
+      final List<int> payloadMergeTables = isUnmergeAll ? <int>[] : remainingMergedTables;
 
       debugPrint('⚙️ Masa birleştirme durumunu GÜNCELLEME API çağrısı - Ana Masa ID: $tableID');
-      debugPrint('🔄 Birleşik kalacak masalar (payload): $remainingMergedTables');
+      debugPrint('🔄 Step: $stepValue, Payload mergeTables: $payloadMergeTables');
       
-      // API'yi, birleştirme durumunu GÜNCELLEMEK için 'merged' adımıyla ve YENİ LİSTEYLE çağır
+      // API çağrısı
       final response = await _tableService.mergeTables(
         userToken: userToken,
         compID: compID,
         tableID: tableID,
         orderID: orderID,
-        mergeTables: remainingMergedTables, // Birleşik kalacak masaların GÜNCEL listesi
-        step: 'merged', // Birleştirme listesini güncellemek için 'merged' kullanılmalı
+        mergeTables: payloadMergeTables,
+        step: stepValue,
       );
       
       _isLoading = false;
@@ -923,7 +928,7 @@ else {
         debugPrint('👍 Seçimli masa ayırma işlemi başarılı, yerel durum güncelleniyor...');
         
         // Ana masanın durumunu güncelle
-        if (remainingMergedTables.isEmpty) {
+        if (isUnmergeAll) {
           _updateTableMergeStatus(tableID, false, []);
         } else {
           _updateTableMergeStatus(tableID, true, remainingMergedTables);

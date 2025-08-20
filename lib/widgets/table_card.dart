@@ -514,10 +514,9 @@ class TableCard extends StatelessWidget {
           // Seçilen masaların ID'lerini al
           final selectedTableIds = selectedTables.map((t) => t.tableID).toList();
 
-          // Kullanıcı bilgilerini al
-          final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-          final userToken = userViewModel.userInfo?.userToken ?? '';
-          final compID = userViewModel.userInfo?.company?.compID ?? 0;
+          // TableCard üzerinden gelen güvenilir kimlik bilgilerini kullan
+          final String userTokenValue = userToken;
+          final int compIDValue = compID;
 
           // Yükleniyor diyaloğunu göster
           if (!context.mounted) return;
@@ -572,8 +571,8 @@ class TableCard extends StatelessWidget {
           try {
             // Seçimli masa ayırma API çağrısı
             final success = await viewModel.unMergeSelectedTables(
-              userToken: userToken,
-              compID: compID,
+              userToken: userTokenValue,
+              compID: compIDValue,
               tableID: table.tableID,
               orderID: table.orderID,
               tablesToUnmerge: selectedTableIds,
@@ -609,8 +608,8 @@ class TableCard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => TablesView(
-                      userToken: userToken,
-                      compID: compID,
+                      userToken: userTokenValue,
+                      compID: compIDValue,
                       title: 'Masalar',
                     ),
                   ),
