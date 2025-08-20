@@ -98,14 +98,6 @@ class _HomeViewState extends State<HomeView> {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.receipt_long, 
-              color: Colors.white,
-              size: isTablet ? 28 : 24,
-            ),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(
               Icons.refresh, 
               color: Colors.white,
               size: isTablet ? 28 : 24,
@@ -983,7 +975,7 @@ class _HomeViewState extends State<HomeView> {
                                 color: occupiedColor,
                                 value: occupiedValue, // Minimum değer kullanıyoruz
                                 title: '',
-                                radius: isTablet ? 42 : 48,
+                                radius: isTablet ? 42 : 28,
                                 titleStyle: const TextStyle(fontSize: 0),
                               ),
                               // Boş masalar
@@ -991,7 +983,7 @@ class _HomeViewState extends State<HomeView> {
                                 color: emptyColor,
                                 value: emptyValue, // Minimum değer kullanıyoruz
                                 title: '',
-                                radius: isTablet ? 42 : 48,
+                                radius: isTablet ? 42 : 28,
                                 titleStyle: const TextStyle(fontSize: 0),
                               ),
                             ],

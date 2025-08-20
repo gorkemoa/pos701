@@ -1,0 +1,24 @@
+flutter_native_splash:
+  # Splash screen arka plan rengi
+  color: "#FFFFFF"
+  
+  # Splash screen görseli
+  image: assets/splash/powered_by.png
+  
+  # Görsel konumu
+  image_dark: assets/splash/powered_by.png
+  
+  # Android konfigürasyonu
+  android_12:
+    image: assets/splash/powered_by.png
+    color: "#FFFFFF"
+  
+  # iOS konfigürasyonu
+  ios: true
+  
+  # Web konfigürasyonu
+  web: false
+  
+  # Platform özel ayarlar
+  android_gravity: center
+  ios_content_mode: scaleAspectFit
