@@ -16,7 +16,7 @@ class BasketViewModel extends ChangeNotifier {
   double get discount => _basket.discount;
   double get orderPayAmount => _basket.orderPayAmount;
   double get orderAmount => _orderAmount;
-  double get remainingAmount => orderAmount - discount - orderPayAmount;
+  double get remainingAmount => totalAmount - discount - orderPayAmount;
   bool get isEmpty => _basket.items.isEmpty;
   int get totalQuantity => _basket.items.fold(0, (sum, item) => sum + item.proQty);
   int get itemCount => _basket.items.length;

@@ -3,11 +3,10 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/models/user_model.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
-import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
-import 'package:pos701/viewmodels/order_viewmodel.dart'; // Added import for OrderViewModel
+import 'package:pos701/viewmodels/order_viewmodel.dart';
 import 'package:provider/provider.dart';
-import 'package:pos701/views/tables_view.dart'; // Added import for TablesView
+import 'package:pos701/views/tables_view.dart'; 
 
 // Enum ekle
 enum AmountInputTarget { total, discount }
@@ -552,7 +551,7 @@ class _PaymentViewState extends State<PaymentView> {
                   activeColor: const Color(AppConstants.primaryColorValue),
                 ),
                 title: Text(
-                  "1 Tam | ${item.product.proName}",
+                  "${item.product.proName}",
                   style: TextStyle(
                     fontWeight: isPaid ? FontWeight.normal : FontWeight.bold,
                     color: isPaid ? Colors.grey : Colors.black,
@@ -562,8 +561,8 @@ class _PaymentViewState extends State<PaymentView> {
                 subtitle: isPaid
                     ? Text("Ödendi", style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold))
                     : hasValidOpId 
-                      ? Text("Adisyon Kalemi ID: ${item.opID}", style: TextStyle(fontSize: 12, color: Colors.green[700]))
-                      : Text("Ödeme yapılamaz: Adisyon Kalemi ID bulunamadı", style: TextStyle(fontSize: 12, color: Colors.red[700])),
+                      ? Text("")
+                      : null,
                 trailing: Text(
                   "₺${unitPrice.toStringAsFixed(2)}",
                   style: TextStyle(

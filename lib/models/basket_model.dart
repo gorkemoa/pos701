@@ -94,6 +94,8 @@ class Basket {
   double? _cachedTotalAmount;
   List<int>? _cachedItemIds;
   List<int>? _cachedQuantities;
+  List<bool>? _cachedGiftFlags;
+  List<int>? _cachedRemoveFlags;
   
   // Benzersiz bir lineId üret
   int getNextLineId() {
@@ -107,13 +109,19 @@ class Basket {
     // Sepet içeriğinin değişip değişmediğini kontrol et
     final currentItemIds = items.map((e) => e.product.proID).toList();
     final currentQuantities = items.map((e) => e.proQty).toList();
+    final currentGiftFlags = items.map((e) => e.isGift).toList();
+    final currentRemoveFlags = items.map((e) => e.isRemove).toList();
     
     // Eğer sepet içeriği değişmemişse ve önbellek değeri varsa, önbelleği kullan
     if (_cachedTotalAmount != null && 
         _cachedItemIds != null && 
         _cachedQuantities != null &&
+        _cachedGiftFlags != null &&
+        _cachedRemoveFlags != null &&
         _listEquals(currentItemIds, _cachedItemIds!) &&
-        _listEquals(currentQuantities, _cachedQuantities!)) {
+        _listEquals(currentQuantities, _cachedQuantities!) &&
+        _listEquals(currentGiftFlags, _cachedGiftFlags!) &&
+        _listEquals(currentRemoveFlags, _cachedRemoveFlags!)) {
       return _cachedTotalAmount!;
     }
     
@@ -126,16 +134,20 @@ class Basket {
     }
     
     double total = 0.0;
-    
     // Sadece değer hesapla, gereksiz log oluşturma
     for (var item in items) {
-      total += item.birimFiyat * item.proQty;
+      if (item.isRemove == 1) {
+        continue; // Siparişten çıkarılacaklar toplamda sayılmaz
+      }
+      total += item.totalPrice; // İkram ürünler zaten 0 hesaplanır
     }
     
     // Önbelleğe al
     _cachedTotalAmount = total;
     _cachedItemIds = currentItemIds;
     _cachedQuantities = currentQuantities;
+    _cachedGiftFlags = currentGiftFlags;
+    _cachedRemoveFlags = currentRemoveFlags;
     
     // Sadece bir kez debugging için logla
     developer.log("Sepet: ${items.length} çeşit, ${items.fold(0, (sum, item) => sum + item.proQty)} adet ürün, Toplam: $total TL");

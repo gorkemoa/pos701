@@ -711,12 +711,7 @@ class _BasketViewState extends State<BasketView> {
                         return const SizedBox.shrink();
                       }
                       
-                      double manuelToplam = 0;
-                      for (var item in basketViewModel.items) {
-                        manuelToplam += item.totalPrice;
-                      }
-                      
-                      final manuelKalan = basketViewModel.orderAmount - basketViewModel.discount - basketViewModel.orderPayAmount;
+                      final manuelKalan = basketViewModel.remainingAmount;
                       
                       return Column(
                         children: [
@@ -809,7 +804,7 @@ class _BasketViewState extends State<BasketView> {
                           children: [
                             _buildInfoRow(
                               "Toplam Tutar",
-                              "₺${basketViewModel.orderAmount.toStringAsFixed(2)}",
+                              "₺${basketViewModel.totalAmount.toStringAsFixed(2)}",
                             ),
                             _buildInfoRow(
                               "İndirim",
