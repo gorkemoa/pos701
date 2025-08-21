@@ -34,7 +34,7 @@ class _AppDrawerState extends State<AppDrawer> {
     _checkConnectivity();
     // Check connectivity every 30 seconds
     _connectivityTimer = Timer.periodic(
-      const Duration(seconds: 30), 
+      const Duration(seconds: 1), 
       (_) => _checkConnectivity()
     );
   }

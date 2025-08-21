@@ -1,0 +1,32 @@
+[
+  {
+    "catID": 1,
+    "catName": "Makarnalar",
+    "catColor": "#129b8d"
+  },
+  {
+    "catID": 2,
+    "catName": "Ravioliler",
+    "catColor": "#24d6c4"
+  },
+  {
+    "catID": 5,
+    "catName": "Tatlılar",
+    "catColor": "#dbadff"
+  },
+  {
+    "catID": 3,
+    "catName": "Sıcak İçecekler",
+    "catColor": "#acde21"
+  },
+  {
+    "catID": 4,
+    "catName": "Soğuk İçecekler",
+    "catColor": "#05f5f1"
+  },
+  {
+    "catID": 8,
+    "catName": "Menüler",
+    "catColor": "#ffe14d"
+  }
+]
