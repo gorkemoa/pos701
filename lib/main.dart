@@ -31,7 +31,7 @@ import 'package:pos701/firebase_options.dart';
 
 // Global navigator key - 403 hatası durumunda login'e yönlendirme için
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
+ 
 // Uygulama başlatıldı mı kontrolü için global değişken
 bool _isFirebaseInitialized = false;
 

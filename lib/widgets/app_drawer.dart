@@ -10,6 +10,8 @@ import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
+import 'dart:io';
+import 'dart:async';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -23,6 +25,43 @@ class AppDrawer extends StatefulWidget {
 
 class _AppDrawerState extends State<AppDrawer> {
   bool _tanimlamalarExpanded = false;
+  bool _isOnline = true;
+  Timer? _connectivityTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+    // Check connectivity every 30 seconds
+    _connectivityTimer = Timer.periodic(
+      const Duration(seconds: 30), 
+      (_) => _checkConnectivity()
+    );
+  }
+
+  @override
+  void dispose() {
+    _connectivityTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkConnectivity() async {
+    try {
+      // Try to reach Google DNS server
+      final result = await InternetAddress.lookup('google.com');
+      if (mounted) {
+        setState(() {
+          _isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isOnline = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,23 +79,53 @@ class _AppDrawerState extends State<AppDrawer> {
             alignment: Alignment.center,
             child: SafeArea(
               bottom: false,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Menü | ${userViewModel.userInfo?.company?.compName ?? ''}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Menü | ${userViewModel.userInfo?.company?.compName ?? ''}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 22),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 22),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                  SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _isOnline ? Colors.green : Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        _isOnline ? 'Online' : 'Offline',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
