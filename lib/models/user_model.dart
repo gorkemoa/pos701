@@ -230,12 +230,14 @@ class CompanyInfo {
   final int compID;
   final String compName;
   final bool compKuverWaiter;
+  final bool compIsOnline;
   final List<PaymentType> compPayTypes;
 
   CompanyInfo({
     required this.compID,
     required this.compName,
     required this.compKuverWaiter,
+    required this.compIsOnline, 
     required this.compPayTypes,
   });
 
@@ -251,6 +253,7 @@ class CompanyInfo {
       compID: json['compID'],
       compName: json['compName'],
       compKuverWaiter: json['compKuverWaiter'],
+      compIsOnline: json['compIsOnline'],
       compPayTypes: payTypes,
     );
   }
@@ -259,6 +262,7 @@ class CompanyInfo {
     return {
       'compID': compID,
       'compName': compName,
+      'compIsOnline': compIsOnline,
       'compKuverWaiter': compKuverWaiter,
       'compPayTypes': compPayTypes.map((payType) => payType.toJson()).toList(),
     };
