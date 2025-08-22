@@ -27,6 +27,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
 import 'package:pos701/viewmodels/notification_viewmodel.dart';
 import 'package:pos701/viewmodels/boss_statistics_viewmodel.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 import 'package:pos701/firebase_options.dart';
 
 // Global navigator key - 403 hatası durumunda login'e yönlendirme için
@@ -104,9 +105,19 @@ void main() async {
           ),
           update: (_, authService, apiService, previous) => LoginViewModel(authService, apiService),
         ),
-        ChangeNotifierProxyProvider<AuthService, UserViewModel>(
-          create: (_) => UserViewModel(AuthService(ApiService())),
-          update: (_, authService, __) => UserViewModel(authService),
+        // CompanyViewModel'i ekle
+        ChangeNotifierProvider<CompanyViewModel>(
+          create: (_) => CompanyViewModel(),
+        ),
+        ChangeNotifierProxyProvider2<AuthService, CompanyViewModel, UserViewModel>(
+          create: (context) => UserViewModel(
+            Provider.of<AuthService>(context, listen: false),
+            companyViewModel: Provider.of<CompanyViewModel>(context, listen: false),
+          ),
+          update: (_, authService, companyViewModel, __) => UserViewModel(
+            authService,
+            companyViewModel: companyViewModel,
+          ),
         ),
         ChangeNotifierProxyProvider<StatisticsService, StatisticsViewModel>(
           create: (_) => StatisticsViewModel(StatisticsService(ApiService())),

@@ -6,9 +6,11 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/utils/app_logger.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 
 class UserViewModel extends ChangeNotifier {
   final AuthService _authService;
+  final CompanyViewModel? _companyViewModel;
   final AppLogger _logger = AppLogger();
   
   UserModel? _userInfo;
@@ -16,7 +18,8 @@ class UserViewModel extends ChangeNotifier {
   String? _errorMessage;
   bool _disposed = false;
   
-  UserViewModel(this._authService) {
+  UserViewModel(this._authService, {CompanyViewModel? companyViewModel}) 
+      : _companyViewModel = companyViewModel {
     _logger.i('UserViewModel başlatıldı');
   }
   
@@ -113,11 +116,28 @@ class UserViewModel extends ChangeNotifier {
       if (response.success && response.data != null) {
         _userInfo = response.data;
         _logger.i('Kullanıcı bilgileri başarıyla yüklendi. Kullanıcı: ${_userInfo?.userFullname}');
+        
+        // Company bilgisini CompanyViewModel'e gönder
+        if (_companyViewModel != null && _userInfo?.company != null) {
+          final companyJson = _userInfo?.company?.toJson();
+          if (companyJson != null) {
+            _companyViewModel.setCompany(companyJson);
+            _logger.d('Company bilgisi CompanyViewModel\'e gönderildi');
+          }
+        }
+        
         _safeNotifyListeners();
         return true;
       } else {
         _errorMessage = 'Kullanıcı bilgileri yüklenemedi';
         _logger.w('Kullanıcı bilgileri başarısız: ${response.errorCode}');
+        
+        // Hata durumunda CompanyViewModel'i offline yap
+        if (_companyViewModel != null) {
+          _companyViewModel.setOffline();
+          _logger.d('Hata nedeniyle CompanyViewModel offline yapıldı');
+        }
+        
         _safeNotifyListeners();
         return false;
       }
@@ -125,6 +145,13 @@ class UserViewModel extends ChangeNotifier {
       _isLoading = false;
       _errorMessage = 'Bir hata oluştu: ${e.toString()}';
       _logger.e('Kullanıcı bilgileri yüklenirken hata oluştu', e);
+      
+      // Exception durumunda CompanyViewModel'i offline yap
+      if (_companyViewModel != null) {
+        _companyViewModel.setOffline();
+        _logger.d('Exception nedeniyle CompanyViewModel offline yapıldı');
+      }
+      
       _safeNotifyListeners();
       return false;
     }

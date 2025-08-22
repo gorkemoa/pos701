@@ -6,12 +6,11 @@ import 'package:pos701/views/settings_view.dart';
 import 'package:pos701/views/patron_statistics_view.dart';
 import 'package:provider/provider.dart';
 import 'package:pos701/viewmodels/user_viewmodel.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
-import 'dart:io';
-import 'dart:async';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -25,43 +24,6 @@ class AppDrawer extends StatefulWidget {
 
 class _AppDrawerState extends State<AppDrawer> {
   bool _tanimlamalarExpanded = false;
-  bool _isOnline = true;
-  Timer? _connectivityTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkConnectivity();
-    // Check connectivity every 30 seconds
-    _connectivityTimer = Timer.periodic(
-      const Duration(seconds: 1), 
-      (_) => _checkConnectivity()
-    );
-  }
-
-  @override
-  void dispose() {
-    _connectivityTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _checkConnectivity() async {
-    try {
-      // Try to reach Google DNS server
-      final result = await InternetAddress.lookup('google.com');
-      if (mounted) {
-        setState(() {
-          _isOnline = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isOnline = false;
-        });
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,26 +68,30 @@ class _AppDrawerState extends State<AppDrawer> {
                     ],
                   ),
                   SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _isOnline ? Colors.green : Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        _isOnline ? 'Online' : 'Offline',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  Consumer<CompanyViewModel>(
+                    builder: (context, companyViewModel, child) {
+                      return Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: companyViewModel.isOnline ? Colors.green : Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            companyViewModel.isOnline ? 'Online' : 'Offline',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
