@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 
 class KitchenService {
   final ApiService _apiService;
@@ -68,12 +69,18 @@ class KitchenService {
       
       // HTTP durum kodunu kontrol et
       if (httpResponse.statusCode == 200) {
+        // Başarılı API yanıtı - CompanyViewModel'i online yap
+        CompanyViewModel.instance.setOnline();
+        
         debugPrint('🟢 [MUTFAK SİPARİŞLERİ] Başarılı (200): ${jsonEncode(responseData)}');
         return ApiResponseModel.fromJson(
           responseData, 
           (data) => KitchenOrdersResponse.fromJson(data),
         );
       } else if (httpResponse.statusCode == 410) {
+        // 410 kodu başarılı kabul ediliyor - CompanyViewModel'i online yap
+        CompanyViewModel.instance.setOnline();
+        
         debugPrint('🟡 [MUTFAK SİPARİŞLERİ] 410 Kodu Alındı: ${jsonEncode(responseData)}');
         return ApiResponseModel.fromJson(
           responseData, 
@@ -81,6 +88,8 @@ class KitchenService {
         );
       } else if (httpResponse.statusCode == 417) {
         // 417 (Expectation Failed) durumu için özel işlem
+        CompanyViewModel.instance.setOffline();
+        
         debugPrint('🔴 [MUTFAK SİPARİŞLERİ] 417 hatası alındı: ${jsonEncode(responseData)}');
         
         String errorMessage = "Sunucu beklentileri karşılanamadı (417)";
@@ -94,6 +103,8 @@ class KitchenService {
           errorCode: errorMessage,
         );
       } else if (httpResponse.statusCode == 401) {
+        CompanyViewModel.instance.setOffline();
+        
         debugPrint('🔴 [MUTFAK SİPARİŞLERİ] Yetkilendirme hatası (401): ${jsonEncode(responseData)}');
         return ApiResponseModel<KitchenOrdersResponse>(
           error: true,
@@ -101,6 +112,8 @@ class KitchenService {
           errorCode: "Yetkilendirme hatası: Lütfen yeniden giriş yapın",
         );
       } else {
+        CompanyViewModel.instance.setOffline();
+        
         debugPrint('🔴 [MUTFAK SİPARİŞLERİ] Beklenmeyen hata kodu: ${httpResponse.statusCode}, Veri: ${jsonEncode(responseData)}');
         
         String errorMessage = "İşlem başarısız";
@@ -117,6 +130,9 @@ class KitchenService {
         );
       }
     } catch (e, stackTrace) {
+      // Exception durumunda CompanyViewModel'i offline yap
+      CompanyViewModel.instance.setOffline();
+      
       debugPrint('🔴 [MUTFAK SİPARİŞLERİ] İSTİSNA: $e');
       debugPrint('🔴 [MUTFAK SİPARİŞLERİ] STACK TRACE: $stackTrace');
       return ApiResponseModel<KitchenOrdersResponse>(
@@ -194,12 +210,18 @@ class KitchenService {
       
       // HTTP durum kodunu kontrol et
       if (httpResponse.statusCode == 410) {
+        // Başarılı API yanıtı - CompanyViewModel'i online yap
+        CompanyViewModel.instance.setOnline();
+        
         debugPrint('🟢 [MUTFAK HAZIR] Başarılı (410): ${jsonEncode(responseData)}');
         return ApiResponseModel.fromJson(
           responseData, 
           (data) => data,
         );
       } else {
+        // Hata durumu - CompanyViewModel'i offline yap
+        CompanyViewModel.instance.setOffline();
+        
         debugPrint('🔴 [MUTFAK HAZIR] Hata: ${httpResponse.statusCode}, Veri: ${jsonEncode(responseData)}');
         
         String errorMessage = "İşlem başarısız";
@@ -216,6 +238,9 @@ class KitchenService {
         );
       }
     } catch (e, stackTrace) {
+      // Exception durumunda CompanyViewModel'i offline yap
+      CompanyViewModel.instance.setOffline();
+      
       debugPrint('🔴 [MUTFAK HAZIR] İSTİSNA: $e');
       debugPrint('🔴 [MUTFAK HAZIR] STACK TRACE: $stackTrace');
       return ApiResponseModel<dynamic>(

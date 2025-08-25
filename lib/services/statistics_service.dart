@@ -5,6 +5,7 @@ import 'package:pos701/models/api_response_model.dart';
 import 'package:pos701/services/api_service.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/utils/app_logger.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 
 class StatisticsService {
   final ApiService _apiService;
@@ -257,8 +258,13 @@ class StatisticsService {
         );
         
         if (responseWithStatusInfo.success && responseWithStatusInfo.data != null) {
+          // Başarılı API yanıtı - CompanyViewModel'i online yap
+          CompanyViewModel.instance.setOnline();
           _logger.i('İstatistik verileri başarıyla alındı');
         } else {
+          // Başarısız API yanıtı - CompanyViewModel'i offline yap
+          CompanyViewModel.instance.setOffline();
+          
           // Daha detaylı hata mesajı oluştur
           String hataMesaji = responseWithStatusInfo.errorCode ?? "Bilinmeyen hata: API başarısız yanıt döndü fakat hata kodu yok";
           if (responseWithStatusInfo.data == null && responseWithStatusInfo.success) {
@@ -285,6 +291,8 @@ class StatisticsService {
         );
       }
     } catch (e) {
+      // Exception durumunda CompanyViewModel'i offline yap
+      CompanyViewModel.instance.setOffline();
       _logger.e('İstatistik verileri alınırken hata oluştu', e);
       return ApiResponseModel<StatisticsModel>(
         error: true,

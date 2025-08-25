@@ -51,7 +51,7 @@ class _AppDrawerState extends State<AppDrawer> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Menü | ${userViewModel.userInfo?.company?.compName ?? ''}',
+                          'Menü | ${userViewModel.userInfo?.company?.compName}',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,

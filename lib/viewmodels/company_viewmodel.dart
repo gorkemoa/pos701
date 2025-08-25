@@ -3,6 +3,14 @@ import 'package:pos701/utils/app_logger.dart';
 import 'package:flutter/scheduler.dart';
 
 class CompanyViewModel extends ChangeNotifier {
+  static CompanyViewModel? _instance;
+  static CompanyViewModel get instance {
+    _instance ??= CompanyViewModel._internal();
+    return _instance!;
+  }
+  
+  CompanyViewModel._internal();
+  
   final AppLogger _logger = AppLogger();
   
   bool _isOnline = false;
@@ -61,6 +69,15 @@ class CompanyViewModel extends ChangeNotifier {
     } catch (e) {
       _logger.e('Company bilgisi güncellenirken hata oluştu', e);
       _isOnline = false;
+      _safeNotifyListeners();
+    }
+  }
+  
+  /// API isteği başarılı olduğunda online olarak işaretle
+  void setOnline() {
+    if (!_isOnline) {
+      _logger.i('Company online olarak işaretlendi');
+      _isOnline = true;
       _safeNotifyListeners();
     }
   }

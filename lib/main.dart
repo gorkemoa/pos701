@@ -105,9 +105,9 @@ void main() async {
           ),
           update: (_, authService, apiService, previous) => LoginViewModel(authService, apiService),
         ),
-        // CompanyViewModel'i ekle
+        // CompanyViewModel'i singleton olarak ekle
         ChangeNotifierProvider<CompanyViewModel>(
-          create: (_) => CompanyViewModel(),
+          create: (_) => CompanyViewModel.instance,
         ),
         ChangeNotifierProxyProvider2<AuthService, CompanyViewModel, UserViewModel>(
           create: (context) => UserViewModel(

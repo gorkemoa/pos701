@@ -5,6 +5,7 @@ import 'package:pos701/models/table_model.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/main.dart';
 import 'package:pos701/views/login_view.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TableService {
@@ -35,6 +36,9 @@ class TableService {
       debugPrint('Yanıt içeriği: ${response.body}');
       
       if (response.statusCode == 410 || response.statusCode == 200) {
+        // Başarılı API yanıtı - CompanyViewModel'i online yap
+        CompanyViewModel.instance.setOnline();
+        
         final Map<String, dynamic> data = jsonDecode(response.body);
         return TablesResponse.fromJson(data);
       } else if (response.statusCode == 403) {
@@ -42,9 +46,13 @@ class TableService {
         await _handle403Error();
         throw Exception('Geçersiz token. Üye doğrulama bilgileri hatalı.');
       } else {
+        // Diğer hata durumları - CompanyViewModel'i offline yap
+        CompanyViewModel.instance.setOffline();
         throw Exception('Sunucu hatası: ${response.statusCode}, ${response.body}');
       }
     } catch (e) {
+      // Exception durumunda CompanyViewModel'i offline yap
+      CompanyViewModel.instance.setOffline();
       debugPrint('Tablolar alınırken hata: $e');
       throw Exception('Tablolar alınırken hata oluştu: $e');
     }

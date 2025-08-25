@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:pos701/models/boss_statistics_model.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/utils/app_logger.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 
 class BossStatisticsService {
   static const String _baseUrl = AppConstants.baseUrl;
@@ -39,18 +40,26 @@ class BossStatisticsService {
       _logger.d('📥 Response Body: ${response.body}');
       
       if (response.statusCode == 410) {
+        // Başarılı API yanıtı - CompanyViewModel'i online yap
+        CompanyViewModel.instance.setOnline();
+        
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         _logger.i('✅ Boss Statistics API çağrısı başarılı');
         return BossStatisticsResponse.fromJson(jsonResponse);
       } else if (response.statusCode == 403) {
         // Gone - Oturum süresi dolmuş
         _logger.e('❌ Oturum süresi dolmuş (403)');
+        CompanyViewModel.instance.setOffline();
         throw Exception('Oturum süresi dolmuş. Lütfen tekrar giriş yapın.');
       } else {
+        // Diğer hata durumları - CompanyViewModel'i offline yap
         _logger.e('❌ Sunucu hatası: ${response.statusCode}');
+        CompanyViewModel.instance.setOffline();
         throw Exception('Sunucu hatası: ${response.statusCode}');
       }
     } catch (e) {
+      // Exception durumunda CompanyViewModel'i offline yap
+      CompanyViewModel.instance.setOffline();
       _logger.e('❌ Boss Statistics API hatası: $e');
       throw Exception('Bağlantı hatası: $e');
     }

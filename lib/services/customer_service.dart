@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/models/api_response_model.dart';
 import 'package:pos701/models/customer_model.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 
 class CustomerService {
   static const String _baseUrl = AppConstants.baseUrl;
@@ -61,11 +62,17 @@ class CustomerService {
       if (httpResponse.statusCode == 200) {
         debugPrint('🟢 [MÜŞTERİ LİSTESİ] Başarılı (200): ${jsonEncode(responseData)}');
         if (responseData['success'] == true) {
+          // Başarılı API yanıtı - CompanyViewModel'i online yap
+          CompanyViewModel.instance.setOnline();
+          
           return ApiResponseModel.fromJson(
             responseData, 
             (data) => CustomerListResponse.fromJson(data),
           );
         } else {
+          // Başarısız API yanıtı - CompanyViewModel'i offline yap
+          CompanyViewModel.instance.setOffline();
+          
           return ApiResponseModel<CustomerListResponse>(
             error: true,
             success: false,
@@ -73,12 +80,18 @@ class CustomerService {
           );
         }
       } else if (httpResponse.statusCode == 410) {
+        // 410 kodu başarılı kabul ediliyor - CompanyViewModel'i online yap
+        CompanyViewModel.instance.setOnline();
+        
         debugPrint('🟡 [MÜŞTERİ LİSTESİ] 410 Kodu Alındı: ${jsonEncode(responseData)}');
         return ApiResponseModel.fromJson(
           responseData, 
           (data) => CustomerListResponse.fromJson(data),
         );
       } else if (httpResponse.statusCode == 417) {
+        // 417 hatası - CompanyViewModel'i offline yap
+        CompanyViewModel.instance.setOffline();
+        
         debugPrint('🔴 [MÜŞTERİ LİSTESİ] 417 hatası alındı: ${jsonEncode(responseData)}');
         
         String errorMessage = "Sunucu beklentileri karşılanamadı (417)";
@@ -92,6 +105,9 @@ class CustomerService {
           errorCode: errorMessage,
         );
       } else if (httpResponse.statusCode == 401) {
+        // 401 hatası - CompanyViewModel'i offline yap
+        CompanyViewModel.instance.setOffline();
+        
         debugPrint('🔴 [MÜŞTERİ LİSTESİ] Yetkilendirme hatası (401): ${jsonEncode(responseData)}');
         return ApiResponseModel<CustomerListResponse>(
           error: true,
@@ -99,6 +115,9 @@ class CustomerService {
           errorCode: "Yetkilendirme hatası: Lütfen yeniden giriş yapın",
         );
       } else {
+        // Diğer hata durumları - CompanyViewModel'i offline yap
+        CompanyViewModel.instance.setOffline();
+        
         debugPrint('🔴 [MÜŞTERİ LİSTESİ] Beklenmeyen hata kodu: ${httpResponse.statusCode}, Veri: ${jsonEncode(responseData)}');
         
         String errorMessage = "İşlem başarısız";
@@ -115,6 +134,9 @@ class CustomerService {
         );
       }
     } catch (e, stackTrace) {
+      // Exception durumunda CompanyViewModel'i offline yap
+      CompanyViewModel.instance.setOffline();
+      
       debugPrint('🔴 [MÜŞTERİ LİSTESİ] İSTİSNA: $e');
       debugPrint('🔴 [MÜŞTERİ LİSTESİ] STACK TRACE: $stackTrace');
       return ApiResponseModel<CustomerListResponse>(

@@ -6,6 +6,7 @@ import 'package:pos701/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:pos701/main.dart';
 import 'package:pos701/views/login_view.dart';
+import 'package:pos701/viewmodels/company_viewmodel.dart';
 
 class ApiService {
   final Dio _dio = Dio();
@@ -56,6 +57,9 @@ class ApiService {
           final endTime = DateTime.now().millisecondsSinceEpoch;
           final executionTime = startTime != null ? endTime - startTime : null;
           
+          // CompanyViewModel'i online yap - API yanıtı başarılı
+          CompanyViewModel.instance.setOnline();
+          
           // 410 durum kodu için özel mesaj
           if (response.statusCode == 410) {
             _logger.i('HTTP 410 alındı: Bu API için normal bir yanıt, başarılı kabul ediliyor');
@@ -87,6 +91,9 @@ class ApiService {
           final startTime = e.requestOptions.extra['startTime'] as int?;
           final endTime = DateTime.now().millisecondsSinceEpoch;
           final executionTime = startTime != null ? endTime - startTime : null;
+          
+          // CompanyViewModel'i offline yap - API hatası
+          CompanyViewModel.instance.setOffline();
           
           // Error Log
           _logger.apiError(
