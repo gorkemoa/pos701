@@ -7,6 +7,7 @@ import 'package:pos701/main.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/viewmodels/company_viewmodel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos701/services/connectivity_service.dart';
 
 class TableService {
   Future<TablesResponse> getTables({
@@ -14,8 +15,22 @@ class TableService {
     required int compID,
   }) async {
     try {
-      final url = '${AppConstants.baseUrl}${AppConstants.getTablesEndpoint}';
-      debugPrint('API isteği: $url');
+      // Eğer boş değer gelmişse SharedPreferences'tan otomatik tamamla
+      if (userToken.isEmpty || compID == 0) {
+        final prefs = await SharedPreferences.getInstance();
+        final String? storedToken = prefs.getString(AppConstants.tokenKey);
+        final int? storedCompId = prefs.getInt(AppConstants.companyIdKey);
+        if (userToken.isEmpty && storedToken != null) {
+          userToken = storedToken;
+        }
+        if (compID == 0 && storedCompId != null) {
+          compID = storedCompId;
+        }
+      }
+
+      final String primaryUrl = '${AppConstants.baseUrl}${AppConstants.getTablesEndpoint}';
+      final String fallbackUrl = '${AppConstants.localFallbackBaseUrl}${AppConstants.getTablesJsonEndpoint}';
+      debugPrint('API isteği (primary): $primaryUrl');
       
       final requestBody = {
         'userToken': userToken,
@@ -23,21 +38,73 @@ class TableService {
       };
       debugPrint('İstek verileri: $requestBody');
       
-      final response = await http.put(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
-        },
-        body: jsonEncode(requestBody),
-      );
+      http.Response? response;
+
+      // Önce internet var mı kontrol et
+      final bool hasInternet = await ConnectivityService().hasInternetConnection();
+
+      if (hasInternet) {
+        // Online ise ana endpointi dene; hata fırlarsa fallback uygula
+        try {
+          response = await http.put(
+            Uri.parse(primaryUrl),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+            },
+            body: jsonEncode(requestBody),
+          );
+          debugPrint('Yanıt kodu (primary): ${response.statusCode}');
+          debugPrint('Yanıt içeriği (primary): ${response.body}');
+
+          // Başarılı değilse fallback dene
+          if (!(response.statusCode == 410 || response.statusCode == 200)) {
+            debugPrint('Primary başarısız. Fallback URL deneniyor: $fallbackUrl');
+            response = await http.get(
+              Uri.parse(fallbackUrl),
+              headers: {
+                'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+              },
+            );
+            debugPrint('Yanıt kodu (fallback): ${response.statusCode}');
+            debugPrint('Yanıt içeriği (fallback): ${response.body}');
+            CompanyViewModel.instance.setOffline();
+          }
+        } catch (primaryError) {
+          // Örn. TLS/CERT hatası vs. durumda doğrudan fallback dene
+          debugPrint('Primary istek hata verdi: $primaryError. Fallback URL deneniyor: $fallbackUrl');
+          response = await http.get(
+            Uri.parse(fallbackUrl),
+            headers: {
+              'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+            },
+          );
+          debugPrint('Yanıt kodu (fallback-ex): ${response.statusCode}');
+          debugPrint('Yanıt içeriği (fallback-ex): ${response.body}');
+          CompanyViewModel.instance.setOffline();
+        }
+      } else {
+        // İnternet yoksa direkt fallback dene
+        debugPrint('İnternet yok. Doğrudan fallback URL deneniyor: $fallbackUrl');
+        response = await http.get(
+          Uri.parse(fallbackUrl),
+          headers: {
+            'Authorization': 'Basic ${base64Encode(utf8.encode('${AppConstants.basicAuthUsername}:${AppConstants.basicAuthPassword}'))}',
+          },
+        );
+        debugPrint('Yanıt kodu (fallback-offline): ${response.statusCode}');
+        debugPrint('Yanıt içeriği (fallback-offline): ${response.body}');
+        CompanyViewModel.instance.setOffline();
+      }
       
       debugPrint('Yanıt kodu: ${response.statusCode}');
       debugPrint('Yanıt içeriği: ${response.body}');
       
       if (response.statusCode == 410 || response.statusCode == 200) {
         // Başarılı API yanıtı - CompanyViewModel'i online yap
-        CompanyViewModel.instance.setOnline();
+        if (hasInternet && response.request?.url.toString() == primaryUrl) {
+          CompanyViewModel.instance.setOnline();
+        }
         
         final Map<String, dynamic> data = jsonDecode(response.body);
         return TablesResponse.fromJson(data);

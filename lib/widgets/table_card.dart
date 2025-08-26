@@ -35,8 +35,6 @@ class TableCard extends StatelessWidget {
     
     // Responsive boyutlar
     final double titleFontSize = isLargeTablet ? 20 : isTablet ? 18 : 17;
-    final double optionFontSize = isLargeTablet ? 16 : isTablet ? 15 : 14;
-    final double iconSize = isLargeTablet ? 20 : isTablet ? 18 : 18;
     final double padding = isLargeTablet ? 12.0 : isTablet ? 10.0 : 8.0;
     
     // Debug: Birleştirilmiş masa bilgisini konsola yazdir
@@ -225,10 +223,37 @@ class TableCard extends StatelessWidget {
   void _handleFastPay(BuildContext context, TablesViewModel viewModel) async {
     // Kullanıcı bilgilerini al
     final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    // Debug: Kullanıcı ve şirket bilgilerini kontrol et
+    try {
+      if (userViewModel.userInfo != null) {
+      if (userViewModel.userInfo!.company != null) {
+        }
+      }
+    } catch (e) {
+    }
+    
+    // userInfo null ise anlık olarak yüklemeyi dene
+    if (userViewModel.userInfo == null) {
+      debugPrint('HIZLI ÖDE DEBUG → userInfo null, loadUserInfo() çağrılıyor');
+      try {
+        final bool loaded = await userViewModel.loadUserInfo();
+        debugPrint('HIZLI ÖDE DEBUG → loadUserInfo sonucu: $loaded');
+        if (loaded && userViewModel.userInfo != null) {
+          debugPrint('HIZLI ÖDE DEBUG → Yüklenen kullanıcı: userID=${userViewModel.userInfo!.userID}, company null mu? ${userViewModel.userInfo!.company == null}');
+          if (userViewModel.userInfo!.company != null) {
+            debugPrint('HIZLI ÖDE DEBUG → Yüklenen company: compID=${userViewModel.userInfo!.company!.compID}, compName=${userViewModel.userInfo!.company!.compName}');
+            debugPrint('HIZLI ÖDE DEBUG → Yüklenen compPayTypes length: ${userViewModel.userInfo!.company!.compPayTypes.length}');
+          }
+        }
+      } catch (e) {
+        debugPrint('HIZLI ÖDE DEBUG → loadUserInfo çağrısında hata: $e');
+      }
+    }
     
     // Kullanıcının ödeme tiplerini kontrol et
     if (userViewModel.userInfo == null || userViewModel.userInfo!.company == null || 
         userViewModel.userInfo!.company!.compPayTypes.isEmpty) {
+      debugPrint('HIZLI ÖDE DEBUG → Ödeme tipleri boş veya erişilemedi. userInfo: ${userViewModel.userInfo != null}, company: ${userViewModel.userInfo?.company != null}');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Ödeme bilgileri alınamadı. Lütfen tekrar giriş yapın.'),
@@ -240,6 +265,10 @@ class TableCard extends StatelessWidget {
     
     // Ödeme tiplerini al
     final List<PaymentType> paymentTypes = userViewModel.userInfo!.company!.compPayTypes;
+    // Debug: Ödeme tiplerini listele
+    for (final PaymentType t in paymentTypes) {
+      debugPrint('HIZLI ÖDE DEBUG → PayType: id=${t.typeID}, name=${t.typeName}, color=${t.typeColor}, img=${t.typeImg}');
+    }
     PaymentType? selectedPaymentType;
     
     // Ödeme tipi seçme diyaloğu göster

@@ -4,7 +4,6 @@ import 'package:pos701/utils/app_logger.dart';
 class UserModel {
   final int userID;
   final int? compID;
-  final String token;
   final String? username;
   final String? userFirstname;
   final String? userLastname;
@@ -25,7 +24,6 @@ class UserModel {
 
   UserModel({
     required this.userID,
-    required this.token,
     this.compID,
     this.username,
     this.userFirstname,
@@ -68,39 +66,40 @@ class UserModel {
     }
     
     // token değerini almaya çalış
-    String tokenValue;
+    String userToken;
     if (json.containsKey('token')) {
       final tokenRaw = json['token'];
       if (tokenRaw is String) {
-        tokenValue = tokenRaw;
+        userToken = tokenRaw;
       } else {
         logger.e('token formatı geçersiz: ${tokenRaw.runtimeType}');
-        tokenValue = ''; // Varsayılan değer
+        userToken = ''; // Varsayılan değer
       }
     } else if (json.containsKey('userToken')) {
       final tokenRaw = json['userToken'];
       if (tokenRaw is String) {
-        tokenValue = tokenRaw;
+        userToken = tokenRaw;
       } else {
         logger.e('userToken formatı geçersiz: ${tokenRaw.runtimeType}');
-        tokenValue = ''; // Varsayılan değer
+        userToken = ''; // Varsayılan değer
       }
     } else {
       logger.e('token veya userToken bulunamadı');
-      tokenValue = ''; // Varsayılan değer
+      userToken = ''; // Varsayılan değer
     }
     
-    logger.i('UserModel oluşturuldu: ID=$userId, Token=$tokenValue');
+    logger.i('UserModel oluşturuldu: ID=$userId, Token=$userToken');
     
     return UserModel(
       userID: userId,
-      token: tokenValue,
+      userToken: userToken,
     );
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final logger = AppLogger();
     logger.d('UserModel.fromJson çağrıldı');
+    logger.d('UserModel.fromJson gelen json: $json');
     
     if (json.containsKey('userID') && (json.containsKey('token') || json.containsKey('userToken'))) {
       logger.d('Login yanıtı formatında veri algılandı, fromLoginJson kullanılıyor');
@@ -115,6 +114,18 @@ class UserModel {
       // API direkt user bilgilerini döndürmüş olabilir
       userData = json;
       logger.d('User verisi direkt gönderilmiş olabilir: $userData');
+    }
+    
+    // Company bilgisi kontrolü
+    if (userData.containsKey('company')) {
+      logger.d('Company bilgisi bulundu: ${userData['company']}');
+      if (userData['company'] is Map<String, dynamic>) {
+        logger.d('Company Map formatında: ${userData['company']}');
+      } else {
+        logger.d('Company Map formatında değil, tip: ${userData['company'].runtimeType}');
+      }
+    } else {
+      logger.d('Company bilgisi bulunamadı');
     }
     
     // userID alınması
@@ -142,13 +153,16 @@ class UserModel {
     // Şirket bilgisi
     CompanyInfo? companyInfo;
     if (userData.containsKey('company') && userData['company'] is Map<String, dynamic>) {
+      logger.d('CompanyInfo.fromJson çağrılıyor...');
       companyInfo = CompanyInfo.fromJson(userData['company'] as Map<String, dynamic>);
+      logger.d('CompanyInfo oluşturuldu: ${companyInfo?.compName ?? 'null'}');
+    } else {
+      logger.d('Company bilgisi oluşturulamadı, company key yok veya Map değil');
     }
     
-    return UserModel(
+    final userModel = UserModel(
       userID: userId,
       compID: compId,
-      token: tokenValue,
       username: userData['username']?.toString(),
       userFirstname: userData['userFirstname']?.toString(),
       userLastname: userData['userLastname']?.toString(),
@@ -157,22 +171,24 @@ class UserModel {
       userBirthday: userData['userBirthday']?.toString(),
       userPermissions: userData['userPermissions'],
       userPhone: userData['userPhone']?.toString(),
+      userToken: userData['userToken']?.toString(),
       userRank: userData['userRank']?.toString(),
       userStatus: userData['userStatus']?.toString(),
       userGender: userData['userGender']?.toString(),
       serverDate: userData['serverDate']?.toString(),
       serverTime: userData['serverTime']?.toString(),
-      userToken: userData['userToken']?.toString(),
       platform: userData['platform']?.toString(),
       version: userData['version']?.toString(),
       company: companyInfo,
     );
+    
+    logger.d('UserModel oluşturuldu, company: ${userModel.company?.compName ?? 'null'}');
+    return userModel;
   }
 
   Map<String, dynamic> toJson() {
     return {
       'userID': userID,
-      'token': token,
       'compID': compID,
       'username': username,
       'userFirstname': userFirstname,
@@ -242,12 +258,17 @@ class CompanyInfo {
   });
 
   factory CompanyInfo.fromJson(Map<String, dynamic> json) {
+    final logger = AppLogger();
+    logger.d('CompanyInfo.fromJson çağrıldı, json: $json');
+    
     List<PaymentType> payTypes = [];
     if (json.containsKey('compPayTypes') && json['compPayTypes'] is List) {
       payTypes = (json['compPayTypes'] as List)
           .map((payType) => PaymentType.fromJson(payType))
           .toList();
     }
+    
+    logger.d('CompanyInfo oluşturuluyor: compID=${json['compID']}, compName=${json['compName']}, compPayTypes.length=${payTypes.length}');
 
     return CompanyInfo(
       compID: json['compID'],

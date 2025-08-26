@@ -348,7 +348,7 @@ class BasketViewModel extends ChangeNotifier {
   void updateProductPrice(int lineId, String newPrice) {
     try {
       final itemIndex = items.indexWhere((item) => item.lineId == lineId);
-      if (itemIndex != -1) {
+      if (itemIndex != -1) {  
         final item = items[itemIndex];
         
         final updatedProduct = Product(

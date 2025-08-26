@@ -179,6 +179,12 @@ class ApiService {
     _logger.i('ŞirketID kaydedildi: $companyId');
   }
 
+  Future<void> saveCompanyName(String companyName) async {
+    await _initPrefs();
+    await _prefs?.setString(AppConstants.companyNameKey, companyName);
+    _logger.i('Şirket adı kaydedildi: $companyName');
+  }
+
   Future<String?> getToken() async {
     await _initPrefs();
     final token = _prefs?.getString(AppConstants.tokenKey);
@@ -200,6 +206,11 @@ class ApiService {
   Future<int?> getCompanyId() async {
     await _initPrefs();
     return _prefs?.getInt(AppConstants.companyIdKey);
+  }
+
+  Future<String?> getCompanyName() async {
+    await _initPrefs();
+    return _prefs?.getString(AppConstants.companyNameKey);
   }
 
   Future<void> clearToken() async {

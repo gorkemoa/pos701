@@ -47,7 +47,7 @@ class _HomeViewState extends State<HomeView> {
         final String? userRank = userViewModel.userInfo?.userRank;
         if (userRank == '30') {
           final int compID = userViewModel.userInfo!.compID!;
-          final String token = userViewModel.userInfo!.token;
+          final String token = userViewModel.userInfo!.userToken!;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => TablesView(
@@ -88,7 +88,7 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Anasayfa / ${userViewModel.userInfo?.userFirstname ?? ''}',
+          'Anasayfa / ${userViewModel.userInfo?.userFullname ?? userViewModel.userInfo?.userFirstname ?? userViewModel.userInfo?.username ?? 'Kullanıcı'}',
           style: TextStyle(
             color: Colors.white,
             fontSize: isTablet ? 20 : 16,
@@ -652,8 +652,6 @@ class _HomeViewState extends State<HomeView> {
     
     // Responsive font boyutları
     final double titleFontSize = isTablet ? 18 : 16;
-    final double legendFontSize = isTablet ? 10 : 8;
-    final double valueFontSize = isTablet ? 9 : 7;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

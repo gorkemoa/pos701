@@ -31,17 +31,21 @@ class AppConstants {
   }
 
   static const String baseUrl = 'https://api.pos701.com/'; // API base URL bilginizi güncelleyin
+  static const String localFallbackBaseUrl = 'http://192.168.1.50/';
   
   // API Endpoints
   static const String loginEndpoint = 'service/auth/login';
   static const String userInfoEndpoint = 'service/user/id/';
   static const String getTablesEndpoint = 'service/user/order/tableList';
+  static const String getTablesJsonEndpoint = 'service/user/order/tableList.json';
   static const String tableOrderMergeEndpoint = 'service/user/order/tableOrderMerge';
   static const String tableChangeEndpoint = 'service/user/order/tableChange';
   static const String productDetailEndpoint = 'service/product/id/detail';
   static const String customersEndpoint = 'service/user/account/customers';
   static const String addCustomerEndpoint = 'service/user/account/customers/addCust';
   static const String allProductsEndpoint = 'service/product/category/allProducts';
+  static const String allProductsJsonEndpoint = 'service/product/category/allProducts.json';
+  static const String allCategoriesJsonEndpoint = 'service/product/category/all.json';
   
   // Storage Keys
   static const String tokenKey = 'token';
@@ -49,6 +53,7 @@ class AppConstants {
   static const String userNameKey = 'userName';
   static const String rememberMeKey = 'rememberMe';
   static const String companyIdKey = 'companyId';
+  static const String companyNameKey = 'companyName';
   
   // Colors
   static const int primaryColorValue = 0xFF1aa7e0; // Yeşil renk

@@ -11,6 +11,7 @@ import 'package:pos701/services/auth_service.dart';
 import 'package:pos701/views/login_view.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/services/firebase_messaging_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({Key? key}) : super(key: key);
@@ -50,13 +51,19 @@ class _AppDrawerState extends State<AppDrawer> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
-                        child: Text(
-                          'Menü | ${userViewModel.userInfo?.company?.compName}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: FutureBuilder<String?>(
+                          future: SharedPreferences.getInstance().then((p) => p.getString(AppConstants.companyNameKey)),
+                          builder: (context, snapshot) {
+                            final String compName = userViewModel.userInfo?.company?.compName ?? snapshot.data ?? '';
+                            return Text(
+                              'Menü | $compName',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       IconButton(
@@ -101,8 +108,8 @@ class _AppDrawerState extends State<AppDrawer> {
             child: SingleChildScrollView(
               child:               Column(
                 children: [
-                  // Anasayfa sadece userRank 50 olan kullanıcılara göster
-                  if (userViewModel.userInfo?.userRank == '50')
+                  // Rank kuralı: userRank '30' DIŞINDAKİ kullanıcılar için Anasayfa göster
+                  if (userViewModel.userInfo?.userRank != '30')
                     _buildDrawerItem(
                       icon: Icons.home,
                       title: 'Anasayfa',
@@ -119,14 +126,21 @@ class _AppDrawerState extends State<AppDrawer> {
                   _buildDrawerItem(
                     icon: Icons.shopping_basket,
                     title: 'Siparişler',
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
+                      String userToken = userViewModel.userInfo?.userToken ?? '';
+                      int compID = userViewModel.userInfo?.compID ?? 0;
+                      if (userToken.isEmpty || compID == 0) {
+                        final prefs = await SharedPreferences.getInstance();
+                        userToken = userToken.isEmpty ? (prefs.getString(AppConstants.tokenKey) ?? '') : userToken;
+                        compID = compID == 0 ? (prefs.getInt(AppConstants.companyIdKey) ?? 0) : compID;
+                      }
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => TablesView(
-                            userToken: userViewModel.userInfo?.userToken ?? '',
-                            compID: userViewModel.userInfo?.compID ?? 0,
+                            userToken: userToken,
+                            compID: compID,
                             title: 'Siparişler',
                           ),
                         ),
@@ -136,14 +150,21 @@ class _AppDrawerState extends State<AppDrawer> {
                   _buildDrawerItem(
                     icon: Icons.tv,
                     title: 'Mutfak',
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
+                      String userToken = userViewModel.userInfo?.userToken ?? '';
+                      int compID = userViewModel.userInfo?.compID ?? 0;
+                      if (userToken.isEmpty || compID == 0) {
+                        final prefs = await SharedPreferences.getInstance();
+                        userToken = userToken.isEmpty ? (prefs.getString(AppConstants.tokenKey) ?? '') : userToken;
+                        compID = compID == 0 ? (prefs.getInt(AppConstants.companyIdKey) ?? 0) : compID;
+                      }
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => KitchenView(
-                            userToken: userViewModel.userInfo?.userToken ?? '',
-                            compID: userViewModel.userInfo?.compID ?? 0,
+                            userToken: userToken,
+                            compID: compID,
                             title: 'Mutfak',
                           ),
                         ),
@@ -182,15 +203,59 @@ class _AppDrawerState extends State<AppDrawer> {
                   _buildDrawerItem(
                     icon: Icons.bar_chart,
                     title: 'Patron İstatistikleri',
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
+                      
+                      debugPrint('APP_DRAWER DEBUG → Patron İstatistikleri açılıyor');
+                      debugPrint('APP_DRAWER DEBUG → userInfo null mu? ${userViewModel.userInfo == null}');
+                      if (userViewModel.userInfo != null) {
+                        debugPrint('APP_DRAWER DEBUG → userID: ${userViewModel.userInfo!.userID}, company null mu? ${userViewModel.userInfo!.company == null}');
+                        if (userViewModel.userInfo!.company != null) {
+                          debugPrint('APP_DRAWER DEBUG → company: compID=${userViewModel.userInfo!.company!.compID}, compName=${userViewModel.userInfo!.company!.compName}');
+                        }
+                      }
+                      
+                      // Eğer userInfo veya company null ise, önce yüklemeyi dene
+                      if (userViewModel.userInfo == null || userViewModel.userInfo!.company == null) {
+                        debugPrint('APP_DRAWER DEBUG → userInfo veya company null, loadUserInfo() çağrılıyor');
+                        try {
+                          final bool loaded = await userViewModel.loadUserInfo();
+                          debugPrint('APP_DRAWER DEBUG → loadUserInfo sonucu: $loaded');
+                          if (loaded && userViewModel.userInfo != null && userViewModel.userInfo!.company != null) {
+                            debugPrint('APP_DRAWER DEBUG → Company bilgisi yüklendi: compID=${userViewModel.userInfo!.company!.compID}, compName=${userViewModel.userInfo!.company!.compName}');
+                          }
+                        } catch (e) {
+                          debugPrint('APP_DRAWER DEBUG → loadUserInfo hatası: $e');
+                        }
+                      }
+                      
+                      String userToken = userViewModel.userInfo?.userToken ?? '';
+                      int compID = userViewModel.userInfo?.compID ?? 0;
+                      String compName = '';
+                      
+                      if (userToken.isEmpty || compID == 0) {
+                        final prefs = await SharedPreferences.getInstance();
+                        userToken = userToken.isEmpty ? (prefs.getString(AppConstants.tokenKey) ?? '') : userToken;
+                        compID = compID == 0 ? (prefs.getInt(AppConstants.companyIdKey) ?? 0) : compID;
+                        compName = userViewModel.userInfo?.company?.compName ?? '';
+                        debugPrint('APP_DRAWER DEBUG → SharedPreferences\'dan alınan: userToken=${userToken.isNotEmpty}, compID=$compID, compName=$compName');
+                      } else {
+                        compName = userViewModel.userInfo?.company?.compName ?? '';
+                        debugPrint('APP_DRAWER DEBUG → UserViewModel\'den alınan: compName=$compName');
+                      }
+                      
+                      debugPrint('APP_DRAWER DEBUG → PatronStatisticsView\'a gönderilen değerler:');
+                      debugPrint('APP_DRAWER DEBUG → userToken: $userToken');
+                      debugPrint('APP_DRAWER DEBUG → compID: $compID');
+                      debugPrint('APP_DRAWER DEBUG → title (compName): $compName');
+                      
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => PatronStatisticsView(
-                            userToken: userViewModel.userInfo?.userToken ?? '',
-                            compID: userViewModel.userInfo?.compID ?? 0,
-                            title: 'Patron İstatistikleri',
+                            userToken: userToken,
+                            compID: compID,
+                            title: compName,
                           ),
                         ),
                       );

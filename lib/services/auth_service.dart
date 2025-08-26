@@ -51,7 +51,7 @@ class AuthService {
         );
         
         if (apiResponse.success && apiResponse.data != null) {
-          await _apiService.saveToken(apiResponse.data!.token);
+          await _apiService.saveToken(apiResponse.data!.userToken!);
           await _apiService.saveUserId(apiResponse.data!.userID);
           
           _logger.i('Login işlemi başarılı. UserID: ${apiResponse.data!.userID}');
@@ -182,6 +182,7 @@ class AuthService {
       _logger.d('İşlenmiş yanıt verisi: $responseData');
       
       try {
+        _logger.d('API yanıtından UserModel oluşturuluyor...');
         final apiResponse = ApiResponseModel<UserModel>.fromJson(
           responseData,
           (data) => UserModel.fromJson(data),
@@ -189,6 +190,26 @@ class AuthService {
         
         if (apiResponse.success && apiResponse.data != null) {
           _logger.i('Kullanıcı bilgileri başarıyla alındı');
+          _logger.d('UserModel oluşturuldu, company null mu: ${apiResponse.data?.company == null}');
+          if (apiResponse.data?.company != null) {
+            _logger.d('Company bilgisi: compID=${apiResponse.data!.company!.compID}, compName=${apiResponse.data!.company!.compName}');
+            _logger.d('Company compPayTypes length: ${apiResponse.data!.company!.compPayTypes.length}');
+          }
+          // companyId kalıcı olarak sakla
+          final int? companyId = apiResponse.data?.company?.compID ?? apiResponse.data?.compID;
+          if (companyId != null && companyId > 0) {
+            await _apiService.saveCompanyId(companyId);
+            _logger.d('CompanyID SharedPreferences içine kaydedildi: $companyId');
+          } else {
+            _logger.w('CompanyID bulunamadı veya geçersiz, kaydedilemedi');
+          }
+          final String? companyName = apiResponse.data?.company?.compName;
+          if (companyName != null && companyName.isNotEmpty) {
+            await _apiService.saveCompanyName(companyName);
+            _logger.d('CompanyName SharedPreferences içine kaydedildi: $companyName');
+          } else {
+            _logger.w('CompanyName null veya boş, kaydedilemedi');
+          }
         } else {
           _logger.w('Kullanıcı bilgileri alınamadı. Yanıt: ${apiResponse.errorCode ?? "Bilinmeyen hata"}');
         }

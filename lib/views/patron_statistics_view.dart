@@ -47,14 +47,52 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
   final List<String> _tabs = ['Raporlar', 'Grafik'];
   final List<String> _periods = ['Bugün', 'Dün', 'Bu Hafta', 'Bu Ay', 'Bu Yıl'];
 
-
-
   @override
   void initState() {
     super.initState();
     _logger.i('🚀 Patron Statistics View: initState çağrıldı');
+    
+    // Constructor'dan gelen parametreleri debug et
+    debugPrint('PATRON_STATS DEBUG → Constructor parametreleri:');
+    debugPrint('PATRON_STATS DEBUG → userToken: ${widget.userToken}');
+    debugPrint('PATRON_STATS DEBUG → compID: ${widget.compID}');
+    debugPrint('PATRON_STATS DEBUG → title: ${widget.title}');
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _logger.d('📱 Patron Statistics View: Post frame callback çalıştırılıyor');
+      // Kullanıcı/şirket bilgisini garanti altına al
+      final userVM = Provider.of<UserViewModel>(context, listen: false);
+      _logger.d('👤 UserViewModel durumu: userInfo null mu? ${userVM.userInfo == null}');
+      if (userVM.userInfo != null) {
+        _logger.d('👤 Mevcut kullanıcı: userID=${userVM.userInfo!.userID}, company null mu? ${userVM.userInfo!.company == null}');
+        if (userVM.userInfo!.company != null) {
+          _logger.d('👤 Company bilgisi: compID=${userVM.userInfo!.company!.compID}, compName=${userVM.userInfo!.company!.compName}');
+        }
+      }
+      
+      // Eğer userInfo veya company null ise, önce yüklemeyi dene
+      if (userVM.userInfo == null || userVM.userInfo!.company == null) {
+        _logger.d('👤 userInfo veya company null, loadUserInfo() çağrılıyor');
+        try {
+          userVM.loadUserInfo().then((loaded) {
+            _logger.d('👤 loadUserInfo sonucu: $loaded');
+            if (loaded && userVM.userInfo != null) {
+              _logger.d('👤 Yüklenen kullanıcı: userID=${userVM.userInfo!.userID}, company null mu? ${userVM.userInfo!.company == null}');
+              if (userVM.userInfo!.company != null) {
+                _logger.d('👤 Yüklenen company: compID=${userVM.userInfo!.company!.compID}, compName=${userVM.userInfo!.company!.compName}');
+                // Company bilgisi yüklendikten sonra setState ile UI'ı güncelle
+                setState(() {});
+              }
+            }
+          }).catchError((e) {
+            _logger.e('❌ loadUserInfo çağrısında hata: $e');
+          });
+        } catch (e) {
+          _logger.e('❌ loadUserInfo çağrısında hata: $e');
+        }
+      } else {
+        _logger.d('👤 Kullanıcı mevcut, company: ${userVM.userInfo?.company?.compName}');
+      }
       _loadCachedSettings();
       _loadStatistics();
     });
@@ -231,19 +269,24 @@ class _PatronStatisticsViewState extends State<PatronStatisticsView> {
   }
 
   PreferredSizeWidget _buildAppBar(UserViewModel userViewModel, Color primaryColor) {
+    final titleText = _isCustomDateRange 
+        ? _formatDateRangeForDisplay(_selectedStartDate!, _selectedEndDate!)
+        : (userViewModel.userInfo?.company?.compName != null && userViewModel.userInfo!.company!.compName.isNotEmpty)
+            ? userViewModel.userInfo!.company!.compName
+            : widget.title;
+    
+    debugPrint('PATRON_STATS DEBUG → AppBar başlık oluşturuluyor:');
+    debugPrint('PATRON_STATS DEBUG → _isCustomDateRange: $_isCustomDateRange');
+    debugPrint('PATRON_STATS DEBUG → widget.title: ${widget.title}');
+    debugPrint('PATRON_STATS DEBUG → userViewModel.userInfo?.company?.compName: ${userViewModel.userInfo?.company?.compName}');
+    debugPrint('PATRON_STATS DEBUG → Final titleText: $titleText');
+    
     return AppBar(
       backgroundColor: primaryColor,
       elevation: 0,
       centerTitle: true,
-      title: _isCustomDateRange ? Text(
-        _formatDateRangeForDisplay(_selectedStartDate!, _selectedEndDate!),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ) : Text(
-        userViewModel.userInfo?.company?.compName ?? '',
+      title: Text(
+        titleText,
         style: const TextStyle(
           color: Colors.white,
           fontSize: 18,

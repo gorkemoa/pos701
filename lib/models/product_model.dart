@@ -51,15 +51,18 @@ class ProductData {
 class Product {
   final int postID;
   final int proID;
+  final int catID;
   final String proName;
   final String proUnit;
   final String proStock;
   final String proPrice;
   final String proNote;
 
+
   Product({
     required this.postID,
     required this.proID,
+    this.catID = 0,
     required this.proName,
     required this.proUnit,
     required this.proStock,
@@ -71,6 +74,7 @@ class Product {
     return Product(
       postID: json['postID'] ?? 0,
       proID: json['proID'] ?? 0,
+      catID: json['catID'] ?? 0,
       proName: json['proName'] ?? '',
       proUnit: json['proUnit'] ?? '',
       proStock: json['proStock'] ?? '0',
@@ -83,6 +87,7 @@ class Product {
     return {
       'postID': postID,
       'proID': proID,
+      'catID': catID,
       'proName': proName,
       'proUnit': proUnit,
       'proStock': proStock,
@@ -93,6 +98,6 @@ class Product {
 
   @override
   String toString() {
-    return 'Product(postID: $postID, proID: $proID, proName: $proName, proUnit: $proUnit, proStock: $proStock, proPrice: $proPrice, proNote: $proNote)';
+    return 'Product(postID: $postID, proID: $proID, catID: $catID, proName: $proName, proUnit: $proUnit, proStock: $proStock, proPrice: $proPrice, proNote: $proNote)';
   }
 } 

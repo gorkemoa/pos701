@@ -1,4 +1,3 @@
-import 'package:pos701/services/api_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos701/models/api_response_model.dart';
 import 'package:pos701/models/order_model.dart';
@@ -8,9 +7,7 @@ import 'package:pos701/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OrderService {
-  final ApiService _apiService;
-  
-  OrderService({ApiService? apiService}) : _apiService = apiService ?? ApiService();
+  OrderService();
   
   /// Yeni sipariş oluşturur
   ///
@@ -51,6 +48,14 @@ class OrderService {
       // Eğer token varsa, header'a ekle
       if (savedToken != null && savedToken.isNotEmpty) {
         headers['X-Auth-Token'] = savedToken;
+      }
+
+      // Geri dönüş: orderRequest içindeki userToken/compID eksikse SharedPreferences'tan tamamla
+      if ((requestBody['userToken'] == null || (requestBody['userToken'] as String).isEmpty)) {
+        requestBody['userToken'] = savedToken ?? '';
+      }
+      if ((requestBody['compID'] == null || (requestBody['compID'] as int) == 0)) {
+        requestBody['compID'] = prefs.getInt(AppConstants.companyIdKey) ?? 0;
       }
       
       debugPrint('🔵 [SİPARİŞ OLUŞTURMA] Headers: $headers');
@@ -206,6 +211,14 @@ class OrderService {
       // Eğer token varsa, header'a ekle
       if (savedToken != null && savedToken.isNotEmpty) {
         headers['X-Auth-Token'] = savedToken;
+      }
+
+      // Geri dönüş: requestBody içindeki userToken/compID eksikse SharedPreferences'tan tamamla
+      if ((requestBody['userToken'] == null || (requestBody['userToken'] as String).isEmpty)) {
+        requestBody['userToken'] = savedToken ?? '';
+      }
+      if ((requestBody['compID'] == null || (requestBody['compID'] as int) == 0)) {
+        requestBody['compID'] = prefs.getInt(AppConstants.companyIdKey) ?? 0;
       }
       
       debugPrint('🔵 [SİPARİŞ DETAYI] Headers: $headers');
@@ -378,6 +391,14 @@ class OrderService {
       if (savedToken != null && savedToken.isNotEmpty) {
         headers['X-Auth-Token'] = savedToken;
       }
+
+      // Geri dönüş: requestBody içindeki userToken/compID eksikse SharedPreferences'tan tamamla
+      if ((requestBody['userToken'] == null || (requestBody['userToken'] as String).isEmpty)) {
+        requestBody['userToken'] = savedToken ?? '';
+      }
+      if ((requestBody['compID'] == null || (requestBody['compID'] as int) == 0)) {
+        requestBody['compID'] = prefs.getInt(AppConstants.companyIdKey) ?? 0;
+      }
       
       debugPrint('🔵 [SİPARİŞ GÜNCELLEME] Headers: $headers');
       debugPrint('🔵 [SİPARİŞ GÜNCELLEME] API isteği gönderiliyor: $url');
@@ -468,6 +489,13 @@ class OrderService {
       // SharedPreferences'tan token veya kimlik bilgilerini alarak header'ları hazırla
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       final String? savedToken = prefs.getString(AppConstants.tokenKey);
+      // Geri dönüş: Parametreler boşsa SharedPreferences'tan tamamla
+      if (userToken.isEmpty) {
+        userToken = savedToken ?? '';
+      }
+      if (compID == 0) {
+        compID = prefs.getInt(AppConstants.companyIdKey) ?? 0;
+      }
       
       debugPrint('🔵 [SİPARİŞ LİSTESİ] Token: ${savedToken ?? "Token bulunamadı"}');
       

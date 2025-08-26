@@ -304,8 +304,8 @@ class _LoginViewState extends State<LoginView> {
                           await viewModel.subscribeToUserTopic(messagingService);
                           final String? userRank = userViewModel.userInfo?.userRank;
                           final int compID = userViewModel.userInfo!.compID!;
-                          final String token = userViewModel.userInfo!.token;
-                          if (mounted) {
+                          final String token = userViewModel.userInfo!.userToken!;
+                          if (mounted) {  
                             if (userRank == '30') {
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
