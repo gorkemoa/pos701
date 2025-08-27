@@ -549,7 +549,7 @@ class _BasketViewState extends State<BasketView> {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              "Mevcut siparişi düzenliyorsunuz. Güncellemek için tüm ürünleri ekleyin ve Güncelle butonuna basın.",
+                              "Mevcut siparişi düzenliyorsunuz.",
                               style: TextStyle(
                                 fontSize: 9,
                                 color: Colors.amber.shade800,

@@ -60,6 +60,34 @@ class _CategoryViewState extends State<CategoryView> {
 
   bool _orderLoaded = false;
 
+  // --- YENİ: Sürüklenebilir sepet butonu konumu ---
+  Offset? _fabOffset;
+  double? _fabXPerc;
+  double? _fabYPerc;
+  bool _isDraggingFab = false;
+  Offset? _fabDragStartOffset;
+
+  Future<void> _loadFabPositionPref() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final double? x = prefs.getDouble('fab_x_perc');
+    final double? y = prefs.getDouble('fab_y_perc');
+    if (mounted) {
+      setState(() {
+        _fabXPerc = x;
+        _fabYPerc = y;
+        // Yüzdeler geldiğinde, konumu yeniden hesaplatmak için offset'i sıfırla
+        _fabOffset = null;
+      });
+    }
+  }
+
+  Future<void> _saveFabPositionPref() async {
+    if (_fabXPerc == null || _fabYPerc == null) return;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('fab_x_perc', _fabXPerc!.clamp(0.0, 1.0));
+    await prefs.setDouble('fab_y_perc', _fabYPerc!.clamp(0.0, 1.0));
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -133,6 +161,7 @@ class _CategoryViewState extends State<CategoryView> {
     _searchController.addListener(_filterProducts);
     _loadCategories();
     _loadLayoutPreference();
+    _loadFabPositionPref();
   }
 
   @override
@@ -246,41 +275,114 @@ class _CategoryViewState extends State<CategoryView> {
             ),
           ],
         ),
-        body: _isVerticalLayout
-            ? _buildVerticalLayout(context)
-            : _buildClassicLayout(context),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _goToBasket,
-          backgroundColor: Color(AppConstants.primaryColorValue),
-          child: Stack(
-            children: [
-              const Icon(Icons.shopping_cart),
-              if (basketViewModel.totalQuantity > 0)
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final double buttonSize = 56;
+            final double padding = 16;
+            final double bottomNavHeight = 60;
+            final double maxX = constraints.maxWidth - buttonSize - padding;
+            final double maxY = constraints.maxHeight - buttonSize - bottomNavHeight - padding;
+            final double minX = padding;
+            final double minY = padding;
+
+            if (_fabOffset == null) {
+              if (_fabXPerc != null && _fabYPerc != null) {
+                final double rangeX = (maxX - minX).clamp(1.0, double.infinity);
+                final double rangeY = (maxY - minY).clamp(1.0, double.infinity);
+                final double px = (minX + (_fabXPerc!.clamp(0.0, 1.0) * rangeX)).clamp(minX, maxX);
+                final double py = (minY + (_fabYPerc!.clamp(0.0, 1.0) * rangeY)).clamp(minY, maxY);
+                _fabOffset = Offset(px, py);
+              } else {
+                _fabOffset = Offset(maxX, maxY);
+                _fabXPerc = 1.0;
+                _fabYPerc = 1.0;
+              }
+            }
+            double positionedX = _fabOffset!.dx.clamp(minX, maxX);
+            double positionedY = _fabOffset!.dy.clamp(minY, maxY);
+
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: _isVerticalLayout
+                      ? _buildVerticalLayout(context)
+                      : _buildClassicLayout(context),
+                ),
                 Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 12,
-                      minHeight: 12,
-                    ),
-                    child: Text(
-                      '${basketViewModel.totalQuantity}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
+                  left: positionedX,
+                  top: positionedY,
+                  child: GestureDetector(
+                    onLongPressStart: (_) {
+                      setState(() {
+                        _isDraggingFab = true;
+                        _fabDragStartOffset = _fabOffset;
+                      });
+                    },
+                    onLongPressMoveUpdate: (details) {
+                      final Offset base = _fabDragStartOffset ?? _fabOffset ?? Offset(maxX, maxY);
+                      final double nextX = (base.dx + details.offsetFromOrigin.dx).clamp(minX, maxX);
+                      final double nextY = (base.dy + details.offsetFromOrigin.dy).clamp(minY, maxY);
+                      setState(() {
+                        _fabOffset = Offset(nextX, nextY);
+                        final double rangeX = (maxX - minX).clamp(1.0, double.infinity);
+                        final double rangeY = (maxY - minY).clamp(1.0, double.infinity);
+                        _fabXPerc = ((nextX - minX) / rangeX).clamp(0.0, 1.0);
+                        _fabYPerc = ((nextY - minY) / rangeY).clamp(0.0, 1.0);
+                      });
+                    },
+                    onLongPressEnd: (_) async {
+                      setState(() {
+                        _isDraggingFab = false;
+                        _fabDragStartOffset = null;
+                      });
+                      await _saveFabPositionPref();
+                    },
+                    onTap: _goToBasket,
+                    child: Material(
+                      elevation: 6,
+                      shape: const CircleBorder(),
+                      color: _isDraggingFab ? Color(AppConstants.primaryColorValue).withOpacity(0.9) : Color(AppConstants.primaryColorValue),
+                      child: SizedBox(
+                        width: buttonSize,
+                        height: buttonSize,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            const Icon(Icons.shopping_cart, color: Colors.white),
+                            if (basketViewModel.totalQuantity > 0)
+                              Positioned(
+                                right: 6,
+                                top: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 14,
+                                    minHeight: 14,
+                                  ),
+                                  child: Text(
+                                    '${basketViewModel.totalQuantity}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
-            ],
-          ),
+              ],
+            );
+          },
         ),
         bottomNavigationBar: Container(
           height: 60,
