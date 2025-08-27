@@ -553,31 +553,73 @@ class _CategoryViewState extends State<CategoryView> {
                             final int quantity = basketViewModel.getProductQuantity(product);
                             return Card(
                               margin: const EdgeInsets.symmetric(vertical: 4),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    // Sol: Ürün adı ve fiyat
-                                    Expanded(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            product.proName.toUpperCase(),
-                                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
+                              child: Stack(
+                                children: [
+                                                                     // Üst kısım - Arttırma (her zaman)
+                                   Positioned(
+                                     left: 0,
+                                     right: 0,
+                                     top: 0,
+                                     height: 40, // Üst yarı
+                                     child: InkWell(
+                                       onTap: () {
+                                         basketViewModel.addProduct(product, opID: 0);
+                                         debugPrint('⬆️ [CATEGORY_VIEW] Liste - Üst kısma tıklandı - Ürün miktarı arttırıldı: ${product.proName}');
+                                       },
+                                       splashColor: Colors.grey.withOpacity(0.1),
+                                       highlightColor: Colors.grey.withOpacity(0.05),
+                                       child: Container(
+                                         color: Colors.transparent,
+                                       ),
+                                     ),
+                                   ),
+                                   
+                                   // Alt kısım - Azaltma (miktar > 0 ise)
+                                   if (quantity > 0)
+                                     Positioned(
+                                       left: 0,
+                                       right: 0,
+                                       bottom: 0,
+                                       height: 40, // Alt yarı
+                                       child: InkWell(
+                                         onTap: () {
+                                           basketViewModel.decreaseProduct(product);
+                                           debugPrint('⬇️ [CATEGORY_VIEW] Liste - Alt kısma tıklandı - Ürün miktarı azaltıldı: ${product.proName}');
+                                         },
+                                         splashColor: Colors.grey.withOpacity(0.1),
+                                         highlightColor: Colors.grey.withOpacity(0.05),
+                                         child: Container(
+                                           color: Colors.transparent,
+                                         ),
+                                       ),
+                                     ),
+                                  
+                                  // Ana içerik
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        // Sol: Ürün adı ve fiyat
+                                        Expanded(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                product.proName.toUpperCase(),
+                                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '₺${product.proPrice.replaceAll(" TL", "")}',
+                                                style: const TextStyle(fontSize: 11),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '₺${product.proPrice.replaceAll(" TL", "")}',
-                                            style: const TextStyle(fontSize: 11),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                        ),
                                     // Sağ: Dikey buton grubu
                                     quantity > 0
                                         ? Container(
@@ -667,20 +709,23 @@ class _CategoryViewState extends State<CategoryView> {
                                   ],
                                 ),
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         );
                       },
-                    ),
-                  ),
+                    );
+                  }
+                ),
+              ),
                 ],
               ),
-            ),
-          ],
+        )
+        ]
         );
       },
     );
   }
+
 
   // Kategoriler bölümünü oluştur
   Widget _buildCategoriesSection(BuildContext context, CategoryViewModel categoryViewModel) {
@@ -895,24 +940,87 @@ class _CategoryViewState extends State<CategoryView> {
           width: 1,
         ),
       ),
-      child: InkWell(
-        onTap: () {
-          // Sepete eklenmemişse tıklandığında ekle
-          // Sepetteyse ve kontrol butonları görünüyorsa, ana tıklama bir şey yapmayabilir
-          // veya ürün detayına gidebilir (şu anki davranış ekleme)
-          if (!isInBasket) {
-            // Ürünü opID=0 ile ekle (yeni ürün)
-            basketViewModel.addProduct(product, opID: 0);
-            debugPrint('🛍️ [CATEGORY_VIEW] Yeni ürün sepete eklendi: ${product.proName}');
-          } else {
-            // İsteğe bağlı: Sepetteyken karta tıklamak bir şey yapmasın
-            // Veya miktar artırma gibi birincil eylem olabilir.
-            // Mevcut +/- butonları zaten bu işlevi görüyor.
-            debugPrint('🛍️ [CATEGORY_VIEW] Ürün zaten sepette: ${product.proName}, miktar: $quantity');
-          }
-        },
-        child: Column(
-          children: [
+      child: Stack(
+        children: [
+          // Tüm kartta tıklanabilir alan - Miktar 0 ise arttır
+          Positioned.fill(
+            child: InkWell(
+              onTap: () {
+                if (quantity == 0) {
+                  basketViewModel.addProduct(product, opID: 0);
+                  debugPrint('🛍️ [CATEGORY_VIEW] Kartın herhangi bir yerine tıklandı - Ürün miktarı arttırıldı: ${product.proName}');
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              splashColor: Colors.grey.withOpacity(0.1),
+              highlightColor: Colors.grey.withOpacity(0.05),
+              child: Container(
+                color: Colors.transparent,
+              ),
+            ),
+          ),
+          
+          // Sol yarı - Azaltma (sadece sepetteyse)
+          if (isInBasket)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: MediaQuery.of(context).size.width * 0.15, // Kartın sol yarısı
+              child: InkWell(
+                onTap: () {
+                  if (quantity > 0) {
+                    basketViewModel.decreaseProduct(product);
+                    debugPrint('⬅️ [CATEGORY_VIEW] Sol tarafa tıklandı - Ürün miktarı azaltıldı: ${product.proName}');
+                  }
+                },
+                borderRadius: BorderRadius.circular(8),
+                splashColor: Colors.grey.withOpacity(0.1),
+                highlightColor: Colors.grey.withOpacity(0.05),
+                child: Container(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: Icon(
+                      Icons.remove_circle_outline,
+                      color: Colors.transparent,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          
+          // Sağ yarı - Arttırma (sadece sepetteyse)
+          if (isInBasket)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: MediaQuery.of(context).size.width * 0.15, // Kartın sağ yarısı
+              child: InkWell(
+                onTap: () {
+                  basketViewModel.addProduct(product, opID: 0);
+                  debugPrint('➡️ [CATEGORY_VIEW] Sağ tarafa tıklandı - Ürün miktarı arttırıldı: ${product.proName}');
+                },
+                borderRadius: BorderRadius.circular(8),
+                splashColor: Colors.grey.withOpacity(0.1),
+                highlightColor: Colors.grey.withOpacity(0.05),
+                child: Container(
+                  color: Colors.transparent,
+                  child: Center(
+                    child: Icon(
+                      Icons.add_circle_outline,
+                      color: Colors.transparent,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          
+          // Ana içerik
+          Column(
+            children: [
             // Ürün Adı ve Fiyat Bölümü
             Expanded(
               child: Container(
@@ -1052,9 +1160,10 @@ class _CategoryViewState extends State<CategoryView> {
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        ],),
+      
     );
   }
 

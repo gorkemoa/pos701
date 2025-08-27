@@ -88,7 +88,7 @@ class _HomeViewState extends State<HomeView> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Anasayfa / ${userViewModel.userInfo?.userFullname ?? userViewModel.userInfo?.userFirstname ?? userViewModel.userInfo?.username ?? 'Kullanıcı'}',
+          'Anasayfa',
           style: TextStyle(
             color: Colors.white,
             fontSize: isTablet ? 20 : 16,
