@@ -15,6 +15,8 @@ import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;  // Sipariş için CustomerAddress sınıfı
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/viewmodels/order_viewmodel.dart';
+import 'package:pos701/viewmodels/ready_notes_viewmodel.dart';
+import 'package:pos701/services/ready_notes_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class CategoryView extends StatefulWidget {
@@ -42,6 +44,7 @@ class CategoryView extends StatefulWidget {
 class _CategoryViewState extends State<CategoryView> {
   late CategoryViewModel _categoryViewModel;
   late ProductViewModel _productViewModel;
+  late ReadyNotesViewModel _readyNotesViewModel;
   
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _orderDescController = TextEditingController();
@@ -234,6 +237,7 @@ class _CategoryViewState extends State<CategoryView> {
     _speech = stt.SpeechToText();
     _categoryViewModel = CategoryViewModel(ProductService());
     _productViewModel = ProductViewModel(ProductService());
+    _readyNotesViewModel = ReadyNotesViewModel(ReadyNotesService());
     // Sepeti temizle
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
@@ -329,6 +333,7 @@ class _CategoryViewState extends State<CategoryView> {
       providers: [
         ChangeNotifierProvider.value(value: _categoryViewModel),
         ChangeNotifierProvider.value(value: _productViewModel),
+        ChangeNotifierProvider.value(value: _readyNotesViewModel),
       ],
       child: Scaffold(
         appBar: AppBar(
@@ -1574,6 +1579,7 @@ class _CategoryViewState extends State<CategoryView> {
   // Sipariş açıklaması ekleme diyaloğu
   void _showOrderDescDialog() {
     _orderDescController.text = _orderDesc;
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1653,6 +1659,41 @@ class _CategoryViewState extends State<CategoryView> {
                             ),
                           ),
                           const SizedBox(height: 12),
+                          
+                          // Hazır notlar (API'den)
+                          StatefulBuilder(
+                            builder: (context, setNotesState) {
+                              if (_readyNotesViewModel.isLoading) {
+                                return const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                );
+                              }
+                              
+                              if (_readyNotesViewModel.hasReadyNotes) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Hazır Notlar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 6,
+                                      children: _readyNotesViewModel.readyNotes.map((readyNote) => 
+                                        _buildQuickNoteChip(readyNote.note, _orderDescController, onChanged: () => setSheetState(() {}))
+                                      ).toList(),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+                                );
+                              }
+                              
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                          
                           // Son kullanılan notlar
                           FutureBuilder<List<String>>(
                             future: _loadRecentNotes(),
