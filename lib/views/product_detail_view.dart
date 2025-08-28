@@ -81,6 +81,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   int _selectedPorsiyonIndex = 0;
   bool _isGift = false;
   bool _isCustomPrice = false; // Özel fiyat kullanılıyor mu
+  
+  // Seçili özellikler için state - Key: FeatureGroup ID, Value: Seçili Feature ID'leri
+  Map<int, List<int>> _selectedFeatures = {};
 
   @override
   void initState() {
@@ -158,10 +161,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
       final selectedPorsiyon = _productDetail!.variants[_selectedPorsiyonIndex];
       
-      // Fiyat değeri olarak özel fiyat veya mevcut fiyatı kullan
+      // Seçili özellikleri not olarak hazırla
+      String fullNote = _buildProductNote();
+      
+      // Fiyat değeri olarak özel fiyat veya hesaplanmış fiyatı kullan
       final String priceValue = _isCustomPrice 
           ? _priceController.text 
-          : selectedPorsiyon.proPrice.toString();
+          : _calculateTotalPrice().toString();
       
       final product = Product(
         postID: _productDetail!.postID,
@@ -169,8 +175,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proName: _productDetail!.postTitle,
         proUnit: selectedPorsiyon.proUnit,
         proStock: selectedPorsiyon.proStock.toString(),
-        proPrice: priceValue, // Özel fiyat veya orijinal fiyat
-        proNote: _noteController.text,
+        proPrice: priceValue, // Özel fiyat veya özellikleri dahil hesaplanmış fiyat
+        proNote: fullNote,
       );
       
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
@@ -178,19 +184,19 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Sepetten gelen bir ürün mü? (lineId veya proID ile belirlenebilir)
       if (widget.selectedLineId != null) {
         // Satır ID'si varsa, belirli bir satırı güncelleme
-        _updateBasketLine(basketViewModel, product);
+        _updateBasketLine(basketViewModel, product, fullNote);
       } else if (widget.selectedProID != null) {
         // Sadece ürün ID'si varsa, geriye dönük uyumluluk için
-        _updateBasketItemByProductId(basketViewModel, product);
+        _updateBasketItemByProductId(basketViewModel, product, fullNote);
       } else {
         // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
-        _addProductAsNewItem(basketViewModel, product);
+        _addProductAsNewItem(basketViewModel, product, fullNote);
       }
     }
   }
   
   // Belirli bir satırı günceller (lineId ile)
-  void _updateBasketLine(BasketViewModel basketViewModel, Product product) {
+  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote) {
     // Sepette var olan lineId'li satırı güncelle
     int lineId = widget.selectedLineId!;
     
@@ -213,13 +219,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         lineId,
         product,
         existingQuantity - 1,
-        proNote: _noteController.text,
+        proNote: fullNote,
         isGift: false,
       );
       // Ardından 1 adet yeni satır olarak ikram ekle
       basketViewModel.addProduct(
         product,
-        proNote: _noteController.text,
+        proNote: fullNote,
         isGift: true,
       );
     } else {
@@ -228,7 +234,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         lineId, 
         product, 
         existingQuantity,
-        proNote: _noteController.text,
+        proNote: fullNote,
         isGift: _isGift,
       );
     }
@@ -243,7 +249,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   }
   
   // Ürün ID'ye göre sepet öğesini günceller (geriye dönük uyumluluk için)
-  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product) {
+  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote) {
     // Eski ürünün ID'si
         int oldProID = widget.selectedProID!;
         
@@ -260,12 +266,12 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             existingItem.lineId,
             product,
             existingItem.proQty - 1,
-            proNote: _noteController.text,
+            proNote: fullNote,
             isGift: false,
           );
           basketViewModel.addProduct(
             product,
-            proNote: _noteController.text,
+            proNote: fullNote,
             isGift: true,
           );
           ScaffoldMessenger.of(context).showSnackBar(
@@ -279,7 +285,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         }
         
         // Not güncelle
-        basketViewModel.updateProductNote(existingItem.lineId, _noteController.text);
+        basketViewModel.updateProductNote(existingItem.lineId, fullNote);
         
         // İkram durumunu güncelle
         basketViewModel.toggleGiftStatus(existingItem.lineId, isGift: _isGift);
@@ -299,7 +305,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           return;
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product);
+        _addProductAsNewItem(basketViewModel, product, fullNote);
         }
     } else {
       // Farklı porsiyon seçildi, ilk bulunan ürünü güncelle
@@ -320,7 +326,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           // Yeni porsiyonu 1 adet ikram olarak ekle
           basketViewModel.addProduct(
             product,
-            proNote: _noteController.text,
+            proNote: fullNote,
             isGift: true,
           );
           ScaffoldMessenger.of(context).showSnackBar(
@@ -338,7 +344,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           existingItem.lineId, 
             product, 
             existingItem.proQty,
-            proNote: _noteController.text,
+            proNote: fullNote,
             isGift: _isGift,
           );
           
@@ -351,13 +357,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           Navigator.of(context).pop();
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product);
+        _addProductAsNewItem(basketViewModel, product, fullNote);
       }
     }
   }
 
   // Ürünü sepete eklerken API'ye gönder
-  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product) {
+  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote) {
     // Eğer orderID yoksa, sadece sepete ekle (yeni sipariş oluşturma durumunda)
     Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     int? orderID = args?['orderID'];
@@ -372,7 +378,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         orderID: orderID,
         product: product,
         quantity: 1,
-        proNote: _noteController.text,
+        proNote: fullNote,
         isGift: _isGift,
       ).then((success) {
         setState(() => _isLoading = false);
@@ -399,7 +405,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Sipariş yoksa, sadece yerel sepete ekle
       basketViewModel.addProduct(
         product,
-        proNote: _noteController.text,
+        proNote: fullNote,
         isGift: _isGift,
       );
       
@@ -416,9 +422,96 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   // Porsiyon seçildiğinde fiyat kontrolcüsünü günceller
   void _updatePriceController() {
     if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
-      _priceController.text = _productDetail!.variants[_selectedPorsiyonIndex].proPrice.toString();
+      final totalPrice = _calculateTotalPrice();
+      _priceController.text = totalPrice.toString();
       _isCustomPrice = false; // Porsiyon değiştiğinde özel fiyat sıfırlansın
     }
+  }
+
+  // Toplam fiyatı hesaplar (porsiyon fiyatı + seçili özellik fiyatları)
+  double _calculateTotalPrice() {
+    if (_productDetail == null || _productDetail!.variants.isEmpty) return 0.0;
+    
+    final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
+    double totalPrice = selectedVariant.proPrice;
+    
+    // Seçili özelliklerin fiyatlarını ekle
+    for (var featureGroup in selectedVariant.featureGroups) {
+      final selectedFeatureIds = _selectedFeatures[featureGroup.fgID] ?? [];
+      for (var featureId in selectedFeatureIds) {
+        final feature = featureGroup.features.firstWhere(
+          (f) => f.featureID == featureId,
+          orElse: () => featureGroup.features.first,
+        );
+        totalPrice += feature.featurePrice;
+      }
+    }
+    
+    return totalPrice;
+  }
+
+  // Ürün notunu hazırlar (kullanıcı notu + seçili özellikler)
+  String _buildProductNote() {
+    List<String> noteParts = [];
+    
+    // Kullanıcının girdiği not
+    if (_noteController.text.isNotEmpty) {
+      noteParts.add(_noteController.text);
+    }
+    
+    // Seçili özellikler
+    if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
+      final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
+      
+      for (var featureGroup in selectedVariant.featureGroups) {
+        final selectedFeatureIds = _selectedFeatures[featureGroup.fgID] ?? [];
+        if (selectedFeatureIds.isNotEmpty) {
+          List<String> featureNames = [];
+          for (var featureId in selectedFeatureIds) {
+            final feature = featureGroup.features.firstWhere(
+              (f) => f.featureID == featureId,
+              orElse: () => featureGroup.features.first,
+            );
+            featureNames.add(feature.featureName);
+          }
+          noteParts.add('${featureGroup.fgName}: ${featureNames.join(", ")}');
+        }
+      }
+    }
+    
+    return noteParts.join(' | ');
+  }
+
+  // Özellik seçildiğinde fiyatı günceller
+  void _updateFeatureSelection(int featureGroupId, int featureId, bool isSelected) {
+    setState(() {
+      if (!_selectedFeatures.containsKey(featureGroupId)) {
+        _selectedFeatures[featureGroupId] = [];
+      }
+      
+      final selectedFeatureIds = _selectedFeatures[featureGroupId]!;
+      
+      if (isSelected) {
+        // Tek seçim yapılabiliyorsa önceki seçimi kaldır
+        final featureGroup = _productDetail!.variants[_selectedPorsiyonIndex].featureGroups
+            .firstWhere((fg) => fg.fgID == featureGroupId);
+        
+        if (featureGroup.fgType == "1") { // Tek seçim
+          selectedFeatureIds.clear();
+        }
+        
+        if (!selectedFeatureIds.contains(featureId)) {
+          selectedFeatureIds.add(featureId);
+        }
+      } else {
+        selectedFeatureIds.remove(featureId);
+      }
+      
+      // Fiyatı güncelle
+      if (!_isCustomPrice) {
+        _updatePriceController();
+      }
+    });
   }
 
   @override
@@ -552,6 +645,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                           if (newValue != null) {
                             setState(() {
                               _selectedPorsiyonIndex = newValue;
+                              _selectedFeatures.clear(); // Porsiyon değiştiğinde özellik seçimlerini sıfırla
                               _updatePriceController();
                             });
                           }
@@ -583,6 +677,143 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                   const SizedBox(height: 16),
                 ],
               ),
+            
+            // Özellik Seçimi
+            if (_productDetail!.variants.isNotEmpty && 
+                _productDetail!.variants[_selectedPorsiyonIndex].featureGroups.isNotEmpty)
+              ..._productDetail!.variants[_selectedPorsiyonIndex].featureGroups.map((featureGroup) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.tune, size: 14, color: Color(AppConstants.primaryColorValue)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  featureGroup.fgName,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (featureGroup.isFeatureRequired)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.red.shade200),
+                                    ),
+                                    child: Text(
+                                      'Zorunlu',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.red.shade700,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            ...featureGroup.features.map((feature) {
+                              final isSelected = _selectedFeatures[featureGroup.fgID]?.contains(feature.featureID) ?? false;
+                              final isSingleSelection = featureGroup.fgType == "1";
+                              
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isSelected 
+                                        ? Color(AppConstants.primaryColorValue)
+                                        : Colors.grey.shade300,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  color: isSelected 
+                                      ? Color(AppConstants.primaryColorValue).withOpacity(0.05)
+                                      : Colors.transparent,
+                                ),
+                                child: InkWell(
+                                  onTap: () => _updateFeatureSelection(
+                                    featureGroup.fgID, 
+                                    feature.featureID, 
+                                    !isSelected
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Row(
+                                      children: [
+                                        if (isSingleSelection)
+                                          Radio<int>(
+                                            value: feature.featureID,
+                                            groupValue: _selectedFeatures[featureGroup.fgID]?.isNotEmpty == true
+                                                ? _selectedFeatures[featureGroup.fgID]!.first
+                                                : null,
+                                            onChanged: (value) {
+                                              if (value != null) {
+                                                _updateFeatureSelection(featureGroup.fgID, value, true);
+                                              }
+                                            },
+                                            activeColor: Color(AppConstants.primaryColorValue),
+                                            visualDensity: VisualDensity.compact,
+                                          )
+                                        else
+                                          Checkbox(
+                                            value: isSelected,
+                                            onChanged: (value) => _updateFeatureSelection(
+                                              featureGroup.fgID, 
+                                              feature.featureID, 
+                                              value ?? false
+                                            ),
+                                            activeColor: Color(AppConstants.primaryColorValue),
+                                            visualDensity: VisualDensity.compact,
+                                          ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            feature.featureName,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            ),
+                                          ),
+                                        ),
+                                        if (feature.featurePrice > 0)
+                                          Text(
+                                            '+₺${feature.featurePrice.toStringAsFixed(2)}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Color(AppConstants.primaryColorValue),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              }).toList(),
             
             // Özel Fiyat Alanı
             Card(
@@ -810,11 +1041,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       return const SizedBox.shrink();
     }
     
-    final selectedPorsiyon = _productDetail!.variants[_selectedPorsiyonIndex];
-    // Gösterilecek fiyat: Özel fiyat veya porsiyon fiyatı
+    // Gösterilecek fiyat: Özel fiyat veya hesaplanmış toplam fiyat
     final displayPrice = _isCustomPrice
-        ? double.tryParse(_priceController.text) ?? selectedPorsiyon.proPrice
-        : selectedPorsiyon.proPrice;
+        ? double.tryParse(_priceController.text) ?? _calculateTotalPrice()
+        : _calculateTotalPrice();
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
