@@ -15,6 +15,7 @@ import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;  // Sipariş için CustomerAddress sınıfı
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/viewmodels/order_viewmodel.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class CategoryView extends StatefulWidget {
   final int compID;
@@ -41,12 +42,12 @@ class CategoryView extends StatefulWidget {
 class _CategoryViewState extends State<CategoryView> {
   late CategoryViewModel _categoryViewModel;
   late ProductViewModel _productViewModel;
-  bool _isInitialized = false;
+  
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _orderDescController = TextEditingController();
   final TextEditingController _customerSearchController = TextEditingController();
   Category? _selectedCategory;
-  int _cartCount = 0;
+  
   String _orderDesc = '';
   int _orderGuest = 1; // Misafir sayısı için değişken
   Customer? _selectedCustomer; // Seçili müşteri
@@ -66,6 +67,11 @@ class _CategoryViewState extends State<CategoryView> {
   double? _fabYPerc;
   bool _isDraggingFab = false;
   Offset? _fabDragStartOffset;
+
+  // Voice input
+  late final stt.SpeechToText _speech;
+  bool _isListening = false;
+  
 
   Future<void> _loadFabPositionPref() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -107,6 +113,81 @@ class _CategoryViewState extends State<CategoryView> {
     });
   }
 
+  
+
+  
+
+  void _showVoiceToast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 1)),
+    );
+  }
+
+  void _addProductByName(String name) {
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    final products = Provider.of<ProductViewModel>(context, listen: false).products;
+    if (products.isEmpty) {
+      _showVoiceToast('Ürün listesi boş');
+      return;
+    }
+    final Product? match = _findBestProductMatch(products, name);
+    if (match != null) {
+      basketViewModel.addProduct(match, opID: 0);
+      _showVoiceToast('${match.proName} eklendi');
+    } else {
+      _showVoiceToast('Ürün bulunamadı');
+    }
+  }
+
+  void _decreaseProductByName(String name) {
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    final products = Provider.of<ProductViewModel>(context, listen: false).products;
+    if (products.isEmpty) {
+      _showVoiceToast('Ürün listesi boş');
+      return;
+    }
+    final Product? match = _findBestProductMatch(products, name);
+    if (match != null) {
+      basketViewModel.decreaseProduct(match);
+      _showVoiceToast('${match.proName} azaltıldı');
+    } else {
+      _showVoiceToast('Ürün bulunamadı');
+    }
+  }
+
+  void _selectCategoryByName(String name) {
+    if (!_categoryViewModel.hasCategories) return;
+    final List<Category> cats = _categoryViewModel.categories;
+    Category? best;
+    for (final c in cats) {
+      if (c.catName.toLowerCase() == name) {
+        best = c;
+        break;
+      }
+      if (c.catName.toLowerCase().contains(name)) {
+        best ??= c;
+      }
+    }
+    if (best != null) {
+      setState(() => _selectedCategory = best);
+      _loadProducts(best.catID, best.catName);
+      _showVoiceToast('Kategori: ${best.catName}');
+    } else {
+      _showVoiceToast('Kategori yok');
+    }
+  }
+
+  Product? _findBestProductMatch(List<Product> list, String name) {
+    final String q = name.toLowerCase();
+    for (final p in list) {
+      if (p.proName.toLowerCase() == q) return p;
+    }
+    for (final p in list) {
+      if (p.proName.toLowerCase().contains(q)) return p;
+    }
+    return null;
+  }
+
   Future<void> _loadOrderDetailAndFillBasket() async {
     final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
     if (basketViewModel.isEmpty) {
@@ -114,7 +195,7 @@ class _CategoryViewState extends State<CategoryView> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator()),
+        builder: (ctx) => Center(child: CircularProgressIndicator()),
       );
 
       final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
@@ -150,6 +231,7 @@ class _CategoryViewState extends State<CategoryView> {
   @override
   void initState() {
     super.initState();
+    _speech = stt.SpeechToText();
     _categoryViewModel = CategoryViewModel(ProductService());
     _productViewModel = ProductViewModel(ProductService());
     // Sepeti temizle
@@ -170,6 +252,9 @@ class _CategoryViewState extends State<CategoryView> {
     _searchController.dispose();
     _orderDescController.dispose();
     _customerSearchController.dispose();
+    if (_isListening) {
+      _speech.stop();
+    }
     super.dispose();
   }
 
@@ -179,9 +264,7 @@ class _CategoryViewState extends State<CategoryView> {
       widget.compID,
     );
     
-    setState(() {
-      _isInitialized = true;
-    });
+    // no-op: removed _isInitialized
 
     // Kategoriler başarıyla yüklendiyse ve en az bir kategori varsa, ilk kategoriyi seç
     if (success && _categoryViewModel.hasCategories) {
@@ -195,7 +278,7 @@ class _CategoryViewState extends State<CategoryView> {
   
   Future<void> _loadProducts(int catID, String categoryName) async {
     _productViewModel.setCategoryInfo(catID, categoryName);
-    final success = await _productViewModel.loadProductsOfCategory(
+    await _productViewModel.loadProductsOfCategory(
       widget.userToken,
       widget.compID,
       catID,
@@ -239,7 +322,7 @@ class _CategoryViewState extends State<CategoryView> {
   @override
   Widget build(BuildContext context) {
     final basketViewModel = Provider.of<BasketViewModel>(context);
-    final customerViewModel = Provider.of<CustomerViewModel>(context, listen: false);
+    // Removed unused customerViewModel
     
     // --- YENİ: Mod seçici ---
     return MultiProvider(
@@ -1155,7 +1238,7 @@ class _CategoryViewState extends State<CategoryView> {
                       ),
                     ),
                     // Stok bilgisini küçük yazı olarak ekle
-                    if (product.proStock != null && product.proStock.isNotEmpty && int.tryParse(product.proStock) != null && int.parse(product.proStock) > 0)
+                    if (product.proStock.isNotEmpty && int.tryParse(product.proStock) != null && int.parse(product.proStock) > 0)
                       Text(
                         'Stok: ${product.proStock}',
                         style: const TextStyle(
@@ -1491,64 +1574,289 @@ class _CategoryViewState extends State<CategoryView> {
   // Sipariş açıklaması ekleme diyaloğu
   void _showOrderDescDialog() {
     _orderDescController.text = _orderDesc;
-    
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sipariş Notu', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _orderDescController,
-              decoration: const InputDecoration(
-                hintText: 'Sipariş için not ekleyin',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.all(16),
-              ),
-              maxLines: 4,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Bu not sipariş ile ilişkilendirilecek ve mutfağa iletilecektir.',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _orderDesc = _orderDescController.text.trim();
-              });
-              Navigator.of(context).pop();
-              
-              if (_orderDesc.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sipariş notu kaydedildi'),
-                    duration: Duration(seconds: 2),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(AppConstants.primaryColorValue),
-            ),
-            child: const Text('Kaydet', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      builder: (context) {
+        final media = MediaQuery.of(context);
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: media.size.height > 700 ? 0.8 : 0.95,
+          minChildSize: 0.6,
+          maxChildSize: 0.95,
+          builder: (_, controller) {
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                final int charCount = _orderDescController.text.trim().length;
+                final int maxChars = 240;
+                return Column(
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Color(AppConstants.primaryColorValue),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.description, color: Colors.white),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text('Sipariş Notu', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        controller: controller,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          // Not alanı
+                          TextField(
+                            controller: _orderDescController,
+                            maxLines: 4,
+                            maxLength: maxChars,
+                            onChanged: (_) => setSheetState(() {}),
+                            decoration: InputDecoration(
+                              hintText: 'Sipariş için not ekleyin (örn. “Az pişmiş, sos ayrı”)',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              contentPadding: const EdgeInsets.all(14),
+                              suffixIcon: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: _isListening ? 'Dinleniyor...' : 'Sesle Not Ekle',
+                                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: Color(AppConstants.primaryColorValue)),
+                                    onPressed: () => _listenNoteIntoController(_orderDescController),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Temizle',
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _orderDescController.clear();
+                                      setSheetState(() {});
+                                    },
+                                  ),
+                                ],
+                              ),
+                              counterText: '$charCount/$maxChars',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                       
+                          // Gruplu hazır metinler
+                          _buildNoteGroup(
+                            title: 'Pişirme',
+                            notes: const ['Az pişmiş', 'Orta pişmiş', 'Çok pişmiş', 'Özel pişirim'],
+                            setSheetState: setSheetState,
+                          ),
+                          _buildNoteGroup(
+                            title: 'Sos ve Garnitür',
+                            notes: const ['Sos yanında', 'Sos ayrı', 'Garnitür yok', 'Ekstra garnitür'],
+                            setSheetState: setSheetState,
+                          ),
+                          _buildNoteGroup(
+                            title: 'Alerji ve Diyet',
+                            notes: const ['Alerji: fındık', 'Alerji: süt', 'Alerji: yumurta', 'Alerji: deniz ürünü', 'Gluten yok', 'Laktoz yok', 'Vejetaryen', 'Vegan'],
+                            setSheetState: setSheetState,
+                          ),
+                          _buildNoteGroup(
+                            title: 'Genel',
+                            notes: const ['Acil', 'Baharat yok', 'Ekstra baharat', 'Helal', 'Koşer'],
+                            setSheetState: setSheetState,
+                          ),
+                          const SizedBox(height: 12),
+                          // Son kullanılan notlar
+                          FutureBuilder<List<String>>(
+                            future: _loadRecentNotes(),
+                            builder: (context, snap) {
+                              final recent = (snap.data ?? []).where((e) => e.isNotEmpty).toList();
+                              if (recent.isEmpty) return const SizedBox.shrink();
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Son Kullanılanlar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    children: recent.take(12).map((e) => _buildQuickNoteChip(e, _orderDescController, onChanged: () => setSheetState(() {}))).toList(),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                    // Alt butonlar
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                      ),
+                      child: Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () {
+                              _orderDescController.clear();
+                              setSheetState(() {});
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Temizle'),
+                          ),
+                          const Spacer(),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final text = _orderDescController.text.trim();
+                              setState(() => _orderDesc = text);
+                              if (text.isNotEmpty) {
+                                await _addRecentNote(text);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Sipariş notu kaydedildi'), backgroundColor: Colors.green),
+                                  );
+                                }
+                              }
+                              if (mounted) Navigator.of(context).pop();
+                            },
+                            icon: const Icon(Icons.save, color: Colors.white),
+                            style: ElevatedButton.styleFrom(backgroundColor: Color(AppConstants.primaryColorValue)),
+                            label: const Text('Kaydet', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
+  }
+
+  Future<void> _listenNoteIntoController(TextEditingController controller) async {
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+      return;
+    }
+    final bool available = await _speech.initialize(
+      onStatus: (status) {
+        if (status.toLowerCase().contains('done') || status.toLowerCase().contains('notlistening')) {
+          if (mounted) setState(() => _isListening = false);
+        }
+      },
+      onError: (err) {
+        if (mounted) setState(() => _isListening = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ses hatası: ${err.errorMsg}')),
+          );
+        }
+      },
+    );
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ses tanıma kullanılamıyor')),
+        );
+      }
+      return;
+    }
+    final locales = await _speech.locales();
+    final String? trLocale = locales.firstWhere(
+      (l) => l.localeId.toLowerCase().startsWith('tr'),
+      orElse: () => locales.isNotEmpty ? locales.first : stt.LocaleName('en_US', 'English'),
+    ).localeId;
+    setState(() => _isListening = true);
+    await _speech.listen(
+      localeId: trLocale,
+      listenMode: stt.ListenMode.dictation,
+      listenFor: const Duration(seconds: 7),
+      pauseFor: const Duration(seconds: 2),
+      cancelOnError: true,
+      onResult: (res) {
+        if (!mounted) return;
+        final String rec = res.recognizedWords.trim();
+        if (rec.isEmpty) return;
+        if ((res.hasConfidenceRating && res.confidence < 0.30)) return;
+        if (res.finalResult) {
+          final String currentText = controller.text.trim();
+          controller.text = currentText.isEmpty ? rec : '$currentText, $rec';
+          controller.selection = TextSelection.fromPosition(TextPosition(offset: controller.text.length));
+          setState(() {});
+        }
+      },
+      partialResults: true,
+    );
+  }
+
+  Widget _buildQuickNoteChip(String text, TextEditingController controller, {VoidCallback? onChanged}) {
+    return ActionChip(
+      label: Text(text, style: const TextStyle(fontSize: 11)),
+      onPressed: () {
+        final currentText = controller.text.trim();
+        controller.text = currentText.isEmpty ? text : '$currentText, $text';
+        controller.selection = TextSelection.fromPosition(TextPosition(offset: controller.text.length));
+        onChanged?.call();
+        setState(() {});
+      },
+      backgroundColor: Color(AppConstants.primaryColorValue).withOpacity(0.08),
+      labelStyle: TextStyle(color: Color(AppConstants.primaryColorValue), fontWeight: FontWeight.w600),
+      shape: StadiumBorder(side: BorderSide(color: Color(AppConstants.primaryColorValue).withOpacity(0.25))),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+    );
+  }
+
+  Widget _buildNoteGroup({required String title, required List<String> notes, required StateSetter setSheetState}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: notes.map((e) => _buildQuickNoteChip(e, _orderDescController, onChanged: () => setSheetState(() {}))).toList(),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Future<List<String>> _loadRecentNotes() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('recent_order_notes') ?? <String>[];
+  }
+
+  Future<void> _addRecentNote(String note) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final List<String> list = prefs.getStringList('recent_order_notes') ?? <String>[];
+    // Aynı kaydı başa taşı, en fazla 20 kayıt tut
+    list.removeWhere((e) => e.trim() == note.trim());
+    list.insert(0, note.trim());
+    if (list.length > 20) {
+      list.removeRange(20, list.length);
+    }
+    await prefs.setStringList('recent_order_notes', list);
   }
 
   // Misafir sayısı seçme diyaloğu
@@ -1657,13 +1965,13 @@ class _CategoryViewState extends State<CategoryView> {
                                     // Yeni müşteri ekleme için değişkenler
     String newCustomerName = '';
     String newCustomerPhone = '';
-    String newCustomerEmail = '';
+    // String newCustomerEmail = ''; // unused
     bool isPhoneValid = true;
     final formKey = GlobalKey<FormState>();
     
     // Adres bilgileri için değişkenler
     List<Map<String, dynamic>> tempAddresses = [];
-    bool showAddressForm = false;
+    // bool showAddressForm = false; // unused
     
     // _CategoryViewState'in setState'ini çağırmak için referans
     final outerSetState = setState;
@@ -1675,13 +1983,13 @@ class _CategoryViewState extends State<CategoryView> {
     int activeTabIndex = 0;
     
     // Dialog içindeki setState referansı
-    StateSetter? dialogSetState;
+    // StateSetter? dialogSetState; // unused
     
           showDialog(
         context: context,
         builder: (context) => StatefulBuilder(
           builder: (context, setState) {
-            dialogSetState = setState;
+            // dialogSetState = setState; // unused
             
             // Dialog içindeki adres fonksiyonları
             void addNewAddress() {
@@ -1693,7 +2001,7 @@ class _CategoryViewState extends State<CategoryView> {
                   'isDefault': tempAddresses.isEmpty, // İlk adres varsayılan olsun
                   'isEditing': true,
                 });
-                showAddressForm = true;
+                // showAddressForm = true;
               });
             }
             
@@ -2498,9 +2806,7 @@ class _CategoryViewState extends State<CategoryView> {
                                               }
                                               return null;
                                             },
-                                            onChanged: (value) {
-                                              newCustomerEmail = value.trim();
-                                            },
+                                            onChanged: (value) {},
                                           ),
                                           
                                           // Adresler bölümü
@@ -3069,9 +3375,7 @@ class _CategoryViewState extends State<CategoryView> {
       return;
     }
     
-    if (mounted) {
-      setState(() => _isInitialized = false); // Yükleniyor durumunu göster
-    }
+    // loading state handled by dialog/snackbar
     
     try {
       final tablesViewModel = Provider.of<TablesViewModel>(context, listen: false);
@@ -3085,8 +3389,6 @@ class _CategoryViewState extends State<CategoryView> {
       );
       
       if (mounted) {
-        setState(() => _isInitialized = true);
-      
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -3107,7 +3409,6 @@ class _CategoryViewState extends State<CategoryView> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isInitialized = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sipariş iptal edilirken hata oluştu: $e'),

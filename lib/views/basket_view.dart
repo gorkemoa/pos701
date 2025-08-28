@@ -11,6 +11,7 @@ import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;
 import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/models/user_model.dart';
+// import 'package:speech_to_text/speech_to_text.dart' as stt; // disabled for BasketView
 
 class BasketView extends StatefulWidget {
   final String tableName;
@@ -52,7 +53,7 @@ class _BasketViewState extends State<BasketView> {
   int? _tableID;
   bool _isLoading = true;
   String _errorMessage = '';
-  bool _isProcessing = false;
+  bool _isProcessing = false; // kept: used in flows (future use)
   bool _isSiparisOlusturuldu = false;
   BasketViewModel? _basketViewModel;
   String _orderDesc = '';
@@ -61,11 +62,16 @@ class _BasketViewState extends State<BasketView> {
   int _isWaiter = 0;
   int _orderPayType = 0;
   int _custAdrID = 0;
+  // Voice input
+  // Voice disabled in BasketView
+  // late final stt.SpeechToText _speech;
+  // bool _isListening = false;
 
 
   @override
   void initState() {
     super.initState();
+    // _speech = stt.SpeechToText();
     _orderDesc = widget.orderDesc;
     _orderGuest = widget.orderGuest;
     _isKuver = widget.isKuver;
@@ -452,6 +458,9 @@ class _BasketViewState extends State<BasketView> {
 
   @override
   void dispose() {
+    // if (_isListening) {
+    //   _speech.stop();
+    // }
     super.dispose();
   }
 
@@ -1760,5 +1769,106 @@ class _BasketViewState extends State<BasketView> {
       ),
     );
   }
+  
+  // Voice listening disabled in BasketView (UI control removed)
 
+  // Voice parser kept for potential future use (currently unused in UI)
+  void _handleRecognizedText(String text) {
+    String lower = text.toLowerCase();
+    lower = lower.replaceAll(RegExp(r"[.,!?]"), ' ').replaceAll(RegExp(r"\s+"), ' ').trim();
+    // Komutlar: "kaydet", "güncelle", "ödeme", "sepeti temizle", "artır [ürün]", "azalt [ürün]", "misafir 3", "not ..."
+    if (lower == 'kaydet' || lower == 'güncelle' || lower == 'kaydet ve çık') {
+      _submitOrder();
+      _toast('Kaydet');
+      return;
+    }
+    if (lower == 'ödeme' || lower == 'ödeme al') {
+      if (widget.orderID != null) {
+        final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+        if (basketViewModel.isEmpty) {
+          _toast('Sepet boş');
+          return;
+        }
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PaymentView(
+              userToken: _userToken!,
+              compID: _compID!,
+              orderID: widget.orderID!,
+              totalAmount: basketViewModel.totalAmount,
+              basketItems: basketViewModel.items,
+              onPaymentSuccess: () {
+                setState(() => _isSiparisOlusturuldu = true);
+                basketViewModel.clearBasket();
+                _toast('Ödeme alındı');
+              },
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    if (lower.contains('misafir ')) {
+      final String num = lower.substring(lower.indexOf('misafir ') + 8).trim();
+      final int? count = int.tryParse(num);
+      if (count != null && count > 0) {
+        setState(() => _orderGuest = count);
+        _toast('Misafir: $count');
+      }
+      return;
+    }
+    if (lower.contains('not ')) {
+      setState(() => _orderDesc = text.substring(lower.indexOf('not ') + 4).trim());
+      _toast('Not eklendi');
+      return;
+    }
+    if (lower.contains('artır ') || lower.contains('ekle ')) {
+      final String name = lower.replaceFirst(RegExp('^(artır|ekle) '), '').trim();
+      _modifyProductByName(name, increase: true);
+      return;
+    }
+    if (lower.contains('azalt ') || lower.contains('çıkar ')) {
+      final String name = lower.replaceFirst(RegExp('^(azalt|çıkar) '), '').trim();
+      _modifyProductByName(name, increase: false);
+      return;
+    }
+    _toast('Anlaşılamadı');
+  }
+
+  void _modifyProductByName(String name, {required bool increase}) {
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    final items = basketViewModel.items;
+    if (items.isEmpty) {
+      _toast('Sepet boş');
+      return;
+    }
+    final String q = name.toLowerCase();
+    BasketItem? match;
+    for (final it in items) {
+      if (it.product.proName.toLowerCase() == q) {
+        match = it;
+        break;
+      }
+      if (it.product.proName.toLowerCase().contains(q)) {
+        match ??= it;
+      }
+    }
+    if (match == null) {
+      _toast('Ürün yok');
+      return;
+    }
+    if (increase) {
+      Provider.of<BasketViewModel>(context, listen: false).incrementQuantity(match.lineId);
+      _toast('${match.product.proName} artırıldı');
+    } else {
+      Provider.of<BasketViewModel>(context, listen: false).decrementQuantity(match.lineId);
+      _toast('${match.product.proName} azaltıldı');
+    }
+  }
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 1)),
+    );
+  }
 }
