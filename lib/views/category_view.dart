@@ -1653,29 +1653,6 @@ class _CategoryViewState extends State<CategoryView> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                       
-                          // Gruplu hazır metinler
-                          _buildNoteGroup(
-                            title: 'Pişirme',
-                            notes: const ['Az pişmiş', 'Orta pişmiş', 'Çok pişmiş', 'Özel pişirim'],
-                            setSheetState: setSheetState,
-                          ),
-                          _buildNoteGroup(
-                            title: 'Sos ve Garnitür',
-                            notes: const ['Sos yanında', 'Sos ayrı', 'Garnitür yok', 'Ekstra garnitür'],
-                            setSheetState: setSheetState,
-                          ),
-                          _buildNoteGroup(
-                            title: 'Alerji ve Diyet',
-                            notes: const ['Alerji: fındık', 'Alerji: süt', 'Alerji: yumurta', 'Alerji: deniz ürünü', 'Gluten yok', 'Laktoz yok', 'Vejetaryen', 'Vegan'],
-                            setSheetState: setSheetState,
-                          ),
-                          _buildNoteGroup(
-                            title: 'Genel',
-                            notes: const ['Acil', 'Baharat yok', 'Ekstra baharat', 'Helal', 'Koşer'],
-                            setSheetState: setSheetState,
-                          ),
-                          const SizedBox(height: 12),
                           // Son kullanılan notlar
                           FutureBuilder<List<String>>(
                             future: _loadRecentNotes(),
@@ -1821,24 +1798,6 @@ class _CategoryViewState extends State<CategoryView> {
       shape: StadiumBorder(side: BorderSide(color: Color(AppConstants.primaryColorValue).withOpacity(0.25))),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-    );
-  }
-
-  Widget _buildNoteGroup({required String title, required List<String> notes, required StateSetter setSheetState}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
-        ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: notes.map((e) => _buildQuickNoteChip(e, _orderDescController, onChanged: () => setSheetState(() {}))).toList(),
-        ),
-        const SizedBox(height: 12),
-      ],
     );
   }
 
