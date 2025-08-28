@@ -1661,9 +1661,10 @@ class _CategoryViewState extends State<CategoryView> {
                           const SizedBox(height: 12),
                           
                           // Hazır notlar (API'den)
-                          StatefulBuilder(
-                            builder: (context, setNotesState) {
-                              if (_readyNotesViewModel.isLoading) {
+                          FutureBuilder<bool>(
+                            future: _readyNotesViewModel.loadReadyNotes(widget.userToken, widget.compID),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
                                 return const Center(
                                   child: Padding(
                                     padding: EdgeInsets.all(16.0),
@@ -1672,6 +1673,7 @@ class _CategoryViewState extends State<CategoryView> {
                                 );
                               }
                               
+                              // Direct access to ViewModel data after API call
                               if (_readyNotesViewModel.hasReadyNotes) {
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,

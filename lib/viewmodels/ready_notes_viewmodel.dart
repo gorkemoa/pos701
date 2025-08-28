@@ -39,6 +39,18 @@ class ReadyNotesViewModel extends ChangeNotifier {
   Future<bool> loadReadyNotes(String userToken, int compID) async {
     _logger.i('Hazır notlar yükleniyor. CompID: $compID');
     
+    // If already loading, return the current state
+    if (_isLoading) {
+      _logger.w('Hazır notlar zaten yükleniyor, tekrar istek gönderilmiyor');
+      return _readyNotes.isNotEmpty;
+    }
+    
+    // If already loaded, return cached data
+    if (_readyNotes.isNotEmpty) {
+      _logger.i('Hazır notlar zaten yüklü, cache\'den döndürülüyor');
+      return true;
+    }
+    
     _isLoading = true;
     _errorMessage = null;
     _safeNotifyListeners();
