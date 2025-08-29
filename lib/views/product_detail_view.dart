@@ -52,6 +52,7 @@ class ProductDetailView extends StatefulWidget {
   final int? selectedLineId;
   final String? initialNote;
   final bool? initialIsGift;
+  final List<int>? initialFeatures;
 
   const ProductDetailView({
     Key? key,
@@ -63,6 +64,7 @@ class ProductDetailView extends StatefulWidget {
     this.selectedLineId,
     this.initialNote,
     this.initialIsGift,
+    this.initialFeatures,
   }) : super(key: key);
 
   @override
@@ -139,6 +141,32 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           if (_productDetail!.variants.isNotEmpty) {
             _priceController.text = _productDetail!.variants[_selectedPorsiyonIndex].proPrice.toString();
           }
+
+          // Eğer initialFeatures gelmediyse, varianttaki isDefault özellikleri seç
+          if ((widget.initialFeatures == null || widget.initialFeatures!.isEmpty) &&
+              _productDetail!.variants.isNotEmpty) {
+            _applyDefaultFeaturesForCurrentVariant();
+            _updatePriceController();
+          }
+
+          // Sepetten gelen özellikler varsa otomatik seç
+          if (widget.initialFeatures != null && widget.initialFeatures!.isNotEmpty) {
+            final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
+            final List<int> ids = widget.initialFeatures!;
+            for (final fg in selectedVariant.featureGroups) {
+              final selectedInGroup = <int>[];
+              for (final f in fg.features) {
+                if (ids.contains(f.featureID)) {
+                  selectedInGroup.add(f.featureID);
+                }
+              }
+              if (selectedInGroup.isNotEmpty) {
+                _selectedFeatures[fg.fgID] = selectedInGroup;
+              }
+            }
+            // Seçili özelliklere göre fiyatı güncelle
+            _updatePriceController();
+          }
         });
       } else {
         setState(() {
@@ -163,6 +191,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       
       // Seçili özellikleri not olarak hazırla
       String fullNote = _buildProductNote();
+      // Seçili özellik ID listesi
+      final List<int> selectedFeatureIds = _collectSelectedFeatureIds();
       
       // Fiyat değeri olarak özel fiyat veya hesaplanmış fiyatı kullan
       final String priceValue = _isCustomPrice 
@@ -184,19 +214,19 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Sepetten gelen bir ürün mü? (lineId veya proID ile belirlenebilir)
       if (widget.selectedLineId != null) {
         // Satır ID'si varsa, belirli bir satırı güncelleme
-        _updateBasketLine(basketViewModel, product, fullNote);
+        _updateBasketLine(basketViewModel, product, fullNote, selectedFeatureIds);
       } else if (widget.selectedProID != null) {
         // Sadece ürün ID'si varsa, geriye dönük uyumluluk için
-        _updateBasketItemByProductId(basketViewModel, product, fullNote);
+        _updateBasketItemByProductId(basketViewModel, product, fullNote, selectedFeatureIds);
       } else {
         // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote);
+        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds);
       }
     }
   }
   
   // Belirli bir satırı günceller (lineId ile)
-  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote) {
+  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds) {
     // Sepette var olan lineId'li satırı güncelle
     int lineId = widget.selectedLineId!;
     
@@ -221,12 +251,14 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         existingQuantity - 1,
         proNote: fullNote,
         isGift: false,
+        proFeature: selectedFeatureIds,
       );
       // Ardından 1 adet yeni satır olarak ikram ekle
       basketViewModel.addProduct(
         product,
         proNote: fullNote,
         isGift: true,
+        proFeature: selectedFeatureIds,
       );
     } else {
       // Satırı güncelle - yeni product bilgileriyle
@@ -236,6 +268,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         existingQuantity,
         proNote: fullNote,
         isGift: _isGift,
+        proFeature: selectedFeatureIds,
       );
     }
     
@@ -249,7 +282,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   }
   
   // Ürün ID'ye göre sepet öğesini günceller (geriye dönük uyumluluk için)
-  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote) {
+  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds) {
     // Eski ürünün ID'si
         int oldProID = widget.selectedProID!;
         
@@ -268,11 +301,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             existingItem.proQty - 1,
             proNote: fullNote,
             isGift: false,
+            proFeature: selectedFeatureIds,
           );
           basketViewModel.addProduct(
             product,
             proNote: fullNote,
             isGift: true,
+            proFeature: selectedFeatureIds,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -305,7 +340,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           return;
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote);
+        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds);
         }
     } else {
       // Farklı porsiyon seçildi, ilk bulunan ürünü güncelle
@@ -322,12 +357,14 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             existingItem.proQty - 1,
             proNote: existingItem.proNote,
             isGift: false,
+            proFeature: selectedFeatureIds,
           );
           // Yeni porsiyonu 1 adet ikram olarak ekle
           basketViewModel.addProduct(
             product,
             proNote: fullNote,
             isGift: true,
+            proFeature: selectedFeatureIds,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -346,6 +383,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             existingItem.proQty,
             proNote: fullNote,
             isGift: _isGift,
+            proFeature: selectedFeatureIds,
           );
           
           ScaffoldMessenger.of(context).showSnackBar(
@@ -357,13 +395,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           Navigator.of(context).pop();
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote);
+        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds);
       }
     }
   }
 
   // Ürünü sepete eklerken API'ye gönder
-  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote) {
+  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds) {
     // Eğer orderID yoksa, sadece sepete ekle (yeni sipariş oluşturma durumunda)
     Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     int? orderID = args?['orderID'];
@@ -380,6 +418,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         quantity: 1,
         proNote: fullNote,
         isGift: _isGift,
+        proFeature: selectedFeatureIds,
       ).then((success) {
         setState(() => _isLoading = false);
         
@@ -407,6 +446,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         product,
         proNote: fullNote,
         isGift: _isGift,
+        proFeature: selectedFeatureIds,
       );
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -646,6 +686,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                             setState(() {
                               _selectedPorsiyonIndex = newValue;
                               _selectedFeatures.clear(); // Porsiyon değiştiğinde özellik seçimlerini sıfırla
+                              // Yeni porsiyon için varsayılan özellikleri uygula
+                              _applyDefaultFeaturesForCurrentVariant();
                               _updatePriceController();
                             });
                           }
@@ -1135,5 +1177,30 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         ],
       ),
     );
+  }
+
+  // Seçili özelliklerin ID listesini döndürür
+  List<int> _collectSelectedFeatureIds() {
+    final List<int> ids = [];
+    if (_productDetail == null || _productDetail!.variants.isEmpty) return ids;
+    final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
+    for (var featureGroup in selectedVariant.featureGroups) {
+      final List<int> selectedIds = _selectedFeatures[featureGroup.fgID] ?? [];
+      ids.addAll(selectedIds);
+    }
+    return ids;
+  }
+
+  // Mevcut seçili porsiyon için featureGroups içindeki isDefault==true olanları uygular
+  void _applyDefaultFeaturesForCurrentVariant() {
+    if (_productDetail == null || _productDetail!.variants.isEmpty) return;
+    final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
+    for (final fg in selectedVariant.featureGroups) {
+      final defaults = fg.features.where((f) => f.isDefault).map((f) => f.featureID).toList();
+      if (defaults.isNotEmpty) {
+        // Tek seçim grubunda birden fazla default gelse bile ilkini alır
+        _selectedFeatures[fg.fgID] = List<int>.from(defaults);
+      }
+    }
   }
 }

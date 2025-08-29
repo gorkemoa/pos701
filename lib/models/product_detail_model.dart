@@ -156,6 +156,7 @@ class Feature {
   final double featurePrice;
   final int featureOrder;
   final Prescription prescription;
+  final bool isDefault;
 
   Feature({
     required this.featureID,
@@ -163,6 +164,7 @@ class Feature {
     required this.featurePrice,
     required this.featureOrder,
     required this.prescription,
+    this.isDefault = false,
   });
 
   factory Feature.fromJson(Map<String, dynamic> json) {
@@ -176,6 +178,7 @@ class Feature {
       prescription: json['prescription'] != null 
           ? Prescription.fromJson(json['prescription'])
           : Prescription(pro: false, variant: false, qty: 0),
+      isDefault: json['isDefault'] ?? false,
     );
   }
 
@@ -186,6 +189,7 @@ class Feature {
       'featurePrice': featurePrice,
       'featureOrder': featureOrder,
       'prescription': prescription.toJson(),
+      'isDefault': isDefault,
     };
   }
 }

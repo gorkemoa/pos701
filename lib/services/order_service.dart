@@ -566,6 +566,7 @@ class OrderService {
     String? proNote,
     int isGift = 0,
     int orderPayType = 0,
+    List<int> proFeature = const [],
   }) async {
     try {
       debugPrint('🔵 [SİPARİŞE ÜRÜN EKLEME] Başlatılıyor...');
@@ -580,6 +581,7 @@ class OrderService {
         'proNote': proNote ?? '',
         'isGift': isGift,
         'orderPayType': orderPayType,
+        'proFeature': proFeature,
       };
       
       // İstek gövdesini logla

@@ -220,6 +220,7 @@ class _CategoryViewState extends State<CategoryView> {
               item.opID,
               proNote: item.proNote,
               isGift: item.isGift,
+              proFeature: item.proFeature,
             );
           }
         }

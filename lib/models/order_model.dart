@@ -41,6 +41,7 @@ class OrderProduct {
   final String proNote;
   final bool isGift;
   final int isRemove;
+  final List<int> proFeature;
 
   OrderProduct({
     required this.opID,
@@ -51,6 +52,7 @@ class OrderProduct {
     this.proNote = '',
     this.isGift = false,
     this.isRemove = 0,
+    this.proFeature = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -63,6 +65,7 @@ class OrderProduct {
       'proNote': proNote,
       'isGift': isGift ? 1 : 0,
       'isRemove': isRemove,
+      'proFeature': proFeature,
     };
   }
 
@@ -76,6 +79,7 @@ class OrderProduct {
       proNote: json['proNote'] ?? '',
       isGift: json['isGift'] == 1,
       isRemove: json['isRemove'] ?? 0,
+      proFeature: (json['proFeature'] as List<dynamic>?)?.map((e) => int.tryParse(e.toString()) ?? 0).toList() ?? const [],
     );
   }
 }
@@ -330,6 +334,7 @@ class OrderDetailProduct {
   final bool isGift;
   final bool isPaid;
   final String? proNote;
+  final List<OrderDetailProductFeature> features;
 
   OrderDetailProduct({
     this.opID = 0,
@@ -346,6 +351,7 @@ class OrderDetailProduct {
     required this.isGift,
     required this.isPaid,
     this.proNote,
+    this.features = const [],
   });
 
   factory OrderDetailProduct.fromJson(Map<String, dynamic> json) {
@@ -364,7 +370,34 @@ class OrderDetailProduct {
       isGift: json['isGift'] ?? false,
       isPaid: json['isPaid'] ?? false,
       proNote: json['proNote'],
+      features: (json['features'] as List<dynamic>?)
+              ?.map((e) => OrderDetailProductFeature.fromJson(e as Map<String, dynamic>))
+              .toList() ?? const [],
     );
+  }
+}
+
+class OrderDetailProductFeature {
+  final int featureID;
+  final String featureName;
+
+  OrderDetailProductFeature({
+    required this.featureID,
+    required this.featureName,
+  });
+
+  factory OrderDetailProductFeature.fromJson(Map<String, dynamic> json) {
+    return OrderDetailProductFeature(
+      featureID: json['featureID'] ?? 0,
+      featureName: json['featureName'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'featureID': featureID,
+      'featureName': featureName,
+    };
   }
 }
 

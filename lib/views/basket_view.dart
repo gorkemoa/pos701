@@ -182,7 +182,8 @@ class _BasketViewState extends State<BasketView> {
                 item.proQty,
                 item.opID,
                 proNote: item.proNote,
-                isGift: item.isGift
+                isGift: item.isGift,
+                proFeature: item.proFeature,
               );
             }
           }
@@ -635,21 +636,17 @@ class _BasketViewState extends State<BasketView> {
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.shade200),
-                    ),
+                   
                     child: Row(
                       children: [
-                        Icon(Icons.people, color: Colors.green.shade700, size: 20),
+                        Icon(Icons.people, color: Colors.green.shade700, size: 12),
                         const SizedBox(width: 6),
                         Text(
                           'Misafir Sayısı:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.green.shade700,
-                            fontSize: 10,
+                            fontSize: 8,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -657,7 +654,7 @@ class _BasketViewState extends State<BasketView> {
                           '$_orderGuest',
                           style: TextStyle(
                             color: Colors.green.shade800,
-                            fontSize: 12,
+                            fontSize: 8,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -992,6 +989,7 @@ class _BasketViewState extends State<BasketView> {
                   selectedLineId: item.lineId,
                   initialNote: item.proNote,
                   initialIsGift: item.isGift,
+                  initialFeatures: item.proFeature,
                 ),
               ),
             );
@@ -1770,105 +1768,6 @@ class _BasketViewState extends State<BasketView> {
     );
   }
   
-  // Voice listening disabled in BasketView (UI control removed)
-
-  // Voice parser kept for potential future use (currently unused in UI)
-  void _handleRecognizedText(String text) {
-    String lower = text.toLowerCase();
-    lower = lower.replaceAll(RegExp(r"[.,!?]"), ' ').replaceAll(RegExp(r"\s+"), ' ').trim();
-    // Komutlar: "kaydet", "güncelle", "ödeme", "sepeti temizle", "artır [ürün]", "azalt [ürün]", "misafir 3", "not ..."
-    if (lower == 'kaydet' || lower == 'güncelle' || lower == 'kaydet ve çık') {
-      _submitOrder();
-      _toast('Kaydet');
-      return;
-    }
-    if (lower == 'ödeme' || lower == 'ödeme al') {
-      if (widget.orderID != null) {
-        final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-        if (basketViewModel.isEmpty) {
-          _toast('Sepet boş');
-          return;
-        }
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => PaymentView(
-              userToken: _userToken!,
-              compID: _compID!,
-              orderID: widget.orderID!,
-              totalAmount: basketViewModel.totalAmount,
-              basketItems: basketViewModel.items,
-              onPaymentSuccess: () {
-                setState(() => _isSiparisOlusturuldu = true);
-                basketViewModel.clearBasket();
-                _toast('Ödeme alındı');
-              },
-            ),
-          ),
-        );
-      }
-      return;
-    }
-    if (lower.contains('misafir ')) {
-      final String num = lower.substring(lower.indexOf('misafir ') + 8).trim();
-      final int? count = int.tryParse(num);
-      if (count != null && count > 0) {
-        setState(() => _orderGuest = count);
-        _toast('Misafir: $count');
-      }
-      return;
-    }
-    if (lower.contains('not ')) {
-      setState(() => _orderDesc = text.substring(lower.indexOf('not ') + 4).trim());
-      _toast('Not eklendi');
-      return;
-    }
-    if (lower.contains('artır ') || lower.contains('ekle ')) {
-      final String name = lower.replaceFirst(RegExp('^(artır|ekle) '), '').trim();
-      _modifyProductByName(name, increase: true);
-      return;
-    }
-    if (lower.contains('azalt ') || lower.contains('çıkar ')) {
-      final String name = lower.replaceFirst(RegExp('^(azalt|çıkar) '), '').trim();
-      _modifyProductByName(name, increase: false);
-      return;
-    }
-    _toast('Anlaşılamadı');
-  }
-
-  void _modifyProductByName(String name, {required bool increase}) {
-    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-    final items = basketViewModel.items;
-    if (items.isEmpty) {
-      _toast('Sepet boş');
-      return;
-    }
-    final String q = name.toLowerCase();
-    BasketItem? match;
-    for (final it in items) {
-      if (it.product.proName.toLowerCase() == q) {
-        match = it;
-        break;
-      }
-      if (it.product.proName.toLowerCase().contains(q)) {
-        match ??= it;
-      }
-    }
-    if (match == null) {
-      _toast('Ürün yok');
-      return;
-    }
-    if (increase) {
-      Provider.of<BasketViewModel>(context, listen: false).incrementQuantity(match.lineId);
-      _toast('${match.product.proName} artırıldı');
-    } else {
-      Provider.of<BasketViewModel>(context, listen: false).decrementQuantity(match.lineId);
-      _toast('${match.product.proName} azaltıldı');
-    }
-  }
-
-  void _toast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 1)),
-    );
-  }
+  
+ 
 }

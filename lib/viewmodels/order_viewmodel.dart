@@ -60,6 +60,7 @@ class OrderViewModel extends ChangeNotifier {
         proNote: item.proNote, // Sepetteki notu kullan
         isGift: item.isGift, // İkram bilgisini kullan
         isRemove: item.isRemove, // Çıkarılacak işaretini aktar
+        proFeature: item.proFeature, // Seçili özellikleri aktar
       ));
     }
     
@@ -285,6 +286,7 @@ class OrderViewModel extends ChangeNotifier {
           opID: product.opID, // OpID'ler aynı kalır - API hangi sipariş kalemi olduğunu bilmeli
           proNote: urun.proNote, // Ürün notu
           isGift: product.isGift, // İkram bilgisi
+          proFeature: product.features.map((f) => f.featureID).toList(),
         );
         
         sepetItems.add(sepetItem);

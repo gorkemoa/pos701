@@ -30,7 +30,7 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Yeni satır ekler ve eklenen satırın lineId'sini döndürür
-  int addProduct(Product product, {int opID = 0, String? proNote, bool isGift = false}) {
+  int addProduct(Product product, {int opID = 0, String? proNote, bool isGift = false, List<int> proFeature = const []}) {
     // Her zaman yeni bir satır oluşturuyoruz
     int lineId = opID > 0 ? opID : _basket.getNextLineId();
     
@@ -42,6 +42,7 @@ class BasketViewModel extends ChangeNotifier {
         proNote: proNote,
         isGift: isGift,
       lineId: lineId,
+      proFeature: proFeature,
       ));
     
     // Yeni eklenen ürünü ve satırı işaretle
@@ -65,12 +66,13 @@ class BasketViewModel extends ChangeNotifier {
     String? proNote,
     bool isGift = false,
     int orderPayType = 0, 
+    List<int> proFeature = const [],
   }) async {
     try {
       developer.log("Sunucuya ürün ekleniyor. Ürün: ${product.proName}, Sipariş: $orderID, Ödeme Türü: $orderPayType");
       
       // Önce ürünü sepete geçici olarak ekleyelim (negatif lineId ile)
-      int tempLineId = addProduct(product, opID: 0, proNote: proNote, isGift: isGift);
+      int tempLineId = addProduct(product, opID: 0, proNote: proNote, isGift: isGift, proFeature: proFeature);
       
       // Sunucuya ürün ekleme isteği gönder
       final orderService = OrderService();
@@ -83,6 +85,7 @@ class BasketViewModel extends ChangeNotifier {
         proNote: proNote,
         isGift: isGift ? 1 : 0,
         orderPayType: orderPayType, // Ödeme türü parametresi eklendi
+        proFeature: proFeature,
       );
       
       if (response.success) {
@@ -109,6 +112,7 @@ class BasketViewModel extends ChangeNotifier {
               proNote: proNote,
               isGift: isGift,
               lineId: opID, // Sunucudan gelen opID'yi lineId olarak kullan
+              proFeature: proFeature,
             ));
             
             _newlyAddedLineIds.add(opID);
@@ -138,7 +142,7 @@ class BasketViewModel extends ChangeNotifier {
     }
   }
   
-  void addProductWithOpID(Product product, int quantity, int opID, {String? proNote, bool isGift = false}) {
+  void addProductWithOpID(Product product, int quantity, int opID, {String? proNote, bool isGift = false, List<int> proFeature = const []}) {
     // Sunucudan gelen opID'yi hem opID hem de lineId olarak kullan
       _basket.items.add(BasketItem(
         product: product,
@@ -147,6 +151,7 @@ class BasketViewModel extends ChangeNotifier {
         proNote: proNote,
         isGift: isGift,
       lineId: opID,
+      proFeature: proFeature,
       ));
     
     _newlyAddedProductIds.add(product.proID);
@@ -420,7 +425,7 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Tek bir satırı belirli bir ürünle değiştir
-  void updateSpecificLine(int lineId, Product newProduct, int quantity, {String? proNote, bool? isGift}) {
+  void updateSpecificLine(int lineId, Product newProduct, int quantity, {String? proNote, bool? isGift, List<int>? proFeature}) {
     try {
       final oldItemIndex = _basket.items.indexWhere((item) => item.lineId == lineId);
       if (oldItemIndex != -1) {
@@ -437,6 +442,7 @@ class BasketViewModel extends ChangeNotifier {
           proNote: proNote ?? oldItem.proNote,
           isGift: isGift ?? oldItem.isGift,
           lineId: lineId,
+          proFeature: proFeature ?? oldItem.proFeature,
         ));
         
         notifyListeners();

@@ -9,6 +9,7 @@ class BasketItem {
   bool isGift;
   final int lineId; // Benzersiz satır kimliği
   int isRemove; // Ürün siparişten çıkarılacaksa 1 olacak
+  final List<int> proFeature; // Seçili özellik ID'leri
   
   // Birim fiyat hesaplama metodu - proPrice'ı temizleyip işler
   double get birimFiyat {
@@ -73,6 +74,7 @@ class BasketItem {
     this.isGift = false,
     this.lineId = 0, // Varsayılan değer 0, ama kullanılırken benzersiz değer atanmalı
     this.isRemove = 0, // Varsayılan olarak ürün siparişten çıkarılmayacak
+    this.proFeature = const [],
   }) : proNote = proNote ?? product.proNote {
     // Oluşturulduğunda fiyatı kontrol et
     developer.log("Yeni sepet öğesi: ${product.proName}, Miktar: $proQty, OpID: $opID, Not: $proNote, İkram: $isGift, Satır ID: $lineId, Çıkarılacak: $isRemove");
@@ -80,7 +82,7 @@ class BasketItem {
   
   @override
   String toString() {
-    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID, proNote: $proNote, isGift: $isGift, lineId: $lineId, isRemove: $isRemove}';
+    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID, proNote: $proNote, isGift: $isGift, lineId: $lineId, isRemove: $isRemove, proFeature: $proFeature}';
   }
 }
 
