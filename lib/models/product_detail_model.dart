@@ -77,9 +77,7 @@ class ProductVariant {
     return ProductVariant(
       proID: json['proID'] ?? 0,
       proUnit: json['proUnit'] ?? '',
-      proPrice: (json['proPrice'] is int) 
-          ? (json['proPrice'] as int).toDouble() 
-          : json['proPrice'] ?? 0.0,
+      proPrice: _parseDouble(json['proPrice']),
       proStock: json['proStock'] ?? 0,
       isDefault: json['isDefault'] ?? false,
       featureGroups: (json['featureGroups'] as List<dynamic>?)
@@ -171,9 +169,7 @@ class Feature {
     return Feature(
       featureID: json['featureID'] ?? 0,
       featureName: json['featureName'] ?? '',
-      featurePrice: (json['featurePrice'] is int)
-          ? (json['featurePrice'] as int).toDouble()
-          : json['featurePrice'] ?? 0.0,
+      featurePrice: _parseDouble(json['featurePrice']),
       featureOrder: json['featureOrder'] ?? 0,
       prescription: json['prescription'] != null 
           ? Prescription.fromJson(json['prescription'])
@@ -220,4 +216,29 @@ class Prescription {
       'qty': qty,
     };
   }
+}
+
+// Helper function to safely parse double values from various types
+double _parseDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) {
+    // Handle Turkish currency formatting like "+5,00 TL", "15,50 TL", etc.
+    String cleanValue = value
+        .replaceAll('TL', '')  // Remove "TL"
+        .replaceAll('₺', '')   // Remove Turkish lira symbol
+        .replaceAll('+', '')   // Remove plus sign
+        .replaceAll('-', '-')  // Keep minus sign for negative values
+        .replaceAll(' ', '')   // Remove spaces
+        .replaceAll(',', '.')  // Convert Turkish decimal separator to dot
+        .trim();
+    
+    // Handle empty string after cleaning
+    if (cleanValue.isEmpty || cleanValue == '-') return 0.0;
+    
+    final parsed = double.tryParse(cleanValue);
+    return parsed ?? 0.0;
+  }
+  return 0.0;
 } 

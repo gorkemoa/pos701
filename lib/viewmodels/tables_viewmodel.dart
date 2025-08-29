@@ -95,32 +95,28 @@ class TablesViewModel extends ChangeNotifier {
       String responseBody = response.body;
       
       // Debug: Ham yanıtı kaydet
-      debugPrint('JSON Yanıt (Ham): $responseBody');
+
       
       try {
         // Özel format düzeltmesi
         if (responseBody.startsWith("order_counts_data='") && responseBody.endsWith("'")) {
           responseBody = responseBody.substring(18, responseBody.length - 1);
-          debugPrint('JSON Yanıt (Temizlendi-1): $responseBody');
         }
         
         // Başında ve sonunda tek tırnak varsa temizle
         if (responseBody.startsWith("'") && responseBody.endsWith("'")) {
           responseBody = responseBody.substring(1, responseBody.length - 1);
-          debugPrint('JSON Yanıt (Temizlendi-2): $responseBody');
         } else if (responseBody.startsWith("'")) {
           responseBody = responseBody.substring(1);
-          debugPrint('JSON Yanıt (Temizlendi-3): $responseBody');
         } else if (responseBody.endsWith("'")) {
           responseBody = responseBody.substring(0, responseBody.length - 1);
-          debugPrint('JSON Yanıt (Temizlendi-4): $responseBody');
         }
         
         // Güvenli JSON parse etme
         Map<String, dynamic> jsonData;
         try {
           jsonData = jsonDecode(responseBody);
-          debugPrint('JSON Parse başarılı');
+         
         } catch (jsonDecodeError) {
           debugPrint('İlk JSON decode hatası: $jsonDecodeError, farklı bir format denenecek');
           
@@ -172,8 +168,6 @@ class TablesViewModel extends ChangeNotifier {
         
         final List<dynamic>? ordersData = jsonData['data'] as List<dynamic>?;
         
-        // Debug: Sipariş verilerini görüntüle
-        debugPrint('Sipariş verileri: $ordersData');
         
         // Eğer veri yoksa veya boşsa, tüm masaları pasif yap
         if (ordersData == null || ordersData.isEmpty) {
@@ -244,21 +238,15 @@ class TablesViewModel extends ChangeNotifier {
               mergedTableNames[parsedId] = name;
             }
             
-            debugPrint('Birleştirilmiş masa eklendi: $name (ID: $id)');
           }
         }
       } catch (e) {
-        debugPrint('Geçersiz birleştirilmiş masa ID: $item, Hata: $e');
       }
     }
 
     mergedTablesMap[tableID] = mergedTableIds;
-    debugPrint('Masa $tableID için birleştirilmiş masalar: $mergedTableIds');
   }
 }
-else {
-            debugPrint('Masa $tableID için mergeTables alanı bulunamadı veya boş');
-          }
         }
         
         // Mevcut masa verilerini kontrol et

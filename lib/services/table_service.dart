@@ -222,12 +222,10 @@ class TableService {
             // Mevcut sipariş verilerini göster
             if (data.containsKey('order')) {
               final order = data['order'];
-              debugPrint('📝 Sipariş verisi: $order');
               
               // Birleştirilmiş masa bilgilerini ara
               if (order is Map && order.containsKey('mergeTables')) {
                 final mergeTables = order['mergeTables'];
-                debugPrint('🔗 Birleştirilmiş masalar: $mergeTables');
               }
             }
           }

@@ -194,10 +194,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Seçili özellik ID listesi
       final List<int> selectedFeatureIds = _collectSelectedFeatureIds();
       
-      // Fiyat değeri olarak özel fiyat veya hesaplanmış fiyatı kullan
+      // Fiyat değeri olarak sadece temel porsiyon fiyatını kullan (özellik fiyatları backend'de hesaplanıyor)
       final String priceValue = _isCustomPrice 
           ? _priceController.text 
-          : _calculateTotalPrice().toString();
+          : selectedPorsiyon.proPrice.toString();
       
       final product = Product(
         postID: _productDetail!.postID,
@@ -459,23 +459,23 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     }
   }
 
-  // Porsiyon seçildiğinde fiyat kontrolcüsünü günceller
+  // Porsiyon seçildiğinde fiyat kontrolcüsünü günceller (sadece görsel - hesaplama backend'de)
   void _updatePriceController() {
     if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
-      final totalPrice = _calculateTotalPrice();
-      _priceController.text = totalPrice.toString();
+      final basePrice = _productDetail!.variants[_selectedPorsiyonIndex].proPrice;
+      _priceController.text = basePrice.toString();
       _isCustomPrice = false; // Porsiyon değiştiğinde özel fiyat sıfırlansın
     }
   }
 
-  // Toplam fiyatı hesaplar (porsiyon fiyatı + seçili özellik fiyatları)
+  // Toplam fiyatı hesaplar (sadece görsel gösterim için - gerçek hesaplama backend'de yapılıyor)
   double _calculateTotalPrice() {
     if (_productDetail == null || _productDetail!.variants.isEmpty) return 0.0;
     
     final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
-    double totalPrice = selectedVariant.proPrice;
+    double displayPrice = selectedVariant.proPrice;
     
-    // Seçili özelliklerin fiyatlarını ekle
+    // Seçili özelliklerin fiyatlarını görsel olarak ekle (sadece gösterim için)
     for (var featureGroup in selectedVariant.featureGroups) {
       final selectedFeatureIds = _selectedFeatures[featureGroup.fgID] ?? [];
       for (var featureId in selectedFeatureIds) {
@@ -483,11 +483,11 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           (f) => f.featureID == featureId,
           orElse: () => featureGroup.features.first,
         );
-        totalPrice += feature.featurePrice;
+        displayPrice += feature.featurePrice;
       }
     }
     
-    return totalPrice;
+    return displayPrice;
   }
 
   // Ürün notunu hazırlar (kullanıcı notu + seçili özellikler)
@@ -547,7 +547,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         selectedFeatureIds.remove(featureId);
       }
       
-      // Fiyatı güncelle
+      // Fiyatı güncelle (sadece görsel gösterim)
       if (!_isCustomPrice) {
         _updatePriceController();
       }
@@ -599,473 +599,412 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Ürün Başlığı ve Fiyat
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-            Text(
-              _productDetail!.postTitle,
-              style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_productDetail!.variants.isNotEmpty) 
-                      Row(
-                        children: [
-                          Text(
-                            'Seçili Porsiyon: ',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                          Text(
-                            _productDetail!.variants[_selectedPorsiyonIndex].proUnit,
-                            style: TextStyle(
-                              fontSize: 13,
-                fontWeight: FontWeight.bold,
-                              color: Color(AppConstants.primaryColorValue),
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
+            // Ürün Başlığı ve Seçili Porsiyon
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
                 ),
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _productDetail!.postTitle,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (_productDetail!.variants.isNotEmpty) 
+                    Row(
+                      children: [
+                        Text(
+                          'Seçili Porsiyon: ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        Text(
+                          _productDetail!.variants[_selectedPorsiyonIndex].proUnit,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(AppConstants.primaryColorValue),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             
             // Porsiyonlar
             if (_productDetail!.variants.length > 1) // Sadece birden fazla porsiyon varsa göster
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.restaurant, size: 14, color: Color(AppConstants.primaryColorValue)),
-                      const SizedBox(width: 4),
-              const Text(
-                        'Porsiyon Seçimi',
-                style: TextStyle(
-                          fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-                    ],
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade200),
                   ),
-                  const SizedBox(height: 8),
-                  // Sadeleştirilmiş Porsiyon Seçimi
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        isExpanded: true,
-                        value: _selectedPorsiyonIndex,
-                        icon: const Icon(Icons.arrow_drop_down),
-                        elevation: 1,
-                        style: TextStyle(color: Colors.black87, fontSize: 14),
-                        onChanged: (int? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedPorsiyonIndex = newValue;
-                              _selectedFeatures.clear(); // Porsiyon değiştiğinde özellik seçimlerini sıfırla
-                              // Yeni porsiyon için varsayılan özellikleri uygula
-                              _applyDefaultFeaturesForCurrentVariant();
-                              _updatePriceController();
-                            });
-                          }
-                        },
-                        items: _productDetail!.variants.asMap().entries.map<DropdownMenuItem<int>>((entry) {
-                          int index = entry.key;
-                          var porsiyon = entry.value;
-                          return DropdownMenuItem<int>(
-                            value: index,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(porsiyon.proUnit),
-                                Spacer(),
-                                Text(
-                                  '₺${porsiyon.proPrice.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(AppConstants.primaryColorValue),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Porsiyon Seçimi',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade800,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      value: _selectedPorsiyonIndex,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(9),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      style: const TextStyle(color: Colors.black87, fontSize: 15),
+                      onChanged: (int? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            _selectedPorsiyonIndex = newValue;
+                            _selectedFeatures.clear();
+                            _applyDefaultFeaturesForCurrentVariant();
+                            _updatePriceController();
+                          });
+                        }
+                      },
+                      items: _productDetail!.variants.asMap().entries.map<DropdownMenuItem<int>>((entry) {
+                        int index = entry.key;
+                        var porsiyon = entry.value;
+                        return DropdownMenuItem<int>(
+                          value: index,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(porsiyon.proUnit, style: const TextStyle(fontSize: 15)),
+                              Text(
+                                '₺${porsiyon.proPrice.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(AppConstants.primaryColorValue),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
               ),
+            const SizedBox(height: 8),
             
             // Özellik Seçimi
             if (_productDetail!.variants.isNotEmpty && 
                 _productDetail!.variants[_selectedPorsiyonIndex].featureGroups.isNotEmpty)
               ..._productDetail!.variants[_selectedPorsiyonIndex].featureGroups.map((featureGroup) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.tune, size: 14, color: Color(AppConstants.primaryColorValue)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  featureGroup.fgName,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            featureGroup.fgName,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                          if (featureGroup.isFeatureRequired)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              child: Text(
+                                'Zorunlu*',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.red.shade700,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                if (featureGroup.isFeatureRequired)
-                                  Container(
-                                    margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade50,
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: Colors.red.shade200),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...featureGroup.features.map((feature) {
+                        final isSelected = _selectedFeatures[featureGroup.fgID]?.contains(feature.featureID) ?? false;
+                        final isSingleSelection = featureGroup.fgType == "1";
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: isSelected 
+                                  ? Color(AppConstants.primaryColorValue)
+                                  : Colors.grey.shade300,
+                              width: 0.5,
+                            ),
+                            color: isSelected 
+                                ? Color(AppConstants.primaryColorValue).withOpacity(0.04)
+                                : Colors.transparent,
+                          ),
+                          child: InkWell(
+                            onTap: () => _updateFeatureSelection(
+                              featureGroup.fgID, 
+                              feature.featureID, 
+                              !isSelected
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Row(
+                                children: [
+                                  if (isSingleSelection)
+                                    Radio<int>(
+                                      value: feature.featureID,
+                                      groupValue: _selectedFeatures[featureGroup.fgID]?.isNotEmpty == true
+                                          ? _selectedFeatures[featureGroup.fgID]!.first
+                                          : null,
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          _updateFeatureSelection(featureGroup.fgID, value, true);
+                                        }
+                                      },
+                                      activeColor: Color(AppConstants.primaryColorValue),
+                                      visualDensity: VisualDensity.compact,
+                                    )
+                                  else
+                                    Checkbox(
+                                      value: isSelected,
+                                      onChanged: (value) => _updateFeatureSelection(
+                                        featureGroup.fgID, 
+                                        feature.featureID, 
+                                        value ?? false
+                                      ),
+                                      activeColor: Color(AppConstants.primaryColorValue),
+                                      visualDensity: VisualDensity.compact,
                                     ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
                                     child: Text(
-                                      'Zorunlu',
+                                      feature.featureName,
                                       style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.red.shade700,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
                                       ),
                                     ),
                                   ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            ...featureGroup.features.map((feature) {
-                              final isSelected = _selectedFeatures[featureGroup.fgID]?.contains(feature.featureID) ?? false;
-                              final isSingleSelection = featureGroup.fgType == "1";
-                              
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isSelected 
-                                        ? Color(AppConstants.primaryColorValue)
-                                        : Colors.grey.shade300,
-                                    width: isSelected ? 2 : 1,
-                                  ),
-                                  color: isSelected 
-                                      ? Color(AppConstants.primaryColorValue).withOpacity(0.05)
-                                      : Colors.transparent,
-                                ),
-                                child: InkWell(
-                                  onTap: () => _updateFeatureSelection(
-                                    featureGroup.fgID, 
-                                    feature.featureID, 
-                                    !isSelected
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      children: [
-                                        if (isSingleSelection)
-                                          Radio<int>(
-                                            value: feature.featureID,
-                                            groupValue: _selectedFeatures[featureGroup.fgID]?.isNotEmpty == true
-                                                ? _selectedFeatures[featureGroup.fgID]!.first
-                                                : null,
-                                            onChanged: (value) {
-                                              if (value != null) {
-                                                _updateFeatureSelection(featureGroup.fgID, value, true);
-                                              }
-                                            },
-                                            activeColor: Color(AppConstants.primaryColorValue),
-                                            visualDensity: VisualDensity.compact,
-                                          )
-                                        else
-                                          Checkbox(
-                                            value: isSelected,
-                                            onChanged: (value) => _updateFeatureSelection(
-                                              featureGroup.fgID, 
-                                              feature.featureID, 
-                                              value ?? false
-                                            ),
-                                            activeColor: Color(AppConstants.primaryColorValue),
-                                            visualDensity: VisualDensity.compact,
-                                          ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            feature.featureName,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                            ),
-                                          ),
-                                        ),
-                                        if (feature.featurePrice > 0)
-                                          Text(
-                                            '+₺${feature.featurePrice.toStringAsFixed(2)}',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Color(AppConstants.primaryColorValue),
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                      ],
+                                  if (feature.featurePrice > 0)
+                                    Text(
+                                      '+₺${feature.featurePrice.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Color(AppConstants.primaryColorValue),
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                );
-              }).toList(),
-            
-            // Özel Fiyat Alanı
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.monetization_on, size: 14, color: Color(AppConstants.primaryColorValue)),
-                         SizedBox(width: 4),
-                         Text(
-              'Ürün Fiyatı',
-              style: TextStyle(
-                        fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _priceController,
-                            keyboardType: TextInputType.numberWithOptions(decimal: true),
-                            inputFormatters: [NumericTextFormatter()],
-                            style: TextStyle(fontSize: 14),
-                            decoration: InputDecoration(
-                              labelText: 'Fiyat (₺)',
-                              labelStyle: TextStyle(fontSize: 13),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              prefixIcon: Icon(Icons.monetization_on, size: 18),
-                              suffixText: '₺',
-                              enabled: _isCustomPrice,
-                              filled: _isCustomPrice,
-                              fillColor: _isCustomPrice ? Colors.yellow.shade50 : null,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        SizedBox(
-                          height: 40,
-                          child: TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _isCustomPrice = !_isCustomPrice;
-                      if (!_isCustomPrice) {
-                        // Özel fiyat kaldırılırsa orijinal fiyata geri dön
-                        _updatePriceController();
-                      }
-                    });
-                  },
-                            icon: Icon(_isCustomPrice ? Icons.lock_open : Icons.lock, size: 16),
-                            label: Text(
-                              _isCustomPrice ? 'Kilidi Kaldır' : 'Değiştir',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            style: TextButton.styleFrom(
-                              backgroundColor: _isCustomPrice ? Colors.orange.shade100 : Colors.grey.shade100,
-                              foregroundColor: _isCustomPrice ? Colors.orange.shade800 : Colors.black87,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                ],
                               ),
                             ),
-                  ),
-                        ),
-                      ],
-                    ),
-                    if (_isCustomPrice)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          'Özel fiyat girişi aktif.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.orange.shade800,
-                            fontStyle: FontStyle.italic,
                           ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Ürün Notu Alanı
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.note, size: 14, color: Color(AppConstants.primaryColorValue)),
-                        const SizedBox(width: 4),
-            const Text(
-              'Ürün Notu',
-              style: TextStyle(
-                        fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-                      ),
+                        );
+                      }),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _noteController,
-                            style: TextStyle(fontSize: 13),
-                            decoration: InputDecoration(
-                      hintText: 'Ürün ile ilgili eklemek istediğiniz notları yazın',
-                      hintStyle: TextStyle(fontSize: 12),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                );
+              }),
+            
+            // Özel Fiyat Alanı
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ürün Fiyatı',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
                     ),
-                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _priceController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [NumericTextFormatter()],
+                          style: const TextStyle(fontSize: 15),
+                          decoration: InputDecoration(
+                            labelText: 'Fiyat (₺)',
+                            labelStyle: const TextStyle(fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            suffixText: '₺',
+                            enabled: _isCustomPrice,
+                            filled: _isCustomPrice,
+                            fillColor: _isCustomPrice ? Colors.yellow.shade50 : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'Özel fiyat',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                              const SizedBox(width: 6),
+                              Switch.adaptive(
+                                value: _isCustomPrice,
+                                activeColor: Color(AppConstants.primaryColorValue),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _isCustomPrice = value;
+                                    if (!value) {
+                                      _updatePriceController();
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_isCustomPrice)
+                            Text(
+                              'Manuel giriş aktif',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade800,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            
+            // Ürün Notu Alanı
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Ürün Notu',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _noteController,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Ürün ile ilgili eklemek istediğiniz notları yazın',
+                      hintStyle: const TextStyle(fontSize: 13),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             
             // İkram Seçeneği
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-            Row(
-              children: [
-                Checkbox(
-                  value: _isGift,
-                  activeColor: Color(AppConstants.primaryColorValue),
-                          visualDensity: VisualDensity.compact,
-                  onChanged: (value) {
-                    setState(() {
-                      _isGift = value ?? false;
-                    });
-                  },
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade200),
                 ),
-                const Text(
+              ),
+              child: SwitchListTile.adaptive(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                title: Text(
                   'İkram olarak işaretle',
                   style: TextStyle(
-                            fontSize: 13,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 14, 
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
                   ),
                 ),
-                const Spacer(),
-                if (_isGift)
-                  Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                                Icon(Icons.card_giftcard, color: Colors.red.shade400, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          'İkram',
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            if (_isGift)
-              Padding(
-                        padding: const EdgeInsets.only(left: 40, top: 4),
-                child: Text(
-                          'Bu ürün ikram olarak işaretlenecek.',
-                  style: TextStyle(
-                            fontSize: 11,
-                    color: Colors.grey.shade600,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-          ],
-        ),
+                subtitle: _isGift
+                    ? Text(
+                        'Bu ürün ikram olarak işaretlenecek.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      )
+                    : null,
+                value: _isGift,
+                activeColor: Color(AppConstants.primaryColorValue),
+                onChanged: (val) {
+                  setState(() => _isGift = val);
+                },
+                secondary: Icon(Icons.card_giftcard, color: Color(AppConstants.primaryColorValue), size: 20),
               ),
             ),
           ],
@@ -1083,22 +1022,18 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       return const SizedBox.shrink();
     }
     
-    // Gösterilecek fiyat: Özel fiyat veya hesaplanmış toplam fiyat
+    // Gösterilecek fiyat: Özel fiyat veya görsel toplam fiyat (gerçek hesaplama backend'de)
     final displayPrice = _isCustomPrice
         ? double.tryParse(_priceController.text) ?? _calculateTotalPrice()
         : _calculateTotalPrice();
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 22),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 6,
-            offset: const Offset(0, -2),
-          ),
-        ],
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade300),
+        ),
       ),
       child: Row(
         children: [
@@ -1112,7 +1047,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                     Text(
                       'Fiyat',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Colors.grey.shade700,
                       ),
                     ),
@@ -1122,13 +1057,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
                           color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(9),
                           border: Border.all(color: Colors.orange.shade300, width: 0.5),
                         ),
                         child: Text(
                           'Özel',
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 10,
                             color: Colors.orange.shade800,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1154,15 +1089,17 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(AppConstants.primaryColorValue),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                shape:  RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.shopping_cart, size: 18),
                   const SizedBox(width: 8),
+                  
                   const Text(
               'Sepete Ekle',
               style: TextStyle(
