@@ -5,9 +5,11 @@ import 'package:pos701/viewmodels/category_viewmodel.dart';
 import 'package:pos701/viewmodels/product_viewmodel.dart';
 import 'package:pos701/models/product_category_model.dart';
 import 'package:pos701/models/product_model.dart';
+import 'package:pos701/models/product_detail_model.dart';
 import 'package:pos701/constants/app_constants.dart';
 import 'package:pos701/services/product_service.dart';
 import 'package:pos701/views/basket_view.dart';
+import 'package:pos701/views/product_detail_view.dart';
 import 'package:pos701/viewmodels/basket_viewmodel.dart';
 import 'package:pos701/viewmodels/tables_viewmodel.dart';
 import 'package:pos701/viewmodels/customer_viewmodel.dart';
@@ -120,76 +122,7 @@ class _CategoryViewState extends State<CategoryView> {
 
   
 
-  void _showVoiceToast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 1)),
-    );
-  }
 
-  void _addProductByName(String name) {
-    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-    final products = Provider.of<ProductViewModel>(context, listen: false).products;
-    if (products.isEmpty) {
-      _showVoiceToast('Ürün listesi boş');
-      return;
-    }
-    final Product? match = _findBestProductMatch(products, name);
-    if (match != null) {
-      basketViewModel.addProduct(match, opID: 0);
-      _showVoiceToast('${match.proName} eklendi');
-    } else {
-      _showVoiceToast('Ürün bulunamadı');
-    }
-  }
-
-  void _decreaseProductByName(String name) {
-    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-    final products = Provider.of<ProductViewModel>(context, listen: false).products;
-    if (products.isEmpty) {
-      _showVoiceToast('Ürün listesi boş');
-      return;
-    }
-    final Product? match = _findBestProductMatch(products, name);
-    if (match != null) {
-      basketViewModel.decreaseProduct(match);
-      _showVoiceToast('${match.proName} azaltıldı');
-    } else {
-      _showVoiceToast('Ürün bulunamadı');
-    }
-  }
-
-  void _selectCategoryByName(String name) {
-    if (!_categoryViewModel.hasCategories) return;
-    final List<Category> cats = _categoryViewModel.categories;
-    Category? best;
-    for (final c in cats) {
-      if (c.catName.toLowerCase() == name) {
-        best = c;
-        break;
-      }
-      if (c.catName.toLowerCase().contains(name)) {
-        best ??= c;
-      }
-    }
-    if (best != null) {
-      setState(() => _selectedCategory = best);
-      _loadProducts(best.catID, best.catName);
-      _showVoiceToast('Kategori: ${best.catName}');
-    } else {
-      _showVoiceToast('Kategori yok');
-    }
-  }
-
-  Product? _findBestProductMatch(List<Product> list, String name) {
-    final String q = name.toLowerCase();
-    for (final p in list) {
-      if (p.proName.toLowerCase() == q) return p;
-    }
-    for (final p in list) {
-      if (p.proName.toLowerCase().contains(q)) return p;
-    }
-    return null;
-  }
 
   Future<void> _loadOrderDetailAndFillBasket() async {
     final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
@@ -1133,14 +1066,18 @@ class _CategoryViewState extends State<CategoryView> {
       ),
       child: Stack(
         children: [
-          // Tüm kartta tıklanabilir alan - Miktar 0 ise arttır
+          // Tüm kartta tıklanabilir alan - Miktar 0 ise arttır veya menülü ürünse detaya git
           Positioned.fill(
             child: InkWell(
               onTap: () {
-                if (quantity == 0) {
-                  basketViewModel.addProduct(product, opID: 0);
-                  debugPrint('🛍️ [CATEGORY_VIEW] Kartın herhangi bir yerine tıklandı - Ürün miktarı arttırıldı: ${product.proName}');
-                }
+                debugPrint('🔍 [CATEGORY_VIEW] Ürün tıklandı: ${product.proName}, isMenu: ${product.isMenu}');
+                
+                // Test için: tüm ürünleri menü olarak kabul et
+                if (product.isMenu || true) {
+                  // Menülü ürün ise menü seçim popup'ını aç
+                  debugPrint('📋 [CATEGORY_VIEW] Menü popup açılıyor...');
+                  _showMenuSelectionDialog(product);
+                } 
               },
               borderRadius: BorderRadius.circular(8),
               splashColor: Colors.grey.withOpacity(0.1),
@@ -1353,6 +1290,28 @@ class _CategoryViewState extends State<CategoryView> {
               ),
             ],
           ),
+          
+          // Menü göstergesi (sadece menülü ürünler için)
+          if (product.isMenu)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Color(AppConstants.primaryColorValue),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'MENÜ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
         ],),
       
     );
@@ -3448,6 +3407,633 @@ class _CategoryViewState extends State<CategoryView> {
         content: Text(_isWaiter == 1 ? 'Garsoniye ücreti eklendi' : 'Garsoniye ücreti kaldırıldı'),
         backgroundColor: _isWaiter == 1 ? Colors.green : Colors.orange,
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Ürün detay sayfasına yönlendirme metodu
+  void _goToProductDetail(Product product) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductDetailView(
+          userToken: widget.userToken,
+          compID: widget.compID,
+          postID: product.postID,
+          tableName: widget.tableName,
+        ),
+      ),
+    );
+  }
+
+  // Menü seçim popup'ını göster
+  Future<void> _showMenuSelectionDialog(Product product) async {
+    debugPrint('🚀 [MENU] Menü popup başlatılıyor: ${product.proName}');
+    
+    // Önce ürün detayını getir
+    final ProductService productService = ProductService();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      debugPrint('📡 [MENU] API çağrısı yapılıyor: postID=${product.postID}');
+      final response = await productService.getProductDetail(
+        userToken: widget.userToken,
+        compID: widget.compID,
+        postID: product.postID,
+      );
+
+      // Loading dialog'unu kapat
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      debugPrint('📨 [MENU] API yanıtı alındı: success=${response.success}, isMenu=${response.data?.isMenu}');
+      
+      if (response.success && response.data != null) {
+        if (response.data!.isMenu && response.data!.menus.isNotEmpty) {
+          debugPrint('✅ [MENU] Menü verileri bulundu, popup açılıyor');
+          _showMenuSelectionDialogContent(product, response.data!);
+        } else {
+          debugPrint('⚠️ [MENU] Bu ürün menü değil veya menü verileri yok');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Bu ürün için menü bilgisi bulunamadı'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        debugPrint('❌ [MENU] API hatası: ${response.toString()}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Menü bilgileri alınamadı'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('💥 [MENU] Exception: $e');
+      // Loading dialog'unu kapat
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hata: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Menü seçim dialog'unu göster
+  void _showMenuSelectionDialogContent(Product product, ProductDetail productDetail) {
+    // Menü seçimleri için state - çoklu seçim desteği
+    Map<int, Map<int, int>> selectedMenuItems = {}; // MenuID -> {ProductID: quantity}
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          // Tüm seçimlerin tamamlanıp tamamlanmadığını kontrol et
+          bool isAllSelectionComplete = _isMenuSelectionComplete(productDetail.menus, selectedMenuItems);
+          
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.92,
+              height: MediaQuery.of(context).size.height * 0.88,
+              child: Column(
+                children: [
+                  // Başlık Bölümü - Minimalist
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE5E5E5), width: 1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.restaurant_menu,
+                            color: Color(0xFF6B7280),
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.proName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1F2937),
+                                  height: 1.3,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Menü seçimini tamamlayın',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B7280),
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close, color: Color(0xFF9CA3AF), size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // İlerleme Göstergesi - Minimalist
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFAFAFA),
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFFE5E5E5), width: 1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: isAllSelectionComplete ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            isAllSelectionComplete ? Icons.check : Icons.pending,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          isAllSelectionComplete 
+                              ? 'Seçimler tamamlandı'
+                              : 'Seçimlerinizi tamamlayın',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isAllSelectionComplete ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Menü Grupları - Minimalist Accordion
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(24),
+                      itemCount: productDetail.menus.length,
+                      itemBuilder: (context, index) {
+                        final menuGroup = productDetail.menus[index];
+                        final selectedItems = selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+                        final totalSelectedCount = selectedItems.values.fold(0, (sum, qty) => sum + qty);
+                        final isComplete = totalSelectedCount == menuGroup.menuSelectQty;
+                        final isExpanded = !isComplete;
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isComplete ? const Color(0xFF10B981) : const Color(0xFFE5E7EB),
+                              width: 1.5,
+                            ),
+                            color: Colors.white,
+                          ),
+                          child: Theme(
+                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                            child: ExpansionTile(
+                              initiallyExpanded: isExpanded,
+                              maintainState: true,
+                              tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                              childrenPadding: const EdgeInsets.only(bottom: 20),
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isComplete 
+                                      ? const Color(0xFFECFDF5) 
+                                      : const Color(0xFFF9FAFB),
+                                ),
+                                child: Icon(
+                                  isComplete ? Icons.check_circle_outline : Icons.radio_button_unchecked,
+                                  color: isComplete ? const Color(0xFF10B981) : const Color(0xFF9CA3AF),
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                menuGroup.menuName,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: isComplete ? const Color(0xFF065F46) : const Color(0xFF1F2937),
+                                  height: 1.3,
+                                ),
+                              ),
+                              subtitle: Container(
+                                margin: const EdgeInsets.only(top: 6),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isComplete 
+                                            ? const Color(0xFFECFDF5)
+                                            : totalSelectedCount > 0 
+                                                ? const Color(0xFFFEF3C7)
+                                                : const Color(0xFFF9FAFB),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isComplete 
+                                              ? const Color(0xFFBBF7D0)
+                                              : totalSelectedCount > 0 
+                                                  ? const Color(0xFFFDE68A)
+                                                  : const Color(0xFFE5E7EB),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '$totalSelectedCount/${menuGroup.menuSelectQty} seçili',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: isComplete 
+                                              ? const Color(0xFF065F46)
+                                              : totalSelectedCount > 0 
+                                                  ? const Color(0xFF92400E)
+                                                  : const Color(0xFF6B7280),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              children: [
+                                // Menü Ürünleri Grid - Geniş ve ferah
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  child: GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 0.85, // 0.9'dan 0.75'e düşürdük - daha yüksek kartlar
+                                    ),
+                                    itemCount: menuGroup.menuProducts.length,
+                                    itemBuilder: (context, productIndex) {
+                                      final menuProduct = menuGroup.menuProducts[productIndex];
+                                      final currentQty = selectedItems[menuProduct.mpID] ?? 0;
+                                      final isSelected = currentQty > 0;
+                                      final canIncrease = totalSelectedCount < menuGroup.menuSelectQty;
+                                      final canDecrease = currentQty > 0;
+                                      
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isSelected 
+                                                ? const Color(0xFF3B82F6)
+                                                : const Color(0xFFE5E7EB),
+                                            width: isSelected ? 1.5 : 1,
+                                          ),
+                                          color: isSelected 
+                                              ? const Color(0xFFF0F8FF)
+                                              : Colors.white,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            // Ana İçerik
+                                            Expanded(
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(12), // 16'dan 12'ye azalttık
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Ürün Adı
+                                                    Expanded(
+                                                      flex: 3, // Ürün adı için daha fazla alan
+                                                      child: Text(
+                                                        menuProduct.productTitle,
+                                                        style: const TextStyle(
+                                                          fontSize: 10, // 13'ten 12'ye küçülttük
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Color(0xFF1F2937),
+                                                          height: 1.2, // 1.3'ten 1.2'ye azalttık
+                                                        ),
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                    
+
+                                                    // Porsiyon
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 2), // Padding'i azalttık
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFF9FAFB),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        menuProduct.variantUnit,
+                                                        style: const TextStyle(
+                                                          fontSize: 9, // 10'dan 9'a küçülttük
+                                                          color: Color(0xFF6B7280),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                                                                        SizedBox(height: 6,),
+
+                                                    // Fiyat Bilgisi
+                                                    if (menuProduct.menuPrice > 0) ...[
+                                                      Text(
+                                                        '+₺${menuProduct.menuPrice.toStringAsFixed(2)}',
+                                                        style: const TextStyle(
+                                                          fontSize: 11, // 12'den 11'e küçülttük
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Color(0xFF3B82F6),
+                                                        ),
+                                                      ),
+                                                    ] 
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            
+                                            // Miktar Seçici - Minimalist
+                                            Container(
+                                              margin: const EdgeInsets.all(8), // 12'den 8'e azalttık
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF9FAFB),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: const Color(0xFFE5E7EB)),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        onTap: canDecrease ? () {
+                                                          setState(() {
+                                                            if (!selectedMenuItems.containsKey(menuGroup.menuID)) {
+                                                              selectedMenuItems[menuGroup.menuID] = <int, int>{};
+                                                            }
+                                                            final items = selectedMenuItems[menuGroup.menuID]!;
+                                                            if (items[menuProduct.mpID] != null) {
+                                                              items[menuProduct.mpID] = items[menuProduct.mpID]! - 1;
+                                                              if (items[menuProduct.mpID]! <= 0) {
+                                                                items.remove(menuProduct.mpID);
+                                                              }
+                                                            }
+                                                          });
+                                                        } : null,
+                                                        borderRadius: const BorderRadius.only(
+                                                          topLeft: Radius.circular(8),
+                                                          bottomLeft: Radius.circular(8),
+                                                        ),
+                                                        child: Container(
+                                                          height: 32, // 36'dan 32'ye azalttık
+                                                          child: Icon(
+                                                            Icons.remove,
+                                                            size: 14, // 16'dan 14'e küçülttük
+                                                            color: canDecrease ? const Color(0xFF6B7280) : const Color(0xFFD1D5DB),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  
+                                                  Container(
+                                                    width: 36, // 40'dan 36'ya azalttık
+                                                    height: 32, // 36'dan 32'ye azalttık
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.white,
+                                                      border: Border.symmetric(
+                                                        vertical: BorderSide(color: Color(0xFFE5E7EB)),
+                                                      ),
+                                                    ),
+                                                    child: Center(
+                                                      child: Text(
+                                                        currentQty.toString(),
+                                                        style: const TextStyle(
+                                                          fontSize: 12, // 13'ten 12'ye küçülttük
+                                                          fontWeight: FontWeight.w600,
+                                                          color: Color(0xFF1F2937),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  
+                                                  Expanded(
+                                                    child: Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        onTap: canIncrease ? () {
+                                                          setState(() {
+                                                            if (!selectedMenuItems.containsKey(menuGroup.menuID)) {
+                                                              selectedMenuItems[menuGroup.menuID] = <int, int>{};
+                                                            }
+                                                            final items = selectedMenuItems[menuGroup.menuID]!;
+                                                            items[menuProduct.mpID] = (items[menuProduct.mpID] ?? 0) + 1;
+                                                          });
+                                                        } : null,
+                                                        borderRadius: const BorderRadius.only(
+                                                          topRight: Radius.circular(8),
+                                                          bottomRight: Radius.circular(8),
+                                                        ),
+                                                        child: Container(
+                                                          height: 32, // 36'dan 32'ye azalttık
+                                                          child: Icon(
+                                                            Icons.add,
+                                                            size: 14, // 16'dan 14'e küçülttük
+                                                            color: canIncrease ? const Color(0xFF6B7280) : const Color(0xFFD1D5DB),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  
+                  // Alt Butonlar - Minimalist
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: Color(0xFFE5E5E5), width: 1)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: const BorderSide(color: Color(0xFFD1D5DB)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              foregroundColor: const Color(0xFF6B7280),
+                            ),
+                            child: const Text(
+                              'İptal',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: isAllSelectionComplete 
+                                ? () {
+                                    Navigator.of(context).pop();
+                                    _addMenuToBasket(product, productDetail, selectedMenuItems);
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isAllSelectionComplete 
+                                  ? const Color(0xFF3B82F6)
+                                  : const Color(0xFFF3F4F6),
+                              foregroundColor: isAllSelectionComplete 
+                                  ? Colors.white 
+                                  : const Color(0xFF9CA3AF),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.shopping_cart_outlined,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Sepete Ekle',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Menü seçiminin tamamlanıp tamamlanmadığını kontrol et
+  bool _isMenuSelectionComplete(List<MenuGroup> menus, Map<int, Map<int, int>> selectedMenuItems) {
+    for (final menuGroup in menus) {
+      final selectedItems = selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+      final totalSelectedCount = selectedItems.values.fold(0, (sum, qty) => sum + qty);
+      if (totalSelectedCount != menuGroup.menuSelectQty) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Seçilen menüyü sepete ekle
+  void _addMenuToBasket(Product product, ProductDetail productDetail, Map<int, Map<int, int>> selectedMenuItems) {
+    final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
+    
+    // Menü seçimlerini özellik ID'leri olarak topla
+    List<int> allSelectedIds = [];
+    for (final selectedItems in selectedMenuItems.values) {
+      for (final entry in selectedItems.entries) {
+        // Her miktar için ID'yi ekle
+        for (int i = 0; i < entry.value; i++) {
+          allSelectedIds.add(entry.key);
+        }
+      }
+    }
+    
+    // Ürünü sepete ekle
+    basketViewModel.addProduct(
+      product,
+      opID: 0,
+      proNote: 'Menü seçimi',
+      proFeature: allSelectedIds,
+    );
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${product.proName} sepete eklendi'),
+        backgroundColor: const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }

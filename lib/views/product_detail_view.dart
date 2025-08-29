@@ -86,6 +86,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   
   // Seçili özellikler için state - Key: FeatureGroup ID, Value: Seçili Feature ID'leri
   Map<int, List<int>> _selectedFeatures = {};
+  
+  // Menü seçimleri için state - Key: MenuGroup ID, Value: Seçili MenuProduct ID'leri
+  Map<int, List<int>> _selectedMenuItems = {};
 
   @override
   void initState() {
@@ -193,6 +196,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       String fullNote = _buildProductNote();
       // Seçili özellik ID listesi
       final List<int> selectedFeatureIds = _collectSelectedFeatureIds();
+      // Seçili menü ID listesi
+      final List<int> selectedMenuIds = _collectSelectedMenuIds();
       
       // Fiyat değeri olarak sadece temel porsiyon fiyatını kullan (özellik fiyatları backend'de hesaplanıyor)
       final String priceValue = _isCustomPrice 
@@ -214,19 +219,19 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Sepetten gelen bir ürün mü? (lineId veya proID ile belirlenebilir)
       if (widget.selectedLineId != null) {
         // Satır ID'si varsa, belirli bir satırı güncelleme
-        _updateBasketLine(basketViewModel, product, fullNote, selectedFeatureIds);
+        _updateBasketLine(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
       } else if (widget.selectedProID != null) {
         // Sadece ürün ID'si varsa, geriye dönük uyumluluk için
-        _updateBasketItemByProductId(basketViewModel, product, fullNote, selectedFeatureIds);
+        _updateBasketItemByProductId(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
       } else {
         // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
       }
     }
   }
   
   // Belirli bir satırı günceller (lineId ile)
-  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds) {
+  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds, List<int> selectedMenuIds) {
     // Sepette var olan lineId'li satırı güncelle
     int lineId = widget.selectedLineId!;
     
@@ -282,7 +287,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   }
   
   // Ürün ID'ye göre sepet öğesini günceller (geriye dönük uyumluluk için)
-  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds) {
+  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds, List<int> selectedMenuIds) {
     // Eski ürünün ID'si
         int oldProID = widget.selectedProID!;
         
@@ -340,7 +345,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           return;
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
         }
     } else {
       // Farklı porsiyon seçildi, ilk bulunan ürünü güncelle
@@ -395,13 +400,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           Navigator.of(context).pop();
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
       }
     }
   }
 
   // Ürünü sepete eklerken API'ye gönder
-  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds) {
+  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds, List<int> selectedMenuIds) {
     // Eğer orderID yoksa, sadece sepete ekle (yeni sipariş oluşturma durumunda)
     Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     int? orderID = args?['orderID'];
@@ -487,39 +492,27 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       }
     }
     
-    return displayPrice;
-  }
-
-  // Ürün notunu hazırlar (kullanıcı notu + seçili özellikler)
-  String _buildProductNote() {
-    List<String> noteParts = [];
-    
-    // Kullanıcının girdiği not
-    if (_noteController.text.isNotEmpty) {
-      noteParts.add(_noteController.text);
-    }
-    
-    // Seçili özellikler
-    if (_productDetail != null && _productDetail!.variants.isNotEmpty) {
-      final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
-      
-      for (var featureGroup in selectedVariant.featureGroups) {
-        final selectedFeatureIds = _selectedFeatures[featureGroup.fgID] ?? [];
-        if (selectedFeatureIds.isNotEmpty) {
-          List<String> featureNames = [];
-          for (var featureId in selectedFeatureIds) {
-            final feature = featureGroup.features.firstWhere(
-              (f) => f.featureID == featureId,
-              orElse: () => featureGroup.features.first,
-            );
-            featureNames.add(feature.featureName);
-          }
-          noteParts.add('${featureGroup.fgName}: ${featureNames.join(", ")}');
+    // Seçili menü öğelerinin fiyatlarını görsel olarak ekle (sadece gösterim için)
+    if (_productDetail!.isMenu) {
+      for (var menuGroup in _productDetail!.menus) {
+        final selectedMenuIds = _selectedMenuItems[menuGroup.menuID] ?? [];
+        for (var menuProductId in selectedMenuIds) {
+          final menuProduct = menuGroup.menuProducts.firstWhere(
+            (mp) => mp.mpID == menuProductId,
+            orElse: () => menuGroup.menuProducts.first,
+          );
+          displayPrice += menuProduct.menuPrice;
         }
       }
     }
     
-    return noteParts.join(' | ');
+    return displayPrice;
+  }
+
+  // Ürün notunu hazırlar (sadece kullanıcının elle girdiği not)
+  String _buildProductNote() {
+    // Sadece kullanıcının girdiği notu döndür
+    return _noteController.text.trim();
   }
 
   // Özellik seçildiğinde fiyatı günceller
@@ -545,6 +538,31 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         }
       } else {
         selectedFeatureIds.remove(featureId);
+      }
+      
+      // Fiyatı güncelle (sadece görsel gösterim)
+      if (!_isCustomPrice) {
+        _updatePriceController();
+      }
+    });
+  }
+
+  // Menü öğesi seçildiğinde güncelleme
+  void _updateMenuSelection(int menuGroupId, int menuProductId, bool isSelected, int maxSelection) {
+    setState(() {
+      if (!_selectedMenuItems.containsKey(menuGroupId)) {
+        _selectedMenuItems[menuGroupId] = [];
+      }
+      
+      final selectedMenuIds = _selectedMenuItems[menuGroupId]!;
+      
+      if (isSelected) {
+        // Maksimum seçim sayısını kontrol et
+        if (selectedMenuIds.length < maxSelection) {
+          selectedMenuIds.add(menuProductId);
+        }
+      } else {
+        selectedMenuIds.remove(menuProductId);
       }
       
       // Fiyatı güncelle (sadece görsel gösterim)
@@ -720,6 +738,154 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                 ),
               ),
             const SizedBox(height: 8),
+            
+            // Menü Seçimi (sadece menülü ürünler için)
+            if (_productDetail!.isMenu && _productDetail!.menus.isNotEmpty)
+              ..._productDetail!.menus.map((menuGroup) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16.0),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            menuGroup.menuName,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Text(
+                              '${menuGroup.menuSelectQty} adet seçin',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Color(AppConstants.primaryColorValue),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...menuGroup.menuProducts.map((menuProduct) {
+                        final isSelected = _selectedMenuItems[menuGroup.menuID]?.contains(menuProduct.mpID) ?? false;
+                        final selectedCount = _selectedMenuItems[menuGroup.menuID]?.length ?? 0;
+                        final canSelect = selectedCount < menuGroup.menuSelectQty;
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: isSelected 
+                                  ? Color(AppConstants.primaryColorValue)
+                                  : Colors.grey.shade300,
+                              width: 0.5,
+                            ),
+                            color: isSelected 
+                                ? Color(AppConstants.primaryColorValue).withOpacity(0.04)
+                                : Colors.transparent,
+                          ),
+                          child: InkWell(
+                            onTap: () => _updateMenuSelection(
+                              menuGroup.menuID, 
+                              menuProduct.mpID, 
+                              !isSelected,
+                              menuGroup.menuSelectQty
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  Radio<int>(
+                                    value: menuProduct.mpID,
+                                    groupValue: isSelected ? menuProduct.mpID : null,
+                                    onChanged: canSelect || isSelected ? (value) {
+                                      if (value != null) {
+                                        _updateMenuSelection(
+                                          menuGroup.menuID, 
+                                          value, 
+                                          !isSelected,
+                                          menuGroup.menuSelectQty
+                                        );
+                                      }
+                                    } : null,
+                                    activeColor: Color(AppConstants.primaryColorValue),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          menuProduct.productTitle,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                                          ),
+                                        ),
+                                        Text(
+                                          menuProduct.variantUnit,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      if (menuProduct.menuPrice > 0)
+                                        Text(
+                                          '+₺${menuProduct.menuPrice.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Color(AppConstants.primaryColorValue),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      Text(
+                                        '₺${menuProduct.variantPrice.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade600,
+                                          decoration: menuProduct.menuPrice > 0 
+                                              ? TextDecoration.lineThrough 
+                                              : null,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              }),
             
             // Özellik Seçimi
             if (_productDetail!.variants.isNotEmpty && 
@@ -1123,6 +1289,17 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
     for (var featureGroup in selectedVariant.featureGroups) {
       final List<int> selectedIds = _selectedFeatures[featureGroup.fgID] ?? [];
+      ids.addAll(selectedIds);
+    }
+    return ids;
+  }
+
+  // Seçili menü öğelerinin ID listesini döndürür
+  List<int> _collectSelectedMenuIds() {
+    final List<int> ids = [];
+    if (_productDetail == null || !_productDetail!.isMenu) return ids;
+    for (var menuGroup in _productDetail!.menus) {
+      final List<int> selectedIds = _selectedMenuItems[menuGroup.menuID] ?? [];
       ids.addAll(selectedIds);
     }
     return ids;

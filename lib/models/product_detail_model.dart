@@ -29,20 +29,28 @@ class ProductDetailResponse {
 class ProductDetail {
   final int postID;
   final String postTitle;
+  final bool isMenu;
   final List<ProductVariant> variants;
+  final List<MenuGroup> menus;
 
   ProductDetail({
     required this.postID,
     required this.postTitle,
+    this.isMenu = false,
     required this.variants,
+    this.menus = const [],
   });
 
   factory ProductDetail.fromJson(Map<String, dynamic> json) {
     return ProductDetail(
       postID: json['postID'] ?? 0,
       postTitle: json['postTitle'] ?? '',
+      isMenu: json['isMenu'] ?? false,
       variants: (json['variants'] as List<dynamic>?)
           ?.map((variant) => ProductVariant.fromJson(variant))
+          .toList() ?? [],
+      menus: (json['menus'] as List<dynamic>?)
+          ?.map((menu) => MenuGroup.fromJson(menu))
           .toList() ?? [],
     );
   }
@@ -51,7 +59,9 @@ class ProductDetail {
     return {
       'postID': postID,
       'postTitle': postTitle,
+      'isMenu': isMenu,
       'variants': variants.map((variant) => variant.toJson()).toList(),
+      'menus': menus.map((menu) => menu.toJson()).toList(),
     };
   }
 }
@@ -241,4 +251,88 @@ double _parseDouble(dynamic value) {
     return parsed ?? 0.0;
   }
   return 0.0;
+}
+
+// Menü grubu sınıfı
+class MenuGroup {
+  final int menuID;
+  final String menuName;
+  final int menuSelectQty;
+  final List<MenuProduct> menuProducts;
+
+  MenuGroup({
+    required this.menuID,
+    required this.menuName,
+    required this.menuSelectQty,
+    required this.menuProducts,
+  });
+
+  factory MenuGroup.fromJson(Map<String, dynamic> json) {
+    return MenuGroup(
+      menuID: json['menuID'] ?? 0,
+      menuName: json['menuName'] ?? '',
+      menuSelectQty: json['menuSelectQty'] ?? 0,
+      menuProducts: (json['menuProducts'] as List<dynamic>?)
+          ?.map((product) => MenuProduct.fromJson(product))
+          .toList() ?? [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'menuID': menuID,
+      'menuName': menuName,
+      'menuSelectQty': menuSelectQty,
+      'menuProducts': menuProducts.map((product) => product.toJson()).toList(),
+    };
+  }
+}
+
+// Menü ürünü sınıfı
+class MenuProduct {
+  final int mpID;
+  final int productID;
+  final String productTitle;
+  final int variantID;
+  final String variantUnit;
+  final double variantPrice;
+  final int menuQty;
+  final double menuPrice;
+
+  MenuProduct({
+    required this.mpID,
+    required this.productID,
+    required this.productTitle,
+    required this.variantID,
+    required this.variantUnit,
+    required this.variantPrice,
+    required this.menuQty,
+    required this.menuPrice,
+  });
+
+  factory MenuProduct.fromJson(Map<String, dynamic> json) {
+    return MenuProduct(
+      mpID: json['mpID'] ?? 0,
+      productID: json['productID'] ?? 0,
+      productTitle: json['productTitle'] ?? '',
+      variantID: json['variantID'] ?? 0,
+      variantUnit: json['variantUnit'] ?? '',
+      variantPrice: _parseDouble(json['variantPrice']),
+      menuQty: json['menuQty'] ?? 0,
+      menuPrice: _parseDouble(json['menuPrice']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'mpID': mpID,
+      'productID': productID,
+      'productTitle': productTitle,
+      'variantID': variantID,
+      'variantUnit': variantUnit,
+      'variantPrice': variantPrice,
+      'menuQty': menuQty,
+      'menuPrice': menuPrice,
+    };
+  }
 } 

@@ -57,7 +57,7 @@ class Product {
   final String proStock;
   final String proPrice;
   final String proNote;
-
+  final bool isMenu;
 
   Product({
     required this.postID,
@@ -68,6 +68,7 @@ class Product {
     required this.proStock,
     required this.proPrice,
     this.proNote = '',
+    this.isMenu = false,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -80,6 +81,7 @@ class Product {
       proStock: json['proStock'] ?? '0',
       proPrice: json['proPrice'] ?? '',
       proNote: json['proNote'] ?? '',
+      isMenu: json['isMenu'] ?? false,
     );
   }
 
@@ -93,11 +95,12 @@ class Product {
       'proStock': proStock,
       'proPrice': proPrice,
       'proNote': proNote,
+      'isMenu': isMenu,
     };
   }
 
   @override
   String toString() {
-    return 'Product(postID: $postID, proID: $proID, catID: $catID, proName: $proName, proUnit: $proUnit, proStock: $proStock, proPrice: $proPrice, proNote: $proNote)';
+    return 'Product(postID: $postID, proID: $proID, catID: $catID, proName: $proName, proUnit: $proUnit, proStock: $proStock, proPrice: $proPrice, proNote: $proNote, isMenu: $isMenu)';
   }
 } 
