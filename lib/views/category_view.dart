@@ -846,7 +846,7 @@ class _CategoryViewState extends State<CategoryView> {
                                               color: Color(AppConstants.primaryColorValue),
                                               onPressed: () {
                                                 basketViewModel.addProduct(product, opID: 0);
-                                              },
+                                               },
                                         tooltip: 'Ekle',
                                       ),
                                     ),
