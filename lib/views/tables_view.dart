@@ -15,11 +15,11 @@ class TablesView extends StatefulWidget {
   final String title;
 
   const TablesView({
-    Key? key,
+    super.key,
     required this.userToken,
     required this.compID,
     required this.title,
-  }) : super(key: key);
+  });
 
   @override
   State<TablesView> createState() => _TablesViewState();
@@ -28,7 +28,6 @@ class TablesView extends StatefulWidget {
 class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
   TabController? _tabController;
   final TablesViewModel _viewModel = TablesViewModel();
-  bool _isInitialized = false;
   Timer? _autoRefreshTimer;
 
   @override
@@ -73,7 +72,6 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
     
     try {
       setState(() {
-        _isInitialized = false;
       });
       
       await _viewModel.getTablesData(
@@ -87,7 +85,6 @@ class _TablesViewState extends State<TablesView> with TickerProviderStateMixin {
             length: _viewModel.regions.length,
             vsync: this,
           );
-          _isInitialized = true;
         });
       }
     } catch (e) {

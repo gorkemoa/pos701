@@ -1072,12 +1072,14 @@ class _CategoryViewState extends State<CategoryView> {
               onTap: () {
                 debugPrint('🔍 [CATEGORY_VIEW] Ürün tıklandı: ${product.proName}, isMenu: ${product.isMenu}');
                 
-                // Test için: tüm ürünleri menü olarak kabul et
-                if (product.isMenu || true) {
-                  // Menülü ürün ise menü seçim popup'ını aç
+                // Menülü ürün ise menü seçim popup'ını aç
+                if (product.isMenu) {
                   debugPrint('📋 [CATEGORY_VIEW] Menü popup açılıyor...');
                   _showMenuSelectionDialog(product);
-                } 
+                } else {
+                  // Normal ürün ise direkt detay sayfasına git
+                  _goToProductDetail(product);
+                }
               },
               borderRadius: BorderRadius.circular(8),
               splashColor: Colors.grey.withOpacity(0.1),
@@ -3945,7 +3947,7 @@ class _CategoryViewState extends State<CategoryView> {
                             onPressed: isAllSelectionComplete 
                                 ? () {
                                     Navigator.of(context).pop();
-                                    _addMenuToBasket(product, productDetail, selectedMenuItems);
+                                    _goToProductDetailWithMenuSelections(product, productDetail, selectedMenuItems);
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(
@@ -4002,6 +4004,34 @@ class _CategoryViewState extends State<CategoryView> {
       }
     }
     return true;
+  }
+
+  // Menü seçimleri ile ürün detay sayfasına yönlendir
+  void _goToProductDetailWithMenuSelections(Product product, ProductDetail productDetail, Map<int, Map<int, int>> selectedMenuItems) {
+    // Menü seçimlerini özellik ID'leri olarak topla
+    List<int> allSelectedIds = [];
+    for (final selectedItems in selectedMenuItems.values) {
+      for (final entry in selectedItems.entries) {
+        // Her miktar için ID'yi ekle
+        for (int i = 0; i < entry.value; i++) {
+          allSelectedIds.add(entry.key);
+        }
+      }
+    }
+    
+    // Ürün detay sayfasına seçimleri aktararak yönlendir
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductDetailView(
+          userToken: widget.userToken,
+          compID: widget.compID,
+          postID: product.postID,
+          tableName: widget.tableName,
+          initialFeatures: allSelectedIds,
+          initialNote: 'Menü seçimi tamamlandı',
+        ),
+      ),
+    );
   }
 
   // Seçilen menüyü sepete ekle

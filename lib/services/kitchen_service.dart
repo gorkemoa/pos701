@@ -9,9 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/viewmodels/company_viewmodel.dart';
 
 class KitchenService {
-  final ApiService _apiService;
   
-  KitchenService({ApiService? apiService}) : _apiService = apiService ?? ApiService();
+  KitchenService({ApiService? apiService});
   
   /// Mutfak siparişlerini getirir
   ///

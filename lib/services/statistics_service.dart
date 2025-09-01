@@ -144,7 +144,6 @@ class StatisticsService {
         }
         
         // API yanıtında özel durum kodu var mı kontrol et (410 Gone, vb.)
-        bool hasSpecialStatusCode = false;
         String specialStatusInfo = "";
         
         // HTTP durum kodu doğrudan anahtarda bulunuyor mu?
@@ -152,7 +151,6 @@ class StatisticsService {
           String statusKey = responseData.containsKey('410') ? '410' : '200';
           specialStatusInfo = "HTTP $statusKey: ${responseData[statusKey]}";
           _logger.d('Özel durum kodu bulundu: $specialStatusInfo');
-          hasSpecialStatusCode = true;
         }
         
         // Yanıtın yapısını detaylı log'la

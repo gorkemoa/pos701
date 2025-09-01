@@ -44,7 +44,6 @@ class _PaymentViewState extends State<PaymentView> {
   int _selectedDiscountType = 0;
   double _discountAmount = 0;
   bool _applyDiscount = false;
-  bool _showPaymentTypeSelection = false;
   
   List<ExpandedBasketItem> _expandedItems = [];
   

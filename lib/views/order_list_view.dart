@@ -257,7 +257,7 @@ class _OrderListViewState extends State<OrderListView> with SingleTickerProvider
     final bool canPay = order.orderStatusID != '4'; // Ödeme alınabilir durumlar
     
     // Gel-Al siparişlerini kontrol et - Sipariş adına göre
-    final bool isGelAl = order.orderName.contains('Gel-Al');
+    order.orderName.contains('Gel-Al');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

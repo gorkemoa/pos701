@@ -225,7 +225,6 @@ class TableService {
               
               // Birleştirilmiş masa bilgilerini ara
               if (order is Map && order.containsKey('mergeTables')) {
-                final mergeTables = order['mergeTables'];
               }
             }
           }

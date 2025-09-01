@@ -207,7 +207,7 @@ class TablesViewModel extends ChangeNotifier {
         
         // Birleştirilmiş masaları işle
         for (var order in ordersData) {
-          int orderID = int.parse(order['order_id'].toString());
+          int.parse(order['order_id'].toString());
           int tableID = int.parse(order['table_id'].toString());
           
           // Debug: Her siparişin detaylarını göster
@@ -282,7 +282,7 @@ class TablesViewModel extends ChangeNotifier {
                 final updatedTable = TableItem(
                   tableID: table.tableID,
                   orderID: table.orderID,
-                  tableName: nameShouldChange ? newName! : table.tableName,
+                  tableName: nameShouldChange ? newName : table.tableName,
                   orderAmount: table.orderAmount,
                   isActive: shouldBeActive,
                   isMerged: shouldBeMerged,

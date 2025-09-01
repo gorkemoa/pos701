@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // NumericFormatter için
+import 'package:flutter/foundation.dart'; // debugPrint için
 import 'package:pos701/models/product_detail_model.dart';
 import 'package:pos701/models/product_model.dart';
 import 'package:pos701/services/product_service.dart';
@@ -76,6 +77,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   final AppLogger _logger = AppLogger();
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  
+  // Menü grupları için GlobalKey'ler
+  final Map<int, GlobalKey> _menuGroupKeys = {};
   
   ProductDetail? _productDetail;
   bool _isLoading = true;
@@ -87,8 +92,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   // Seçili özellikler için state - Key: FeatureGroup ID, Value: Seçili Feature ID'leri
   Map<int, List<int>> _selectedFeatures = {};
   
-  // Menü seçimleri için state - Key: MenuGroup ID, Value: Seçili MenuProduct ID'leri
-  Map<int, List<int>> _selectedMenuItems = {};
+  // Menü seçimleri için state - Key: MenuGroup ID, Value: Map<MenuProduct ID, Miktar>
+  Map<int, Map<int, int>> _selectedMenuItems = {};
 
   @override
   void initState() {
@@ -102,6 +107,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   void dispose() {
     _noteController.dispose();
     _priceController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -122,6 +128,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         setState(() {
           _productDetail = response.data;
           _isLoading = false;
+          
+          // Menü grupları için key'leri oluştur
+          if (_productDetail!.isMenu && _productDetail!.menus.isNotEmpty) {
+            for (final menuGroup in _productDetail!.menus) {
+              _menuGroupKeys[menuGroup.menuID] = GlobalKey();
+            }
+          }
           
           if (widget.selectedProID != null) {
             // Sepetten seçilen ürünün porsiyonunu bul
@@ -156,6 +169,8 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           if (widget.initialFeatures != null && widget.initialFeatures!.isNotEmpty) {
             final selectedVariant = _productDetail!.variants[_selectedPorsiyonIndex];
             final List<int> ids = widget.initialFeatures!;
+            
+            // Özellik grupları için kontrol
             for (final fg in selectedVariant.featureGroups) {
               final selectedInGroup = <int>[];
               for (final f in fg.features) {
@@ -167,6 +182,24 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                 _selectedFeatures[fg.fgID] = selectedInGroup;
               }
             }
+            
+            // Menü grupları için kontrol (eğer bu ürün menülü ise)
+            if (_productDetail!.isMenu && _productDetail!.menus.isNotEmpty) {
+              for (final menuGroup in _productDetail!.menus) {
+                final selectedInGroup = <int, int>{};
+                for (final menuProduct in menuGroup.menuProducts) {
+                  // Her ID'nin kaç kez geçtiğini say
+                  int count = ids.where((id) => id == menuProduct.mpID).length;
+                  if (count > 0) {
+                    selectedInGroup[menuProduct.mpID] = count;
+                  }
+                }
+                if (selectedInGroup.isNotEmpty) {
+                  _selectedMenuItems[menuGroup.menuID] = selectedInGroup;
+                }
+              }
+            }
+            
             // Seçili özelliklere göre fiyatı güncelle
             _updatePriceController();
           }
@@ -199,6 +232,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Seçili menü ID listesi
       final List<int> selectedMenuIds = _collectSelectedMenuIds();
       
+      // Hem özellik hem menü ID'lerini birleştir
+      final List<int> allSelectedIds = [...selectedFeatureIds, ...selectedMenuIds];
+      
       // Fiyat değeri olarak sadece temel porsiyon fiyatını kullan (özellik fiyatları backend'de hesaplanıyor)
       final String priceValue = _isCustomPrice 
           ? _priceController.text 
@@ -219,19 +255,19 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Sepetten gelen bir ürün mü? (lineId veya proID ile belirlenebilir)
       if (widget.selectedLineId != null) {
         // Satır ID'si varsa, belirli bir satırı güncelleme
-        _updateBasketLine(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
+        _updateBasketLine(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
       } else if (widget.selectedProID != null) {
         // Sadece ürün ID'si varsa, geriye dönük uyumluluk için
-        _updateBasketItemByProductId(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
+        _updateBasketItemByProductId(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
       } else {
         // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
       }
     }
   }
   
   // Belirli bir satırı günceller (lineId ile)
-  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds, List<int> selectedMenuIds) {
+  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote, List<int> allSelectedIds, List<int> selectedMenuIds) {
     // Sepette var olan lineId'li satırı güncelle
     int lineId = widget.selectedLineId!;
     
@@ -256,14 +292,14 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         existingQuantity - 1,
         proNote: fullNote,
         isGift: false,
-        proFeature: selectedFeatureIds,
+        proFeature: allSelectedIds,
       );
       // Ardından 1 adet yeni satır olarak ikram ekle
       basketViewModel.addProduct(
         product,
         proNote: fullNote,
         isGift: true,
-        proFeature: selectedFeatureIds,
+        proFeature: allSelectedIds,
       );
     } else {
       // Satırı güncelle - yeni product bilgileriyle
@@ -273,7 +309,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         existingQuantity,
         proNote: fullNote,
         isGift: _isGift,
-        proFeature: selectedFeatureIds,
+        proFeature: allSelectedIds,
       );
     }
     
@@ -287,7 +323,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   }
   
   // Ürün ID'ye göre sepet öğesini günceller (geriye dönük uyumluluk için)
-  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds, List<int> selectedMenuIds) {
+  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote, List<int> allSelectedIds, List<int> selectedMenuIds) {
     // Eski ürünün ID'si
         int oldProID = widget.selectedProID!;
         
@@ -306,13 +342,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             existingItem.proQty - 1,
             proNote: fullNote,
             isGift: false,
-            proFeature: selectedFeatureIds,
+            proFeature: allSelectedIds,
           );
           basketViewModel.addProduct(
             product,
             proNote: fullNote,
             isGift: true,
-            proFeature: selectedFeatureIds,
+            proFeature: allSelectedIds,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -345,7 +381,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           return;
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
         }
     } else {
       // Farklı porsiyon seçildi, ilk bulunan ürünü güncelle
@@ -362,14 +398,14 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             existingItem.proQty - 1,
             proNote: existingItem.proNote,
             isGift: false,
-            proFeature: selectedFeatureIds,
+            proFeature: allSelectedIds,
           );
           // Yeni porsiyonu 1 adet ikram olarak ekle
           basketViewModel.addProduct(
             product,
             proNote: fullNote,
             isGift: true,
-            proFeature: selectedFeatureIds,
+            proFeature: allSelectedIds,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -388,7 +424,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             existingItem.proQty,
             proNote: fullNote,
             isGift: _isGift,
-            proFeature: selectedFeatureIds,
+            proFeature: allSelectedIds,
           );
           
           ScaffoldMessenger.of(context).showSnackBar(
@@ -400,13 +436,13 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           Navigator.of(context).pop();
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, selectedFeatureIds, selectedMenuIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
       }
     }
   }
 
   // Ürünü sepete eklerken API'ye gönder
-  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote, List<int> selectedFeatureIds, List<int> selectedMenuIds) {
+  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote, List<int> allSelectedIds, List<int> selectedMenuIds) {
     // Eğer orderID yoksa, sadece sepete ekle (yeni sipariş oluşturma durumunda)
     Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     int? orderID = args?['orderID'];
@@ -423,7 +459,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         quantity: 1,
         proNote: fullNote,
         isGift: _isGift,
-        proFeature: selectedFeatureIds,
+        proFeature: allSelectedIds,
       ).then((success) {
         setState(() => _isLoading = false);
         
@@ -451,7 +487,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         product,
         proNote: fullNote,
         isGift: _isGift,
-        proFeature: selectedFeatureIds,
+        proFeature: allSelectedIds,
       );
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -495,13 +531,15 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     // Seçili menü öğelerinin fiyatlarını görsel olarak ekle (sadece gösterim için)
     if (_productDetail!.isMenu) {
       for (var menuGroup in _productDetail!.menus) {
-        final selectedMenuIds = _selectedMenuItems[menuGroup.menuID] ?? [];
-        for (var menuProductId in selectedMenuIds) {
+        final selectedMenuItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+        for (var entry in selectedMenuItems.entries) {
+          final menuProductId = entry.key;
+          final quantity = entry.value;
           final menuProduct = menuGroup.menuProducts.firstWhere(
             (mp) => mp.mpID == menuProductId,
             orElse: () => menuGroup.menuProducts.first,
           );
-          displayPrice += menuProduct.menuPrice;
+          displayPrice += menuProduct.menuPrice * quantity;
         }
       }
     }
@@ -551,18 +589,32 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   void _updateMenuSelection(int menuGroupId, int menuProductId, bool isSelected, int maxSelection) {
     setState(() {
       if (!_selectedMenuItems.containsKey(menuGroupId)) {
-        _selectedMenuItems[menuGroupId] = [];
+        _selectedMenuItems[menuGroupId] = <int, int>{};
       }
       
-      final selectedMenuIds = _selectedMenuItems[menuGroupId]!;
+      final selectedMenuItems = _selectedMenuItems[menuGroupId]!;
+      final currentCount = selectedMenuItems[menuProductId] ?? 0;
+      final totalSelected = selectedMenuItems.values.fold(0, (sum, count) => sum + count);
       
       if (isSelected) {
         // Maksimum seçim sayısını kontrol et
-        if (selectedMenuIds.length < maxSelection) {
-          selectedMenuIds.add(menuProductId);
+        if (totalSelected < maxSelection) {
+          selectedMenuItems[menuProductId] = currentCount + 1;
+          
+          // Menü grubunun seçimi tamamlandıysa bir sonraki zorunlu gruba kaydır
+          final newTotalSelected = selectedMenuItems.values.fold(0, (sum, count) => sum + count);
+          if (newTotalSelected == maxSelection) {
+            _scrollToNextIncompleteMenuGroup(menuGroupId);
+          }
         }
       } else {
-        selectedMenuIds.remove(menuProductId);
+        if (currentCount > 0) {
+          if (currentCount == 1) {
+            selectedMenuItems.remove(menuProductId);
+          } else {
+            selectedMenuItems[menuProductId] = currentCount - 1;
+          }
+        }
       }
       
       // Fiyatı güncelle (sadece görsel gösterim)
@@ -570,6 +622,52 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         _updatePriceController();
       }
     });
+  }
+  
+  // Tüm menü seçimlerinin tamamlanıp tamamlanmadığını kontrol et
+  bool _areAllMenuSelectionsComplete() {
+    if (_productDetail == null || !_productDetail!.isMenu) return true;
+    
+    for (final menuGroup in _productDetail!.menus) {
+      final selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+      final totalSelected = selectedItems.values.fold(0, (sum, count) => sum + count);
+      if (totalSelected != menuGroup.menuSelectQty) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  // Bir sonraki tamamlanmamış menü grubuna otomatik kaydır
+  void _scrollToNextIncompleteMenuGroup(int currentMenuGroupId) {
+    if (_productDetail == null || !_productDetail!.isMenu) return;
+    
+    // Mevcut grup indexini bul
+    int currentIndex = _productDetail!.menus.indexWhere((group) => group.menuID == currentMenuGroupId);
+    if (currentIndex == -1) return;
+    
+    // Bir sonraki tamamlanmamış grubu bul
+    for (int i = currentIndex + 1; i < _productDetail!.menus.length; i++) {
+      final menuGroup = _productDetail!.menus[i];
+      final selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+      final totalSelected = selectedItems.values.fold(0, (sum, count) => sum + count);
+      
+      // Bu grup tamamlanmamışsa buraya kaydır
+      if (totalSelected < menuGroup.menuSelectQty) {
+        final targetKey = _menuGroupKeys[menuGroup.menuID];
+        if (targetKey != null && targetKey.currentContext != null) {
+          Future.delayed(Duration(milliseconds: 300), () {
+            Scrollable.ensureVisible(
+              targetKey.currentContext!,
+              duration: Duration(milliseconds: 500),
+              curve: Curves.easeInOut,
+              alignment: 0.1, // Ekranın üst kısmında görünsün
+            );
+          });
+        }
+        break;
+      }
+    }
   }
 
   @override
@@ -617,6 +715,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -742,142 +841,211 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             // Menü Seçimi (sadece menülü ürünler için)
             if (_productDetail!.isMenu && _productDetail!.menus.isNotEmpty)
               ..._productDetail!.menus.map((menuGroup) {
+                final groupKey = _menuGroupKeys[menuGroup.menuID];
                 return Container(
+                  key: groupKey,
                   width: double.infinity,
                   padding: const EdgeInsets.all(16.0),
-                  margin: const EdgeInsets.only(bottom: 8),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade200),
-                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            menuGroup.menuName,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade800,
-                            ),
-                          ),
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Color(AppConstants.primaryColorValue).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(9),
-                            ),
+                          Expanded(
                             child: Text(
-                              '${menuGroup.menuSelectQty} adet seçin',
+                              menuGroup.menuName,
                               style: TextStyle(
-                                fontSize: 10,
-                                color: Color(AppConstants.primaryColorValue),
+                                fontSize: 15,
                                 fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade800,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ...menuGroup.menuProducts.map((menuProduct) {
-                        final isSelected = _selectedMenuItems[menuGroup.menuID]?.contains(menuProduct.mpID) ?? false;
-                        final selectedCount = _selectedMenuItems[menuGroup.menuID]?.length ?? 0;
-                        final canSelect = selectedCount < menuGroup.menuSelectQty;
-                        
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(
-                              color: isSelected 
-                                  ? Color(AppConstants.primaryColorValue)
-                                  : Colors.grey.shade300,
-                              width: 0.5,
-                            ),
-                            color: isSelected 
-                                ? Color(AppConstants.primaryColorValue).withOpacity(0.04)
-                                : Colors.transparent,
-                          ),
-                          child: InkWell(
-                            onTap: () => _updateMenuSelection(
-                              menuGroup.menuID, 
-                              menuProduct.mpID, 
-                              !isSelected,
-                              menuGroup.menuSelectQty
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  Radio<int>(
-                                    value: menuProduct.mpID,
-                                    groupValue: isSelected ? menuProduct.mpID : null,
-                                    onChanged: canSelect || isSelected ? (value) {
-                                      if (value != null) {
-                                        _updateMenuSelection(
-                                          menuGroup.menuID, 
-                                          value, 
-                                          !isSelected,
-                                          menuGroup.menuSelectQty
-                                        );
-                                      }
-                                    } : null,
-                                    activeColor: Color(AppConstants.primaryColorValue),
-                                    visualDensity: VisualDensity.compact,
+                          // Minimal ilerleme göstergesi
+                          Builder(
+                            builder: (context) {
+                              final selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+                              final totalSelected = selectedItems.values.fold(0, (sum, count) => sum + count);
+                              final isComplete = totalSelected == menuGroup.menuSelectQty;
+                              
+                              return Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isComplete 
+                                      ? Colors.green.withOpacity(0.1)
+                                      : Colors.grey.withOpacity(0.1),
+                                  border: Border.all(
+                                    color: isComplete ? Colors.green : Colors.grey.shade400,
+                                    width: 1.5,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          menuProduct.productTitle,
+                                ),
+                                child: Center(
+                                  child: isComplete 
+                                      ? Icon(Icons.check, size: 14, color: Colors.green)
+                                      : Text(
+                                          '$totalSelected',
                                           style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey.shade600,
                                           ),
                                         ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ...menuGroup.menuProducts.map((menuProduct) {
+                        final selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+                        final currentQuantity = selectedItems[menuProduct.mpID] ?? 0;
+                        final totalSelected = selectedItems.values.fold(0, (sum, count) => sum + count);
+                        final canIncrease = totalSelected < menuGroup.menuSelectQty;
+                        final canDecrease = currentQuantity > 0;
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: currentQuantity > 0 
+                                  ? Color(AppConstants.primaryColorValue).withOpacity(0.3)
+                                  : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                            color: currentQuantity > 0 
+                                ? Color(AppConstants.primaryColorValue).withOpacity(0.02)
+                                : Colors.white,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        menuProduct.productTitle,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey.shade800,
+                                        ),
+                                      ),
+                                      if (menuProduct.variantUnit.isNotEmpty) ...[
+                                        SizedBox(height: 2),
                                         Text(
                                           menuProduct.variantUnit,
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey.shade600,
+                                            color: Colors.grey.shade500,
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      if (menuProduct.menuPrice > 0)
+                                      if (menuProduct.menuPrice > 0) ...[
+                                        SizedBox(height: 4),
                                         Text(
                                           '+₺${menuProduct.menuPrice.toStringAsFixed(2)}',
                                           style: TextStyle(
-                                            fontSize: 13,
+                                            fontSize: 12,
                                             color: Color(AppConstants.primaryColorValue),
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                      Text(
-                                        '₺${menuProduct.variantPrice.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey.shade600,
-                                          decoration: menuProduct.menuPrice > 0 
-                                              ? TextDecoration.lineThrough 
-                                              : null,
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                // Minimal miktar kontrolü
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: canDecrease ? () {
+                                            _updateMenuSelection(
+                                              menuGroup.menuID, 
+                                              menuProduct.mpID, 
+                                              false,
+                                              menuGroup.menuSelectQty
+                                            );
+                                          } : null,
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            width: 32,
+                                            height: 32,
+                                            child: Icon(
+                                              Icons.remove,
+                                              size: 16,
+                                              color: canDecrease ? Colors.grey.shade600 : Colors.grey.shade300,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 36,
+                                        child: Center(
+                                          child: Text(
+                                            '$currentQuantity',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.grey.shade800,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: canIncrease ? () {
+                                            _updateMenuSelection(
+                                              menuGroup.menuID, 
+                                              menuProduct.mpID, 
+                                              true,
+                                              menuGroup.menuSelectQty
+                                            );
+                                          } : null,
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            width: 32,
+                                            height: 32,
+                                            child: Icon(
+                                              Icons.add,
+                                              size: 16,
+                                              color: canIncrease ? Color(AppConstants.primaryColorValue) : Colors.grey.shade300,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -1251,7 +1419,33 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           SizedBox(
             height: 44,
             child: ElevatedButton(
-            onPressed: _addProductToBasket,
+            onPressed: () {
+              // Menülü ürünse tüm seçimlerin tamamlanıp tamamlanmadığını kontrol et
+              if (_productDetail!.isMenu && !_areAllMenuSelectionsComplete()) {
+                // İlk tamamlanmamış menü grubuna sessizce kaydır
+                if (_productDetail!.menus.isNotEmpty) {
+                  for (final menuGroup in _productDetail!.menus) {
+                    final selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+                    final totalSelected = selectedItems.values.fold(0, (sum, count) => sum + count);
+                    if (totalSelected < menuGroup.menuSelectQty) {
+                      final targetKey = _menuGroupKeys[menuGroup.menuID];
+                      if (targetKey != null && targetKey.currentContext != null) {
+                        Scrollable.ensureVisible(
+                          targetKey.currentContext!,
+                          duration: Duration(milliseconds: 400),
+                          curve: Curves.easeInOut,
+                          alignment: 0.1,
+                        );
+                      }
+                      break;
+                    }
+                  }
+                }
+                return;
+              }
+              
+              _addProductToBasket();
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(AppConstants.primaryColorValue),
                 foregroundColor: Colors.white,
@@ -1297,11 +1491,23 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   // Seçili menü öğelerinin ID listesini döndürür
   List<int> _collectSelectedMenuIds() {
     final List<int> ids = [];
-    if (_productDetail == null || !_productDetail!.isMenu) return ids;
-    for (var menuGroup in _productDetail!.menus) {
-      final List<int> selectedIds = _selectedMenuItems[menuGroup.menuID] ?? [];
-      ids.addAll(selectedIds);
+    if (_productDetail == null || !_productDetail!.isMenu) {
+      return ids;
     }
+    
+    for (var menuGroup in _productDetail!.menus) {
+      final Map<int, int> selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+      
+      // Her menü öğesini miktar kadar ID listesine ekle
+      for (var entry in selectedItems.entries) {
+        final menuProductId = entry.key;
+        final quantity = entry.value;
+        for (int i = 0; i < quantity; i++) {
+          ids.add(menuProductId);
+        }
+      }
+    }
+    
     return ids;
   }
 

@@ -14,7 +14,7 @@ import 'package:pos701/services/firebase_messaging_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppDrawer extends StatefulWidget {
-  const AppDrawer({Key? key}) : super(key: key);
+  const AppDrawer({super.key});
 
   
 
@@ -136,6 +136,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         compID = compID == 0 ? (prefs.getInt(AppConstants.companyIdKey) ?? 0) : compID;
                       }
                       Navigator.push(
+                        // ignore: use_build_context_synchronously
                         context,
                         MaterialPageRoute(
                           builder: (context) => TablesView(
@@ -160,6 +161,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         compID = compID == 0 ? (prefs.getInt(AppConstants.companyIdKey) ?? 0) : compID;
                       }
                       Navigator.push(
+                        // ignore: use_build_context_synchronously
                         context,
                         MaterialPageRoute(
                           builder: (context) => KitchenView(

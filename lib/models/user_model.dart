@@ -143,11 +143,8 @@ class UserModel {
     final compId = userData['compID'] is int ? userData['compID'] as int : null;
     
     // Token bilgisi
-    String tokenValue = '';
     if (userData.containsKey('token')) {
-      tokenValue = userData['token']?.toString() ?? '';
     } else if (userData.containsKey('userToken')) {
-      tokenValue = userData['userToken']?.toString() ?? '';
     }
     
     // Şirket bilgisi
@@ -155,7 +152,7 @@ class UserModel {
     if (userData.containsKey('company') && userData['company'] is Map<String, dynamic>) {
       logger.d('CompanyInfo.fromJson çağrılıyor...');
       companyInfo = CompanyInfo.fromJson(userData['company'] as Map<String, dynamic>);
-      logger.d('CompanyInfo oluşturuldu: ${companyInfo?.compName ?? 'null'}');
+      logger.d('CompanyInfo oluşturuldu: ${companyInfo.compName}');
     } else {
       logger.d('Company bilgisi oluşturulamadı, company key yok veya Map değil');
     }
