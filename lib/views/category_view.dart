@@ -718,20 +718,25 @@ class _CategoryViewState extends State<CategoryView> {
                                        ),
                                      ),
                                   
-                                  // Tüm kartta tıklanabilir alan - Tüm ürünlerde arttır
+                                  // Tüm kartta tıklanabilir alan - Menü ise detay sayfasına, değilse arttırma
                                   Positioned.fill(
                                     child: InkWell(
                                       onTap: () {
-                                        basketViewModel.addProduct(product, opID: 0);
-                                        debugPrint('➕ [VERTICAL_LAYOUT] Ürün tıklandı - arttırıldı: ${product.proName}');
-                                         },
-                                         splashColor: Colors.grey.withOpacity(0.1),
-                                         highlightColor: Colors.grey.withOpacity(0.05),
-                                         child: Container(
-                                           color: Colors.transparent,
-                                         ),
-                                       ),
-                                     ),
+                                        if (product.isMenu) {
+                                          debugPrint('🔍 [VERTICAL_LAYOUT] Menü ürünü tıklandı - detay sayfasına gidiliyor: ${product.proName}');
+                                          _goToProductDetail(product);
+                                        } else {
+                                          debugPrint('➕ [VERTICAL_LAYOUT] Normal ürün tıklandı - arttırıldı: ${product.proName}');
+                                          basketViewModel.addProduct(product, opID: 0);
+                                        }
+                                      },
+                                      splashColor: Colors.grey.withOpacity(0.1),
+                                      highlightColor: Colors.grey.withOpacity(0.05),
+                                      child: Container(
+                                        color: Colors.transparent,
+                                      ),
+                                    ),
+                                  ),
                                   
                                   // Ana içerik
                                   Padding(
@@ -842,9 +847,9 @@ class _CategoryViewState extends State<CategoryView> {
                                               onPressed: () {
                                                 basketViewModel.addProduct(product, opID: 0);
                                               },
-                                              tooltip: 'Ekle',
-                                            ),
-                                          ),
+                                        tooltip: 'Ekle',
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1081,12 +1086,17 @@ class _CategoryViewState extends State<CategoryView> {
       ),
       child: Stack(
         children: [
-          // Tüm kartta tıklanabilir alan - Ürün detayına git
+          // Tüm kartta tıklanabilir alan - Menü ise detay sayfasına, değilse arttırma
           Positioned.fill(
             child: InkWell(
               onTap: () {
-                debugPrint('🔍 [CATEGORY_VIEW] Ürün tıklandı: ${product.proName}');
+                if (product.isMenu) {
+                  debugPrint('🔍 [CATEGORY_VIEW] Menü ürünü tıklandı - detay sayfasına gidiliyor: ${product.proName}');
                   _goToProductDetail(product);
+                } else {
+                  debugPrint('➕ [CATEGORY_VIEW] Normal ürün tıklandı - arttırılıyor: ${product.proName}');
+                  basketViewModel.addProduct(product, opID: 0);
+                }
               },
               borderRadius: BorderRadius.circular(8),
               splashColor: Colors.grey.withOpacity(0.1),
