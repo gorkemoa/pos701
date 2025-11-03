@@ -48,7 +48,7 @@ class OrderViewModel extends ChangeNotifier {
 
     for (var item in items) {
       // Debug için ürün bilgilerini logla
-      debugPrint('🔄 [ORDER_VM] Sipariş ürünü hazırlanıyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}, Not: ${item.proNote}, İkram: ${item.isGift}, Çıkarılacak: ${item.isRemove}');
+      debugPrint('🔄 [ORDER_VM] Sipariş ürünü hazırlanıyor: ${item.product.proName}, Miktar: ${item.proQty}, OpID: ${item.opID}, Not: ${item.proNote}, İkram: ${item.isGift}, Çıkarılacak: ${item.isRemove}, Menü: ${item.isMenu}');
       
       // OrderProduct oluştur
       orderProducts.add(OrderProduct(
@@ -61,6 +61,9 @@ class OrderViewModel extends ChangeNotifier {
         isGift: item.isGift, // İkram bilgisini kullan
         isRemove: item.isRemove, // Çıkarılacak işaretini aktar
         proFeature: item.proFeature, // Seçili özellikleri aktar
+        isMenu: item.isMenu, // Menü bilgisini aktar
+        menuIDs: item.menuIDs, // Menü grup ID'lerini aktar
+        menuProducts: item.menuProducts, // Menü ürünlerini aktar
       ));
     }
     
@@ -277,7 +280,29 @@ class OrderViewModel extends ChangeNotifier {
       
       // Birden fazla aynı ürün varsa, bunları tek bir sepet öğesi olarak ekle
       if (kalanMiktar > 0) {
-        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Toplam miktar: $kalanMiktar, OpID: ${product.opID}, Fiyat: ${urun.proPrice}, Not: ${urun.proNote}, İkram: ${product.isGift}');
+        debugPrint('✅ [ORDER_VM] Ürün sepete aktarılıyor: ${urun.proName}, Toplam miktar: $kalanMiktar, OpID: ${product.opID}, Fiyat: ${urun.proPrice}, Not: ${urun.proNote}, İkram: ${product.isGift}, Menü: ${product.isMenu}');
+        
+        // Menü bilgilerini hazırla
+        List<Map<String, dynamic>> menuProducts = [];
+        if (product.isMenu && product.menus.isNotEmpty) {
+          debugPrint('🍽️ [ORDER_VM] Menü ürünleri dönüştürülüyor: ${product.menus.length} grup');
+          for (var menuGroup in product.menus) {
+            debugPrint('   Menü Grubu: ${menuGroup.menuName} (ID: ${menuGroup.menuID}), ${menuGroup.selectedProducts.length} seçili ürün');
+            for (var selectedProduct in menuGroup.selectedProducts) {
+              debugPrint('     Seçili: ${selectedProduct.productTitle} (pID=${selectedProduct.productID}, vID=${selectedProduct.variantID}, qty=${selectedProduct.qty})');
+              for (int i = 0; i < selectedProduct.qty; i++) {
+                menuProducts.add({
+                  'productID': selectedProduct.productID,
+                  'variantID': selectedProduct.variantID,
+                  'qty': 1,
+                  'menuID': menuGroup.menuID,
+                });
+              }
+            }
+          }
+          debugPrint('🍽️ [ORDER_VM] Menü ürünleri sepete ekleniyor: ${menuProducts.length} adet kayıt');
+          debugPrint('   Detay: $menuProducts');
+        }
         
         // Tek bir sepet öğesi oluştur
         final BasketItem sepetItem = BasketItem(
@@ -287,6 +312,9 @@ class OrderViewModel extends ChangeNotifier {
           proNote: urun.proNote, // Ürün notu
           isGift: product.isGift, // İkram bilgisi
           proFeature: product.features.map((f) => f.featureID).toList(),
+          isMenu: product.isMenu,
+          menuIDs: product.menuIDs,
+          menuProducts: menuProducts,
         );
         
         sepetItems.add(sepetItem);
@@ -314,6 +342,8 @@ class OrderViewModel extends ChangeNotifier {
     required int compID,
     required int orderID,
     required List<BasketItem> sepetUrunleri,
+    int tableID = 0, // Eklendi
+    String tableName = '', // Eklendi
     String orderDesc = '',
     int orderGuest = 1,
     int kuverQty = 1,
@@ -335,7 +365,8 @@ class OrderViewModel extends ChangeNotifier {
     
     try {
       _setStatus(OrderStatus.loading);
-      debugPrint('🔄 [ORDER_VM] Sipariş güncelleniyor. OrderID: $orderID, Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${custAdrs.length}');
+      debugPrint('🔄 [ORDER_VM] Sipariş güncelleniyor. OrderID: $orderID, TableID: $tableID, TableName: $tableName');
+      debugPrint('🔄 [ORDER_VM] Müşteri ID: $custID, Müşteri adı: $custName, Müşteri tel: $custPhone, Adres sayısı: ${custAdrs.length}');
       debugPrint('🔄 [ORDER_VM] Kuver: $isKuver, Garsoniye: $isWaiter, Ödeme Türü: $orderPayType değerleri ile güncelleniyor');
       debugPrint('🔄 [ORDER_VM] Ürün çıkarma durumu: ${isRemove == 1 ? "Evet" : "Hayır"}');
       
@@ -354,6 +385,8 @@ class OrderViewModel extends ChangeNotifier {
         userToken: userToken,
         compID: compID,
         orderID: orderID,
+        tableID: tableID, // Eklendi
+        orderName: tableName, // Eklendi
         orderGuest: orderGuest,
         kuverQty: kuverQty,
         orderDesc: orderDesc,

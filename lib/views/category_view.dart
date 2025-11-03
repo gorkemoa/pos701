@@ -72,7 +72,6 @@ class _CategoryViewState extends State<CategoryView> {
   bool _isDraggingFab = false;
   Offset? _fabDragStartOffset;
 
-  bool _isListening = false;
   
 
   Future<void> _loadFabPositionPref() async {
@@ -123,42 +122,48 @@ class _CategoryViewState extends State<CategoryView> {
 
   Future<void> _loadOrderDetailAndFillBasket() async {
     final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-    if (basketViewModel.isEmpty) {
-      // Yükleniyor göstergesini aç
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => Center(child: CircularProgressIndicator()),
-      );
+    
+    // Sipariş detaylarını her zaman yeniden yükle (menü bilgilerini korumak için)
+    debugPrint('🧹 [CATEGORY_VIEW] Sepet temizleniyor ve sipariş detayları yüklenecek. OrderID: ${widget.orderID}');
+    basketViewModel.clearServerItems();
+    
+    // Yükleniyor göstergesini aç
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(child: CircularProgressIndicator()),
+    );
 
-      final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
-      final userViewModel = Provider.of<UserViewModel>(context, listen: false);
-      final userToken = userViewModel.userInfo?.userToken ?? widget.userToken;
-      final compID = userViewModel.userInfo?.compID ?? widget.compID;
-      final success = await orderViewModel.getSiparisDetayi(
-        userToken: userToken,
-        compID: compID,
-        orderID: widget.orderID!,
-      );
-      if (success && orderViewModel.orderDetail != null) {
-        final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
-        for (var item in sepetItems) {
-          if (item.opID > 0) {
-            basketViewModel.addProductWithOpID(
-              item.product,
-              item.proQty,
-              item.opID,
-              proNote: item.proNote,
-              isGift: item.isGift,
-              proFeature: item.proFeature,
-            );
-          }
+    final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
+    final userViewModel = Provider.of<UserViewModel>(context, listen: false);
+    final userToken = userViewModel.userInfo?.userToken ?? widget.userToken;
+    final compID = userViewModel.userInfo?.compID ?? widget.compID;
+    final success = await orderViewModel.getSiparisDetayi(
+      userToken: userToken,
+      compID: compID,
+      orderID: widget.orderID!,
+    );
+    if (success && orderViewModel.orderDetail != null) {
+      final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
+      for (var item in sepetItems) {
+        if (item.opID > 0) {
+          basketViewModel.addProductWithOpID(
+            item.product,
+            item.proQty,
+            item.opID,
+            proNote: item.proNote,
+            isGift: item.isGift,
+            proFeature: item.proFeature,
+            isMenu: item.isMenu,
+            menuIDs: item.menuIDs,
+            menuProducts: item.menuProducts,
+          );
         }
       }
-      // Yükleniyor göstergesini kapat
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
+    }
+    // Yükleniyor göstergesini kapat
+    if (Navigator.canPop(context)) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -168,11 +173,7 @@ class _CategoryViewState extends State<CategoryView> {
     _categoryViewModel = CategoryViewModel(ProductService());
     _productViewModel = ProductViewModel(ProductService());
     _readyNotesViewModel = ReadyNotesViewModel(ReadyNotesService());
-    // Sepeti temizle
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      basketViewModel.clearBasket();
-    });
+    // NOT: Sepeti burada temizlemiyoruz çünkü sipariş yüklenirken temizlenecek
     // Arama alanını dinlemeye başla
     _searchController.addListener(_filterProducts);
     _loadCategories();
@@ -1131,7 +1132,7 @@ class _CategoryViewState extends State<CategoryView> {
               ),
             ),
           
-          // Sağ yarı - Arttırma (sadece sepetteyse)
+          // Sağ yarı - Arttırma veya detay (sadece sepetteyse)
           if (isInBasket)
             Positioned(
               right: 0,
@@ -1140,8 +1141,13 @@ class _CategoryViewState extends State<CategoryView> {
               width: MediaQuery.of(context).size.width * 0.15, // Kartın sağ yarısı
               child: InkWell(
                 onTap: () {
-                  basketViewModel.addProduct(product, opID: 0);
-                  debugPrint('➡️ [CATEGORY_VIEW] Sağ tarafa tıklandı - Ürün miktarı arttırıldı: ${product.proName}');
+                  if (product.isMenu) {
+                    debugPrint('🔍 [CATEGORY_VIEW] Menü ürünü - sağdan detay sayfasına gidiliyor: ${product.proName}');
+                    _goToProductDetail(product);
+                  } else {
+                    basketViewModel.addProduct(product, opID: 0);
+                    debugPrint('➡️ [CATEGORY_VIEW] Sağ tarafa tıklandı - Ürün miktarı arttırıldı: ${product.proName}');
+                  }
                 },
                 borderRadius: BorderRadius.circular(8),
                 splashColor: Colors.grey.withOpacity(0.1),
@@ -3359,6 +3365,11 @@ class _CategoryViewState extends State<CategoryView> {
           compID: widget.compID,
           postID: product.postID,
           tableName: widget.tableName,
+        ),
+        settings: RouteSettings(
+          arguments: {
+            if (widget.orderID != null) 'orderID': widget.orderID,
+          },
         ),
       ),
     );

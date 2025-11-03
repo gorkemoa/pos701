@@ -42,6 +42,9 @@ class OrderProduct {
   final bool isGift;
   final int isRemove;
   final List<int> proFeature;
+  final bool isMenu;
+  final List<int> menuIDs;
+  final List<Map<String, dynamic>> menuProducts;
 
   OrderProduct({
     required this.opID,
@@ -53,20 +56,32 @@ class OrderProduct {
     this.isGift = false,
     this.isRemove = 0,
     this.proFeature = const [],
+    this.isMenu = false,
+    this.menuIDs = const [],
+    this.menuProducts = const [],
   });
 
   Map<String, dynamic> toJson() {
-    return {
+    final Map<String, dynamic> json = {
       'opID': opID,
       'postID': postID,
       'proID': proID,
       'proQty': proQty,
-      'proPrice': proPrice,
+      'proPrice': proPrice, // Ham fiyat gönder (menü ekstra ücretleri eklenMEMİŞ)
       'proNote': proNote,
       'isGift': isGift ? 1 : 0,
       'isRemove': isRemove,
       'proFeature': proFeature,
     };
+    
+    // Eğer menü ürünüyse, menü verilerini ekle
+    if (isMenu) {
+      json['isMenu'] = true;
+      json['menuIDs'] = menuIDs;
+      json['menuProducts'] = menuProducts;
+    }
+    
+    return json;
   }
 
   factory OrderProduct.fromJson(Map<String, dynamic> json) {
@@ -80,6 +95,9 @@ class OrderProduct {
       isGift: json['isGift'] == 1,
       isRemove: json['isRemove'] ?? 0,
       proFeature: (json['proFeature'] as List<dynamic>?)?.map((e) => int.tryParse(e.toString()) ?? 0).toList() ?? const [],
+      isMenu: json['isMenu'] == true,
+      menuIDs: (json['menuIDs'] as List<dynamic>?)?.map((e) => int.tryParse(e.toString()) ?? 0).toList() ?? const [],
+      menuProducts: (json['menuProducts'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? const [],
     );
   }
 }
@@ -150,20 +168,20 @@ class OrderRequest {
 
 class OrderResponse {
   final int orderID;
-  final String message;
-  final bool success;
+  final String? message;
+  final bool? success;
 
   OrderResponse({
     required this.orderID,
-    required this.message,
-    required this.success,
+    this.message,
+    this.success,
   });
 
   factory OrderResponse.fromJson(Map<String, dynamic> json) {
     return OrderResponse(
-      orderID: json['orderID'],
-      message: json['message'],
-      success: json['success'],
+      orderID: json['orderID'] as int,
+      message: json['message'] as String?,
+      success: json['success'] as bool?,
     );
   }
 }
@@ -335,6 +353,9 @@ class OrderDetailProduct {
   final bool isPaid;
   final String? proNote;
   final List<OrderDetailProductFeature> features;
+  final bool isMenu;
+  final List<int> menuIDs;
+  final List<OrderDetailMenuGroup> menus;
 
   OrderDetailProduct({
     this.opID = 0,
@@ -352,9 +373,20 @@ class OrderDetailProduct {
     required this.isPaid,
     this.proNote,
     this.features = const [],
+    this.isMenu = false,
+    this.menuIDs = const [],
+    this.menus = const [],
   });
 
   factory OrderDetailProduct.fromJson(Map<String, dynamic> json) {
+    // Debug: Menü verilerini logla
+    if (json['isMenu'] == true) {
+      debugPrint('📋 [OrderDetailProduct] Menülü ürün parse ediliyor: ${json['proName']}');
+      debugPrint('   isMenu: ${json['isMenu']}');
+      debugPrint('   menuIDs: ${json['menuIDs']}');
+      debugPrint('   menus: ${json['menus']}');
+    }
+    
     return OrderDetailProduct(
       opID: json['opID'] ?? 0,
       postID: json['postID'] ?? 0,
@@ -372,6 +404,11 @@ class OrderDetailProduct {
       proNote: json['proNote'],
       features: (json['features'] as List<dynamic>?)
               ?.map((e) => OrderDetailProductFeature.fromJson(e as Map<String, dynamic>))
+              .toList() ?? const [],
+      isMenu: json['isMenu'] == true,
+      menuIDs: (json['menuIDs'] as List<dynamic>?)?.map((e) => int.tryParse(e.toString()) ?? 0).toList() ?? const [],
+      menus: (json['menus'] as List<dynamic>?)
+              ?.map((e) => OrderDetailMenuGroup.fromJson(e as Map<String, dynamic>))
               .toList() ?? const [],
     );
   }
@@ -401,11 +438,69 @@ class OrderDetailProductFeature {
   }
 }
 
+// Sipariş detayındaki menü grubu modeli
+class OrderDetailMenuGroup {
+  final int menuID;
+  final String menuName;
+  final int menuSelectQty;
+  final List<OrderDetailSelectedProduct> selectedProducts;
+
+  OrderDetailMenuGroup({
+    required this.menuID,
+    required this.menuName,
+    required this.menuSelectQty,
+    required this.selectedProducts,
+  });
+
+  factory OrderDetailMenuGroup.fromJson(Map<String, dynamic> json) {
+    return OrderDetailMenuGroup(
+      menuID: json['menuID'] ?? 0,
+      menuName: json['menuName'] ?? '',
+      menuSelectQty: json['menuSelectQty'] ?? 0,
+      selectedProducts: (json['selectedProducts'] as List<dynamic>?)
+          ?.map((e) => OrderDetailSelectedProduct.fromJson(e as Map<String, dynamic>))
+          .toList() ?? const [],
+    );
+  }
+}
+
+// Sipariş detayındaki seçili menü ürünü modeli
+class OrderDetailSelectedProduct {
+  final int productID;
+  final String productTitle;
+  final int variantID;
+  final String variantUnit;
+  final int qty;
+  final String extraPrice;
+
+  OrderDetailSelectedProduct({
+    required this.productID,
+    required this.productTitle,
+    required this.variantID,
+    required this.variantUnit,
+    required this.qty,
+    required this.extraPrice,
+  });
+
+  factory OrderDetailSelectedProduct.fromJson(Map<String, dynamic> json) {
+    return OrderDetailSelectedProduct(
+      productID: json['productID'] ?? 0,
+      productTitle: json['productTitle'] ?? '',
+      variantID: json['variantID'] ?? 0,
+      variantUnit: json['variantUnit'] ?? '',
+      qty: json['qty'] ?? 0,
+      extraPrice: json['extraPrice'] ?? '0,00',
+    );
+  }
+}
+
 // Sipariş Güncelleme İstek Modeli
 class OrderUpdateRequest {
   final String userToken;
   final int compID;
   final int orderID;
+  final int tableID; // Eksikti - Eklendi
+  final String orderName; // Eksikti - Eklendi
   final int orderGuest;
   final int kuverQty;
   final String orderDesc;
@@ -425,6 +520,8 @@ class OrderUpdateRequest {
     required this.userToken,
     required this.compID,
     required this.orderID,
+    this.tableID = 0, // Varsayılan değer
+    this.orderName = '', // Varsayılan değer
     required this.orderGuest,
     required this.kuverQty,
     this.orderDesc = '',
@@ -446,6 +543,8 @@ class OrderUpdateRequest {
       'userToken': userToken,
       'compID': compID,
       'orderID': orderID,
+      'tableID': tableID, // Eklendi
+      'orderName': orderName, // Eklendi
       'orderGuest': orderGuest,
       'kuverQty': kuverQty,
       'orderDesc': orderDesc,

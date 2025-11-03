@@ -54,6 +54,7 @@ class ProductDetailView extends StatefulWidget {
   final String? initialNote;
   final bool? initialIsGift;
   final List<int>? initialFeatures;
+  final List<Map<String, dynamic>>? initialMenuProducts;
 
   const ProductDetailView({
     Key? key,
@@ -66,6 +67,7 @@ class ProductDetailView extends StatefulWidget {
     this.initialNote,
     this.initialIsGift,
     this.initialFeatures,
+    this.initialMenuProducts,
   }) : super(key: key);
 
   @override
@@ -100,6 +102,16 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     super.initState();
     _noteController.text = widget.initialNote ?? '';
     _isGift = widget.initialIsGift ?? false;
+    
+    // Debug: Constructor parametrelerini logla
+    debugPrint('🚀 [PRODUCT_DETAIL] initState çağrıldı');
+    debugPrint('   selectedProID: ${widget.selectedProID}');
+    debugPrint('   selectedLineId: ${widget.selectedLineId}');
+    debugPrint('   initialNote: ${widget.initialNote}');
+    debugPrint('   initialIsGift: ${widget.initialIsGift}');
+    debugPrint('   initialFeatures: ${widget.initialFeatures}');
+    debugPrint('   initialMenuProducts: ${widget.initialMenuProducts}');
+    
     _loadProductDetail();
   }
 
@@ -128,6 +140,19 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         setState(() {
           _productDetail = response.data;
           _isLoading = false;
+          
+          // DEBUG: Ürün detayını logla
+          debugPrint('📦 [PRODUCT_DETAIL] Ürün detayı yüklendi: ${_productDetail!.postTitle}');
+          debugPrint('   isMenu: ${_productDetail!.isMenu}');
+          if (_productDetail!.isMenu && _productDetail!.menus.isNotEmpty) {
+            debugPrint('   Menü grupları: ${_productDetail!.menus.length}');
+            for (var menuGroup in _productDetail!.menus) {
+              debugPrint('   - ${menuGroup.menuName} (ID: ${menuGroup.menuID}): ${menuGroup.menuProducts.length} ürün');
+              for (var mp in menuGroup.menuProducts) {
+                debugPrint('     * mpID=${mp.mpID}, productID=${mp.productID} (${mp.productTitle}), variantID=${mp.variantID} (${mp.variantUnit})');
+              }
+            }
+          }
           
           // Menü grupları için key'leri oluştur
           if (_productDetail!.isMenu && _productDetail!.menus.isNotEmpty) {
@@ -183,24 +208,60 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               }
             }
             
-            // Menü grupları için kontrol (eğer bu ürün menülü ise)
-            if (_productDetail!.isMenu && _productDetail!.menus.isNotEmpty) {
-              for (final menuGroup in _productDetail!.menus) {
-                final selectedInGroup = <int, int>{};
-                for (final menuProduct in menuGroup.menuProducts) {
-                  // Her ID'nin kaç kez geçtiğini say
-                  int count = ids.where((id) => id == menuProduct.mpID).length;
-                  if (count > 0) {
-                    selectedInGroup[menuProduct.mpID] = count;
+            // Seçili özelliklere göre fiyatı güncelle
+            _updatePriceController();
+          }
+          
+          // Sepetten gelen menü seçimleri varsa otomatik yükle
+          if (widget.initialMenuProducts != null && widget.initialMenuProducts!.isNotEmpty && _productDetail!.isMenu) {
+            debugPrint('📋 [PRODUCT_DETAIL] İnitial menü seçimleri yükleniyor: ${widget.initialMenuProducts!.length} adet');
+            debugPrint('📋 [PRODUCT_DETAIL] Mevcut menü grupları: ${_productDetail!.menus.map((m) => m.menuID).toList()}');
+            
+            // initialMenuProducts formatı: [{productID, variantID, qty, menuID}, ...]
+            for (final menuProductData in widget.initialMenuProducts!) {
+              final int menuID = menuProductData['menuID'] ?? 0;
+              final int productID = menuProductData['productID'] ?? 0;
+              final int variantID = menuProductData['variantID'] ?? 0;
+              
+              debugPrint('🔍 [PRODUCT_DETAIL] Aranan: MenuID=$menuID, ProductID=$productID, VariantID=$variantID');
+              
+              // Bu menü grubunu bul
+              try {
+                final menuGroup = _productDetail!.menus.firstWhere(
+                  (mg) => mg.menuID == menuID,
+                );
+                
+                debugPrint('✓ [PRODUCT_DETAIL] Menü grubu bulundu: ${menuGroup.menuName} (${menuGroup.menuProducts.length} ürün)');
+                
+                // MenuProduct'ı productID ve variantID'ye göre bul
+                try {
+                  final menuProduct = menuGroup.menuProducts.firstWhere(
+                    (mp) {
+                      final matches = mp.productID == productID && mp.variantID == variantID;
+                      debugPrint('  Kontrol: mpID=${mp.mpID}, productID=${mp.productID}, variantID=${mp.variantID}, eşleşme=$matches');
+                      return matches;
+                    },
+                  );
+                  
+                  // Seçimi kaydet
+                  if (!_selectedMenuItems.containsKey(menuID)) {
+                    _selectedMenuItems[menuID] = <int, int>{};
                   }
+                  
+                  final currentCount = _selectedMenuItems[menuID]![menuProduct.mpID] ?? 0;
+                  _selectedMenuItems[menuID]![menuProduct.mpID] = currentCount + 1;
+                  
+                  debugPrint('✅ [PRODUCT_DETAIL] Menü seçimi eklendi: MenuID=$menuID, ProductID=$productID, VariantID=$variantID, mpID=${menuProduct.mpID}');
+                } catch (e) {
+                  debugPrint('❌ [PRODUCT_DETAIL] MenuProduct bulunamadı: $e');
+                  debugPrint('   Mevcut ürünler: ${menuGroup.menuProducts.map((mp) => 'mpID=${mp.mpID}(pID=${mp.productID},vID=${mp.variantID})').join(", ")}');
                 }
-                if (selectedInGroup.isNotEmpty) {
-                  _selectedMenuItems[menuGroup.menuID] = selectedInGroup;
-                }
+              } catch (e) {
+                debugPrint('❌ [PRODUCT_DETAIL] Menü grubu bulunamadı: MenuID=$menuID, Hata: $e');
               }
             }
             
-            // Seçili özelliklere göre fiyatı güncelle
+            // Menü seçimlerine göre fiyatı güncelle
             _updatePriceController();
           }
         });
@@ -229,13 +290,19 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       String fullNote = _buildProductNote();
       // Seçili özellik ID listesi
       final List<int> selectedFeatureIds = _collectSelectedFeatureIds();
-      // Seçili menü ID listesi
+      // Seçili menü ID listesi (eski format - geriye dönük uyumluluk)
       final List<int> selectedMenuIds = _collectSelectedMenuIds();
       
-      // Hem özellik hem menü ID'lerini birleştir
+      // Menü verileri
+      final bool isMenu = _productDetail!.isMenu;
+      final List<int> menuGroupIds = _collectMenuGroupIds();
+      final List<Map<String, dynamic>> menuProductsData = _collectMenuProductsData();
+      
+      // Hem özellik hem menü ID'lerini birleştir (eski yöntem için)
       final List<int> allSelectedIds = [...selectedFeatureIds, ...selectedMenuIds];
       
-      // Fiyat değeri olarak sadece temel porsiyon fiyatını kullan (özellik fiyatları backend'de hesaplanıyor)
+      // Fiyat değeri olarak sadece HAM PORSIYON FİYATINI kullan
+      // Özellik ve menü ekstra ücretlerini GÖNDERME - Backend hesaplasın
       final String priceValue = _isCustomPrice 
           ? _priceController.text 
           : selectedPorsiyon.proPrice.toString();
@@ -246,7 +313,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proName: _productDetail!.postTitle,
         proUnit: selectedPorsiyon.proUnit,
         proStock: selectedPorsiyon.proStock.toString(),
-        proPrice: priceValue, // Özel fiyat veya özellikleri dahil hesaplanmış fiyat
+        proPrice: priceValue, // Sadece ham porsiyon fiyatı - ekstra ücretler backend'de hesaplanacak
         proNote: fullNote,
       );
       
@@ -255,19 +322,28 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       // Sepetten gelen bir ürün mü? (lineId veya proID ile belirlenebilir)
       if (widget.selectedLineId != null) {
         // Satır ID'si varsa, belirli bir satırı güncelleme
-        _updateBasketLine(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
+        _updateBasketLine(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds, isMenu, menuGroupIds, menuProductsData);
       } else if (widget.selectedProID != null) {
         // Sadece ürün ID'si varsa, geriye dönük uyumluluk için
-        _updateBasketItemByProductId(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
+        _updateBasketItemByProductId(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds, isMenu, menuGroupIds, menuProductsData);
       } else {
         // Yeni ürün ekleme - API ile sunucuya gönder, sonra sepete ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds, isMenu, menuGroupIds, menuProductsData);
       }
     }
   }
   
   // Belirli bir satırı günceller (lineId ile)
-  void _updateBasketLine(BasketViewModel basketViewModel, Product product, String fullNote, List<int> allSelectedIds, List<int> selectedMenuIds) {
+  void _updateBasketLine(
+    BasketViewModel basketViewModel, 
+    Product product, 
+    String fullNote, 
+    List<int> allSelectedIds, 
+    List<int> selectedMenuIds,
+    bool isMenu,
+    List<int> menuGroupIds,
+    List<Map<String, dynamic>> menuProductsData,
+  ) {
     // Sepette var olan lineId'li satırı güncelle
     int lineId = widget.selectedLineId!;
     
@@ -293,6 +369,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proNote: fullNote,
         isGift: false,
         proFeature: allSelectedIds,
+        isMenu: isMenu,
+        menuIDs: menuGroupIds,
+        menuProducts: menuProductsData,
       );
       // Ardından 1 adet yeni satır olarak ikram ekle
       basketViewModel.addProduct(
@@ -300,6 +379,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proNote: fullNote,
         isGift: true,
         proFeature: allSelectedIds,
+        isMenu: isMenu,
+        menuIDs: menuGroupIds,
+        menuProducts: menuProductsData,
       );
     } else {
       // Satırı güncelle - yeni product bilgileriyle
@@ -310,6 +392,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proNote: fullNote,
         isGift: _isGift,
         proFeature: allSelectedIds,
+        isMenu: isMenu,
+        menuIDs: menuGroupIds,
+        menuProducts: menuProductsData,
       );
     }
     
@@ -323,13 +408,22 @@ class _ProductDetailViewState extends State<ProductDetailView> {
   }
   
   // Ürün ID'ye göre sepet öğesini günceller (geriye dönük uyumluluk için)
-  void _updateBasketItemByProductId(BasketViewModel basketViewModel, Product product, String fullNote, List<int> allSelectedIds, List<int> selectedMenuIds) {
+  void _updateBasketItemByProductId(
+    BasketViewModel basketViewModel, 
+    Product product, 
+    String fullNote, 
+    List<int> allSelectedIds, 
+    List<int> selectedMenuIds,
+    bool isMenu,
+    List<int> menuGroupIds,
+    List<Map<String, dynamic>> menuProductsData,
+  ) {
     // Eski ürünün ID'si
         int oldProID = widget.selectedProID!;
         
-        // Eğer aynı porsiyon seçildiyse sadece seçilen ürünün notunu, ikram durumunu ve fiyatını güncelle
+        // Eğer aynı porsiyon seçildiyse sadece bilgileri güncelle
     if (oldProID == product.proID) {
-      // İlk bulunan ürünü güncelle (artık tek bir satır olacak)
+      // İlk bulunan ürünü güncelle
       try {
         final existingItem = basketViewModel.items.firstWhere(
           (item) => item.product.proID == oldProID,
@@ -343,12 +437,18 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             proNote: fullNote,
             isGift: false,
             proFeature: allSelectedIds,
+            isMenu: isMenu,
+            menuIDs: menuGroupIds,
+            menuProducts: menuProductsData,
           );
           basketViewModel.addProduct(
             product,
             proNote: fullNote,
             isGift: true,
             proFeature: allSelectedIds,
+            isMenu: isMenu,
+            menuIDs: menuGroupIds,
+            menuProducts: menuProductsData,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -360,16 +460,18 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           return;
         }
         
-        // Not güncelle
-        basketViewModel.updateProductNote(existingItem.lineId, fullNote);
-        
-        // İkram durumunu güncelle
-        basketViewModel.toggleGiftStatus(existingItem.lineId, isGift: _isGift);
-          
-          // Eğer özel fiyat seçilmişse fiyatı güncelle
-          if (_isCustomPrice) {
-          basketViewModel.updateProductPrice(existingItem.lineId, _priceController.text);
-          }
+        // Tüm bilgileri güncelle - updateSpecificLine kullan
+        basketViewModel.updateSpecificLine(
+          existingItem.lineId,
+          product,
+          existingItem.proQty,
+          proNote: fullNote,
+          isGift: _isGift,
+          proFeature: allSelectedIds,
+          isMenu: isMenu,
+          menuIDs: menuGroupIds,
+          menuProducts: menuProductsData,
+        );
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -381,7 +483,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           return;
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds, isMenu, menuGroupIds, menuProductsData);
         }
     } else {
       // Farklı porsiyon seçildi, ilk bulunan ürünü güncelle
@@ -436,13 +538,22 @@ class _ProductDetailViewState extends State<ProductDetailView> {
           Navigator.of(context).pop();
       } catch (e) {
         // Ürün bulunamadıysa, yeni ürün olarak ekle
-        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds);
+        _addProductAsNewItem(basketViewModel, product, fullNote, allSelectedIds, selectedMenuIds, isMenu, menuGroupIds, menuProductsData);
       }
     }
   }
 
   // Ürünü sepete eklerken API'ye gönder
-  void _addProductAsNewItem(BasketViewModel basketViewModel, Product product, String fullNote, List<int> allSelectedIds, List<int> selectedMenuIds) {
+  void _addProductAsNewItem(
+    BasketViewModel basketViewModel, 
+    Product product, 
+    String fullNote, 
+    List<int> allSelectedIds, 
+    List<int> selectedMenuIds,
+    bool isMenu,
+    List<int> menuGroupIds,
+    List<Map<String, dynamic>> menuProductsData,
+  ) {
     // Eğer orderID yoksa, sadece sepete ekle (yeni sipariş oluşturma durumunda)
     Map<String, dynamic>? args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     int? orderID = args?['orderID'];
@@ -460,6 +571,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proNote: fullNote,
         isGift: _isGift,
         proFeature: allSelectedIds,
+        isMenu: isMenu,
+        menuIDs: menuGroupIds,
+        menuProducts: menuProductsData,
       ).then((success) {
         setState(() => _isLoading = false);
         
@@ -488,6 +602,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         proNote: fullNote,
         isGift: _isGift,
         proFeature: allSelectedIds,
+        isMenu: isMenu,
+        menuIDs: menuGroupIds,
+        menuProducts: menuProductsData,
       );
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -622,20 +739,6 @@ class _ProductDetailViewState extends State<ProductDetailView> {
         _updatePriceController();
       }
     });
-  }
-  
-  // Tüm menü seçimlerinin tamamlanıp tamamlanmadığını kontrol et
-  bool _areAllMenuSelectionsComplete() {
-    if (_productDetail == null || !_productDetail!.isMenu) return true;
-    
-    for (final menuGroup in _productDetail!.menus) {
-      final selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
-      final totalSelected = selectedItems.values.fold(0, (sum, count) => sum + count);
-      if (totalSelected != menuGroup.menuSelectQty) {
-        return false;
-      }
-    }
-    return true;
   }
   
   // Bir sonraki tamamlanmamış menü grubuna otomatik kaydır
@@ -1420,30 +1523,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
             height: 44,
             child: ElevatedButton(
             onPressed: () {
-              // Menülü ürünse tüm seçimlerin tamamlanıp tamamlanmadığını kontrol et
-              if (_productDetail!.isMenu && !_areAllMenuSelectionsComplete()) {
-                // İlk tamamlanmamış menü grubuna sessizce kaydır
-                if (_productDetail!.menus.isNotEmpty) {
-                  for (final menuGroup in _productDetail!.menus) {
-                    final selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
-                    final totalSelected = selectedItems.values.fold(0, (sum, count) => sum + count);
-                    if (totalSelected < menuGroup.menuSelectQty) {
-                      final targetKey = _menuGroupKeys[menuGroup.menuID];
-                      if (targetKey != null && targetKey.currentContext != null) {
-                        Scrollable.ensureVisible(
-                          targetKey.currentContext!,
-                          duration: Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                          alignment: 0.1,
-                        );
-                      }
-                      break;
-                    }
-                  }
-                }
-                return;
-              }
-              
+              // Menü seçimleri zorunlu değil - direkt sepete ekle
               _addProductToBasket();
             },
             style: ElevatedButton.styleFrom(
@@ -1488,7 +1568,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     return ids;
   }
 
-  // Seçili menü öğelerinin ID listesini döndürür
+  // Seçili menü öğelerinin ID listesini döndürür (eski yöntem - geriye dönük uyumluluk için)
   List<int> _collectSelectedMenuIds() {
     final List<int> ids = [];
     if (_productDetail == null || !_productDetail!.isMenu) {
@@ -1509,6 +1589,58 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     }
     
     return ids;
+  }
+
+  // Menü grup ID'lerini toplar
+  List<int> _collectMenuGroupIds() {
+    final List<int> ids = [];
+    if (_productDetail == null || !_productDetail!.isMenu) {
+      return ids;
+    }
+    
+    for (var menuGroup in _productDetail!.menus) {
+      final Map<int, int> selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+      if (selectedItems.isNotEmpty) {
+        ids.add(menuGroup.menuID);
+      }
+    }
+    
+    return ids;
+  }
+
+  // Seçili menü ürünlerini API formatında döndürür
+  List<Map<String, dynamic>> _collectMenuProductsData() {
+    final List<Map<String, dynamic>> menuProductsData = [];
+    if (_productDetail == null || !_productDetail!.isMenu) {
+      return menuProductsData;
+    }
+    
+    for (var menuGroup in _productDetail!.menus) {
+      final Map<int, int> selectedItems = _selectedMenuItems[menuGroup.menuID] ?? <int, int>{};
+      
+      for (var entry in selectedItems.entries) {
+        final mpID = entry.key; // MenuProduct ID (mpID)
+        final quantity = entry.value;
+        
+        // Menü ürününü bul
+        final menuProduct = menuGroup.menuProducts.firstWhere(
+          (mp) => mp.mpID == mpID,
+          orElse: () => menuGroup.menuProducts.first,
+        );
+        
+        // Her birim için ayrı kayıt ekle
+        for (int i = 0; i < quantity; i++) {
+          menuProductsData.add({
+            'productID': menuProduct.productID,
+            'variantID': menuProduct.variantID,
+            'qty': 1,
+            'menuID': menuGroup.menuID,
+          });
+        }
+      }
+    }
+    
+    return menuProductsData;
   }
 
   // Mevcut seçili porsiyon için featureGroups içindeki isDefault==true olanları uygular

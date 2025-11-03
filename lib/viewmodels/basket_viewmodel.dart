@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos701/models/basket_model.dart';
 import 'package:pos701/models/product_model.dart';
-import 'package:pos701/services/order_service.dart';
 import 'dart:developer' as developer;
 
 class BasketViewModel extends ChangeNotifier {
@@ -30,7 +29,16 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Yeni satır ekler ve eklenen satırın lineId'sini döndürür
-  int addProduct(Product product, {int opID = 0, String? proNote, bool isGift = false, List<int> proFeature = const []}) {
+  int addProduct(
+    Product product, {
+    int opID = 0, 
+    String? proNote, 
+    bool isGift = false, 
+    List<int> proFeature = const [],
+    bool isMenu = false,
+    List<int> menuIDs = const [],
+    List<Map<String, dynamic>> menuProducts = const [],
+  }) {
     // Her zaman yeni bir satır oluşturuyoruz
     int lineId = opID > 0 ? opID : _basket.getNextLineId();
     
@@ -43,11 +51,19 @@ class BasketViewModel extends ChangeNotifier {
         isGift: isGift,
       lineId: lineId,
       proFeature: proFeature,
+      isMenu: isMenu,
+      menuIDs: menuIDs,
+      menuProducts: menuProducts,
       ));
     
     // Yeni eklenen ürünü ve satırı işaretle
       _newlyAddedProductIds.add(product.proID);
     _newlyAddedLineIds.add(lineId);
+    
+    // Yeni ürün eklendi, backend'deki tutar artık geçersiz - sıfırla
+    if (opID == 0) {
+      _orderAmount = 0.0;
+    }
     
     developer.log("Sepete yeni satır eklendi. LineID: $lineId, Ürün: ${product.proName}");
     notifyListeners();
@@ -55,8 +71,8 @@ class BasketViewModel extends ChangeNotifier {
     return lineId; // Eklenen satırın ID'sini döndür
   }
   
-  /// Ürünü sepete ekler ve API ile sunucuya direkt gönderir
-  /// Başarılı olduğunda opID güncellenmiş ürünü sepete ekler
+  /// Ürünü SADECE YEREL sepete ekler (opID=0)
+  /// BasketView'da "Güncelle" butonuna basınca updateOrder ile sunucuya gönderilecek
   Future<bool> addProductToOrder({
     required String userToken,
     required int compID,
@@ -67,82 +83,39 @@ class BasketViewModel extends ChangeNotifier {
     bool isGift = false,
     int orderPayType = 0, 
     List<int> proFeature = const [],
+    bool isMenu = false,
+    List<int> menuIDs = const [],
+    List<Map<String, dynamic>> menuProducts = const [],
   }) async {
-    try {
-      developer.log("Sunucuya ürün ekleniyor. Ürün: ${product.proName}, Sipariş: $orderID, Ödeme Türü: $orderPayType");
-      
-      // Önce ürünü sepete geçici olarak ekleyelim (negatif lineId ile)
-      int tempLineId = addProduct(product, opID: 0, proNote: proNote, isGift: isGift, proFeature: proFeature);
-      
-      // Sunucuya ürün ekleme isteği gönder
-      final orderService = OrderService();
-      final response = await orderService.addProductToOrder(
-        userToken: userToken,
-        compID: compID,
-        orderID: orderID,
-        productID: product.proID,
-        quantity: quantity,
-        proNote: proNote,
-        isGift: isGift ? 1 : 0,
-        orderPayType: orderPayType, // Ödeme türü parametresi eklendi
-        proFeature: proFeature,
-      );
-      
-      if (response.success) {
-        // Başarılı ise, geçici lineId'li satırı sepetten çıkarıp, 
-        // sunucudan gelen opID ile yeni satır ekleyelim
-        final tempIndex = _basket.items.indexWhere(
-          (item) => item.lineId == tempLineId
-        );
-        
-        if (tempIndex != -1) {
-          // Geçici satırı sil
-          _basket.items.removeAt(tempIndex);
-          _newlyAddedLineIds.remove(tempLineId);
-          
-          // Sunucudan dönen opID ile ekle
-          final int opID = response.data?.opID ?? 0;
-          if (opID > 0) {
-            developer.log("Ürün başarıyla sunucuya eklendi. OpID: $opID, Ürün: ${product.proName}");
-            
-            _basket.items.add(BasketItem(
-              product: product,
-              proQty: quantity,
-              opID: opID,
-              proNote: proNote,
-              isGift: isGift,
-              lineId: opID, // Sunucudan gelen opID'yi lineId olarak kullan
-              proFeature: proFeature,
-            ));
-            
-            _newlyAddedLineIds.add(opID);
-            _newlyAddedProductIds.add(product.proID);
-            notifyListeners();
-            return true;
-          } else {
-            developer.log("Sunucu geçerli bir OpID dönmedi. Ürün: ${product.proName}");
-            _errorMessage = "Sunucu geçerli bir OpID dönmedi";
-          }
-        } else {
-          developer.log("Geçici satır bulunamadı. TempLineID: $tempLineId");
-          _errorMessage = "Geçici sepet öğesi bulunamadı";
-        }
-      } else {
-        developer.log("Ürün eklenirken sunucu hatası: ${response.errorCode}");
-        _errorMessage = response.errorCode ?? "Ürün eklenirken bir sunucu hatası oluştu";
-      }
-      
-      notifyListeners();
-      return false;
-    } catch (e) {
-      developer.log("Ürün eklenirken istisna: $e");
-      _errorMessage = "Ürün eklenirken bir hata oluştu: $e";
-      notifyListeners();
-      return false;
-    }
+    developer.log("🔵 [ÜRÜN EKLEME] Yerel sepete ekleniyor: ${product.proName}, Sipariş: $orderID");
+    
+    // Sadece yerel sepete ekle (opID = 0)
+    addProduct(
+      product,
+      opID: 0,
+      proNote: proNote,
+      isGift: isGift,
+      proFeature: proFeature,
+      isMenu: isMenu,
+      menuIDs: menuIDs,
+      menuProducts: menuProducts,
+    );
+    
+    developer.log("🟢 [ÜRÜN EKLEME] Yerel sepete eklendi. Toplam ürün: ${_basket.items.length}");
+    return true;
   }
   
-  void addProductWithOpID(Product product, int quantity, int opID, {String? proNote, bool isGift = false, List<int> proFeature = const []}) {
+  void addProductWithOpID(
+    Product product, 
+    int quantity, 
+    int opID, {
+    String? proNote, 
+    bool isGift = false, 
+    List<int> proFeature = const [],
+    bool isMenu = false,
+    List<int> menuIDs = const [],
+    List<Map<String, dynamic>> menuProducts = const [],
+  }) {
     // Sunucudan gelen opID'yi hem opID hem de lineId olarak kullan
       _basket.items.add(BasketItem(
         product: product,
@@ -152,6 +125,9 @@ class BasketViewModel extends ChangeNotifier {
         isGift: isGift,
       lineId: opID,
       proFeature: proFeature,
+      isMenu: isMenu,
+      menuIDs: menuIDs,
+      menuProducts: menuProducts,
       ));
     
     _newlyAddedProductIds.add(product.proID);
@@ -173,6 +149,10 @@ class BasketViewModel extends ChangeNotifier {
       _basket.removeProduct(productId);
     _newlyAddedProductIds.remove(productId);
     }
+    
+    // Ürün silindi, backend tutarı artık geçersiz
+    _orderAmount = 0.0;
+    
     notifyListeners();
   }
   
@@ -207,6 +187,10 @@ class BasketViewModel extends ChangeNotifier {
       if (index != -1) {
         // Satır bulundu, miktarı artır
         _basket.items[index].proQty++;
+        
+        // Miktar değişti, backend tutarı artık geçersiz
+        _orderAmount = 0.0;
+        
         developer.log("Miktar artırıldı. LineID: $lineId, Yeni miktar: ${_basket.items[index].proQty}");
         notifyListeners();
       } else {
@@ -246,10 +230,18 @@ class BasketViewModel extends ChangeNotifier {
         
         // Miktarı 1 olan ürünü sepetten kaldır
         _basket.items.removeAt(index);
+        
+        // Ürün silindi, backend tutarı artık geçersiz
+        _orderAmount = 0.0;
+        
         developer.log("Ürün sepetten kaldırıldı. LineID: $lineId");
       } else {
         // Miktarı azalt
         _basket.items[index].proQty--;
+        
+        // Miktar değişti, backend tutarı artık geçersiz
+        _orderAmount = 0.0;
+        
         developer.log("Miktar azaltıldı. LineID: $lineId, Yeni miktar: ${_basket.items[index].proQty}");
       }
       
@@ -278,6 +270,25 @@ class BasketViewModel extends ChangeNotifier {
       });
     } catch (e) {
       // Hatayı yut, uygulama çökmemeli
+    }
+  }
+  
+  /// Sunucudan gelen ürünleri temizle, ama yerel olarak eklenenleri koru
+  void clearServerItems() {
+    // Sadece opID > 0 olan (sunucudan gelen) ürünleri temizle
+    _basket.items.removeWhere((item) => item.opID > 0);
+    _orderAmount = 0.0;
+    _basket.discount = 0.0;
+    _basket.orderPayAmount = 0.0;
+    
+    developer.log("🧹 [BASKET_VM] Sunucu ürünleri temizlendi. Kalan yerel ürün: ${_basket.items.length}");
+    
+    try {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+    } catch (e) {
+      // Hatayı yut
     }
   }
   
@@ -364,6 +375,7 @@ class BasketViewModel extends ChangeNotifier {
           proStock: item.product.proStock,
           proPrice: newPrice,
           proNote: item.product.proNote,
+          isMenu: item.product.isMenu,
         );
         
         final updatedItem = BasketItem(
@@ -373,6 +385,10 @@ class BasketViewModel extends ChangeNotifier {
           proNote: item.proNote,
           isGift: item.isGift,
           lineId: item.lineId,
+          proFeature: item.proFeature, // Özellikleri koru
+          isMenu: item.isMenu,         // Menü durumunu koru
+          menuIDs: item.menuIDs,       // Menü ID'lerini koru
+          menuProducts: item.menuProducts, // Menü ürünlerini koru
         );
         
         items[itemIndex] = updatedItem;
@@ -425,7 +441,17 @@ class BasketViewModel extends ChangeNotifier {
   }
   
   // Tek bir satırı belirli bir ürünle değiştir
-  void updateSpecificLine(int lineId, Product newProduct, int quantity, {String? proNote, bool? isGift, List<int>? proFeature}) {
+  void updateSpecificLine(
+    int lineId, 
+    Product newProduct, 
+    int quantity, {
+    String? proNote, 
+    bool? isGift, 
+    List<int>? proFeature,
+    bool? isMenu,
+    List<int>? menuIDs,
+    List<Map<String, dynamic>>? menuProducts,
+  }) {
     try {
       final oldItemIndex = _basket.items.indexWhere((item) => item.lineId == lineId);
       if (oldItemIndex != -1) {
@@ -443,6 +469,9 @@ class BasketViewModel extends ChangeNotifier {
           isGift: isGift ?? oldItem.isGift,
           lineId: lineId,
           proFeature: proFeature ?? oldItem.proFeature,
+          isMenu: isMenu ?? oldItem.isMenu,
+          menuIDs: menuIDs ?? oldItem.menuIDs,
+          menuProducts: menuProducts ?? oldItem.menuProducts,
         ));
         
         notifyListeners();

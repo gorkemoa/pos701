@@ -10,6 +10,9 @@ class BasketItem {
   final int lineId; // Benzersiz satır kimliği
   int isRemove; // Ürün siparişten çıkarılacaksa 1 olacak
   final List<int> proFeature; // Seçili özellik ID'leri
+  final bool isMenu; // Ürün menü mü?
+  final List<int> menuIDs; // Menü grup ID'leri
+  final List<Map<String, dynamic>> menuProducts; // Menü ürünleri
   
   // Birim fiyat hesaplama metodu - proPrice'ı temizleyip işler
   double get birimFiyat {
@@ -75,14 +78,17 @@ class BasketItem {
     this.lineId = 0, // Varsayılan değer 0, ama kullanılırken benzersiz değer atanmalı
     this.isRemove = 0, // Varsayılan olarak ürün siparişten çıkarılmayacak
     this.proFeature = const [],
+    this.isMenu = false,
+    this.menuIDs = const [],
+    this.menuProducts = const [],
   }) : proNote = proNote ?? product.proNote {
     // Oluşturulduğunda fiyatı kontrol et
-    developer.log("Yeni sepet öğesi: ${product.proName}, Miktar: $proQty, OpID: $opID, Not: $proNote, İkram: $isGift, Satır ID: $lineId, Çıkarılacak: $isRemove");
+    developer.log("Yeni sepet öğesi: ${product.proName}, Miktar: $proQty, OpID: $opID, Not: $proNote, İkram: $isGift, Satır ID: $lineId, Çıkarılacak: $isRemove, Menü: $isMenu");
   }
   
   @override
   String toString() {
-    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID, proNote: $proNote, isGift: $isGift, lineId: $lineId, isRemove: $isRemove, proFeature: $proFeature}';
+    return 'BasketItem{product: ${product.proName}, quantity: $proQty, opID: $opID, proNote: $proNote, isGift: $isGift, lineId: $lineId, isRemove: $isRemove, proFeature: $proFeature, isMenu: $isMenu, menuIDs: $menuIDs, menuProducts: $menuProducts}';
   }
 }
 
@@ -180,7 +186,10 @@ class Basket {
       product: product, 
       proQty: 1, 
       opID: opID,
-      lineId: lineId
+      lineId: lineId,
+      isMenu: false,
+      menuIDs: const [],
+      menuProducts: const [],
     ));
     
     developer.log("Yeni ürün sepete eklendi. Sepetteki ürün sayısı: ${items.length}, LineID: $lineId");

@@ -52,7 +52,6 @@ class _BasketViewState extends State<BasketView> {
   int? _tableID;
   bool _isLoading = true;
   String _errorMessage = '';
-  bool _isProcessing = false; // kept: used in flows (future use)
   bool _isSiparisOlusturuldu = false;
   BasketViewModel? _basketViewModel;
   String _orderDesc = '';
@@ -143,88 +142,63 @@ class _BasketViewState extends State<BasketView> {
       final orderViewModel = Provider.of<OrderViewModel>(context, listen: false);
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
       
-      // Sepeti temizlemeden önce sepette kaç ürün olduğunu kontrol et
-      final hasItemsInBasket = basketViewModel.items.isNotEmpty;
+      // MENÜ BİLGİLERİNİ KORUMAK İÇİN HER ZAMAN YENİDEN YÜKLEYELİM
+      // Sepeti tamamen temizle ve güncel sipariş detaylarıyla doldur
+      debugPrint('� [BASKET_VIEW] Sepet temizleniyor ve sipariş detayları yüklenecek. OrderID: $orderID');
+      basketViewModel.clearServerItems();
       
-      // Sepette ürün yoksa veya ilk kez yükleniyorsa sipariş detaylarını yükle
-      if (!hasItemsInBasket) {
-        debugPrint('🧾 [BASKET_VIEW] Sepet boş, sipariş detayları yüklenecek. OrderID: $orderID');
+      final success = await orderViewModel.getSiparisDetayi(
+        userToken: _userToken!,
+        compID: _compID!,
+        orderID: orderID,
+      );
+      
+      if (success && orderViewModel.orderDetail != null) {
+        final orderDetail = orderViewModel.orderDetail!;
         
-        final success = await orderViewModel.getSiparisDetayi(
-          userToken: _userToken!,
-          compID: _compID!,
-          orderID: orderID,
-        );
+        setState(() {
+          _isKuver = orderDetail.isKuver;
+          _isWaiter = orderDetail.isWaiter;
+        });
         
-        if (success && orderViewModel.orderDetail != null) {
-          final orderDetail = orderViewModel.orderDetail!;
-          
-          setState(() {
-            _isKuver = orderDetail.isKuver;
-            _isWaiter = orderDetail.isWaiter;
-          });
-          
-          basketViewModel.setOrderAmount(orderDetail.orderAmount);
-          basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
-          
-          if (orderDetail.orderDiscount > 0) {
-            basketViewModel.applyDiscount(orderDetail.orderDiscount);
-          }
-          
-          final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
-          debugPrint('📦 [BASKET_VIEW] Sipariş detaylarından ${sepetItems.length} ürün sepete ekleniyor.');
-          
-          for (var item in sepetItems) {
-            if (item.opID > 0) {
-              basketViewModel.addProductWithOpID(
-                item.product, 
-                item.proQty,
-                item.opID,
-                proNote: item.proNote,
-                isGift: item.isGift,
-                proFeature: item.proFeature,
-              );
-            }
-          }
-        } else {
-          setState(() {
-            _errorMessage = orderViewModel.errorMessage ?? 'Sipariş detayları alınamadı.';
-          });
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_errorMessage),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
+        basketViewModel.setOrderAmount(orderDetail.orderAmount);
+        basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
+        
+        if (orderDetail.orderDiscount > 0) {
+          basketViewModel.applyDiscount(orderDetail.orderDiscount);
+        }
+        
+        final sepetItems = orderViewModel.siparisUrunleriniSepeteAktar();
+        debugPrint('📦 [BASKET_VIEW] Sipariş detaylarından ${sepetItems.length} ürün sepete ekleniyor.');
+        
+        for (var item in sepetItems) {
+          if (item.opID > 0) {
+            basketViewModel.addProductWithOpID(
+              item.product, 
+              item.proQty,
+              item.opID,
+              proNote: item.proNote,
+              isGift: item.isGift,
+              proFeature: item.proFeature,
+              isMenu: item.isMenu,
+              menuIDs: item.menuIDs,
+              menuProducts: item.menuProducts,
             );
           }
         }
       } else {
-        // Sepette ürün varsa sipariş bilgilerini al ama ürünleri ekleme
-        debugPrint('🛒 [BASKET_VIEW] Sepette zaten ürün var, sipariş detayları yüklenmedi. Ürün sayısı: ${basketViewModel.items.length}');
+        setState(() {
+          _errorMessage = orderViewModel.errorMessage ?? 'Sipariş detayları alınamadı.';
+        });
         
-        final success = await orderViewModel.getSiparisDetayi(
-          userToken: _userToken!,
-          compID: _compID!,
-          orderID: orderID,
-        );
-        
-        if (success && orderViewModel.orderDetail != null) {
-          final orderDetail = orderViewModel.orderDetail!;
-          
-          setState(() {
-            _isKuver = orderDetail.isKuver;
-            _isWaiter = orderDetail.isWaiter;
-          });
-          
-          basketViewModel.setOrderAmount(orderDetail.orderAmount);
-          basketViewModel.updateOrderPayAmount(orderDetail.orderPayAmount);
-          
-          if (orderDetail.orderDiscount > 0) {
-            basketViewModel.applyDiscount(orderDetail.orderDiscount);
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_errorMessage),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
       }
     } catch (e) {
@@ -250,14 +224,12 @@ class _BasketViewState extends State<BasketView> {
 
   Future<void> _submitOrder() async {
     setState(() {
-      _isProcessing = true;
       _isLoading = true;
       _errorMessage = '';
     });
     
     if (_userToken == null || _compID == null) {
       setState(() {
-        _isProcessing = false;
         _isLoading = false;
         _errorMessage = 'Kullanıcı bilgileri alınamadı.';
       });
@@ -275,7 +247,6 @@ class _BasketViewState extends State<BasketView> {
     final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
     if (basketViewModel.items.isEmpty) {
       setState(() {
-        _isProcessing = false;
         _isLoading = false;
         _errorMessage = 'Sepette ürün bulunmuyor.';
       });
@@ -345,6 +316,8 @@ class _BasketViewState extends State<BasketView> {
           userToken: _userToken!,
           compID: _compID!,
           orderID: widget.orderID!,
+          tableID: tableID, // Eklendi
+          tableName: widget.tableName, // Eklendi
           sepetUrunleri: basketViewModel.items,
           orderDesc: _orderDesc,
           orderGuest: _orderGuest,
@@ -386,7 +359,6 @@ class _BasketViewState extends State<BasketView> {
       }
     } catch (e) {
       setState(() {
-        _isProcessing = false;
         _isLoading = false;
         _errorMessage = 'Sipariş gönderilirken hata oluştu: $e';
       });
@@ -451,7 +423,7 @@ class _BasketViewState extends State<BasketView> {
   Future<bool> _onWillPop() async {
     if (_isSiparisOlusturuldu) {
       final basketViewModel = Provider.of<BasketViewModel>(context, listen: false);
-      basketViewModel.clearBasket();
+      basketViewModel.clearServerItems();
     }
     return true;
   }
@@ -664,6 +636,8 @@ class _BasketViewState extends State<BasketView> {
                   Expanded(
                     child: Consumer<BasketViewModel>(
                       builder: (context, basketViewModel, child) {
+                        debugPrint('🛒 [BASKET_VIEW] Sepet durumu - Boş mu: ${basketViewModel.isEmpty}, Ürün sayısı: ${basketViewModel.items.length}');
+                        
                         if (basketViewModel.isEmpty) {
                           return const Center(
                             child: Text(
@@ -671,6 +645,11 @@ class _BasketViewState extends State<BasketView> {
                               style: TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           );
+                        }
+                        
+                        // Sepetteki tüm ürünleri logla
+                        for (var item in basketViewModel.items) {
+                          debugPrint('   📦 Ürün: ${item.product.proName}, Adet: ${item.proQty}, LineID: ${item.lineId}, OpID: ${item.opID}');
                         }
                         
                         // Sepet öğelerini mevcut ve yeni eklenmiş olarak ayır
@@ -681,6 +660,8 @@ class _BasketViewState extends State<BasketView> {
                         final existingItems = basketViewModel.items
                             .where((item) => !basketViewModel.newlyAddedProductIds.contains(item.product.proID))
                             .toList();
+                        
+                        debugPrint('   📊 Mevcut ürünler: ${existingItems.length}, Yeni ürünler: ${newItems.length}');
                         
                         return ListView(
                           children: [
@@ -716,7 +697,13 @@ class _BasketViewState extends State<BasketView> {
                         return const SizedBox.shrink();
                       }
                       
-                      final manuelKalan = basketViewModel.remainingAmount;
+                      // Backend'den gelen orderAmount varsa onu kullan, yoksa sepet toplamını kullan
+                      final double displayTotalAmount = basketViewModel.orderAmount > 0 
+                          ? basketViewModel.orderAmount 
+                          : basketViewModel.totalAmount;
+                      
+                      // Kalan tutarı doğru hesapla
+                      final double calculatedRemaining = displayTotalAmount - basketViewModel.discount - basketViewModel.orderPayAmount;
                       
                       return Column(
                         children: [
@@ -809,7 +796,7 @@ class _BasketViewState extends State<BasketView> {
                           children: [
                             _buildInfoRow(
                               "Toplam Tutar",
-                              "₺${basketViewModel.totalAmount.toStringAsFixed(2)}",
+                              "₺${displayTotalAmount.toStringAsFixed(2)}",
                             ),
                             _buildInfoRow(
                               "İndirim",
@@ -821,7 +808,7 @@ class _BasketViewState extends State<BasketView> {
                             ),
                             _buildInfoRow(
                               "Kalan",
-                              "₺${manuelKalan.toStringAsFixed(2)}",
+                              "₺${calculatedRemaining.toStringAsFixed(2)}",
                               isBold: true,
                             ),
                           ],
@@ -886,7 +873,6 @@ class _BasketViewState extends State<BasketView> {
                               }
                               
                               setState(() {
-                                _isProcessing = true;
                               });
                               
                               Navigator.of(context).push(
@@ -899,7 +885,7 @@ class _BasketViewState extends State<BasketView> {
                                     basketItems: basketViewModel.items,
                                     onPaymentSuccess: () {
                                       setState(() => _isSiparisOlusturuldu = true);
-                                      basketViewModel.clearBasket();
+                                      basketViewModel.clearServerItems();
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
                                           content: Text('Ödeme başarıyla alındı.'),
@@ -935,7 +921,6 @@ class _BasketViewState extends State<BasketView> {
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                                _isProcessing = true;
                               });
                             },
                             style: ElevatedButton.styleFrom(
@@ -974,8 +959,11 @@ class _BasketViewState extends State<BasketView> {
         onTap: () {
           if (_userToken != null && _compID != null) {
             setState(() {
-              _isProcessing = true;
             });
+            debugPrint('🔍 [BASKET_VIEW] Ürün detayına gidiliyor: ${item.product.proName}');
+            debugPrint('   isMenu: ${item.isMenu}');
+            debugPrint('   menuIDs: ${item.menuIDs}');
+            debugPrint('   menuProducts: ${item.menuProducts}');
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -989,6 +977,7 @@ class _BasketViewState extends State<BasketView> {
                   initialNote: item.proNote,
                   initialIsGift: item.isGift,
                   initialFeatures: item.proFeature,
+                  initialMenuProducts: item.menuProducts,
                 ),
               ),
             );
@@ -1008,7 +997,6 @@ class _BasketViewState extends State<BasketView> {
                   onPressed: isMarkedForRemoval 
                       ? () {} // Siparişten çıkarılacak ürünler için devre dışı bırakılmış buton
                       : () {
-                          setState(() => _isProcessing = true);
                           Provider.of<BasketViewModel>(context, listen: false)
                               .decrementQuantity(item.lineId);
                         },
@@ -1031,9 +1019,27 @@ class _BasketViewState extends State<BasketView> {
                   onPressed: isMarkedForRemoval 
                       ? () {} // Siparişten çıkarılacak ürünler için devre dışı bırakılmış buton
                       : () {
-                          setState(() => _isProcessing = true);
-                          Provider.of<BasketViewModel>(context, listen: false)
-                              .incrementQuantity(item.lineId);
+                          // Ürün detayına git (menü veya normal ürün)
+                          if (_userToken != null && _compID != null) {
+                            debugPrint('🔍 [BASKET_VIEW] + butonuna tıklandı - Ürün detayına gidiliyor: ${item.product.proName}');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProductDetailView(
+                                  userToken: _userToken!,
+                                  compID: _compID!,
+                                  postID: item.product.postID,
+                                  tableName: widget.tableName,
+                                  selectedProID: item.product.proID,
+                                  selectedLineId: item.lineId,
+                                  initialNote: item.proNote,
+                                  initialIsGift: item.isGift,
+                                  initialFeatures: item.proFeature,
+                                  initialMenuProducts: item.menuProducts,
+                                ),
+                              ),
+                            );
+                          }
                         },
                 ),
                 
@@ -1178,7 +1184,6 @@ class _BasketViewState extends State<BasketView> {
                     color: isMarkedForRemoval ? Colors.green : Colors.red,
                   ),
                   onPressed: () {
-                    setState(() => _isProcessing = true);
                     
                     // Eğer mevcut bir sipariş güncelleniyorsa ürünler API'ye isRemove=1 ile gönderilmeli
                     if (widget.orderID != null && item.opID > 0) {
