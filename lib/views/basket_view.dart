@@ -11,7 +11,6 @@ import 'package:pos701/models/customer_model.dart';
 import 'package:pos701/models/order_model.dart' as order_model;
 import 'package:pos701/views/tables_view.dart';
 import 'package:pos701/models/user_model.dart';
-// import 'package:speech_to_text/speech_to_text.dart' as stt; // disabled for BasketView
 
 class BasketView extends StatefulWidget {
   final String tableName;

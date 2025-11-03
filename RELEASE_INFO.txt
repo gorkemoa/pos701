@@ -1,0 +1,57 @@
+
+
+KEYSTORE BİLGİLERİ (GOOGLE PLAY STORE):
+=========================================
+
+✅ DOĞRU KEYSTORE (Google Play Store'da kayıtlı):
+-------------------------------------------------
+Keystore dosyası: android/app/upload.keystore
+Alias: upload
+Store password: office701
+Key password: office701
+DNAME: C=TR, ST=Konak, L=Izmir, O=Office701, OU=Software, CN=Yunus ŞAHİN
+Oluşturulma tarihi: 9 Nisan 2023
+Geçerlilik: 2048 yılına kadar
+SHA1 Parmak İzi: 23:3C:BF:68:8C:F5:1A:55:25:65:AA:07:C9:4F:9D:BD:E7:DC:F0:98
+SHA256 Parmak İzi: 96:CE:81:2E:E3:FC:AC:BF:6C:FD:A9:9F:D5:65:41:C0:4E:33:9D:EC:4E:32:A3:36:59:37:22:F8:56:24:3E:53
+
+⚠️ ESKİ/YANLIŞ KEYSTORE (Google Play Store'da kayıtlı DEĞİL):
+-------------------------------------------------------------
+Keystore dosyası: android/app/pos701-release-key.jks
+Alias: izmir
+Store password: izmir35
+Key password: izmir35
+DNAME: CN=izmir, OU=izmir, O=izmir, L=izmir, ST=izmir, C=TR
+Oluşturulma tarihi: 15 Ekim 2025
+SHA1 Parmak İzi: 63:62:13:03:F0:9B:68:A2:E2:31:B5:C7:AB:84:12:AE:C4:60:B5:18
+NOT: Bu keystore Google Play Store'a yükleme için KULLANILMAMALIDIR!
+
+BUILD KOMUTLARI:
+================
+
+Release APK oluşturma:
+flutter build apk --release
+
+Release App Bundle oluşturma (Google Play Store için):
+flutter build appbundle --release
+
+ÇIKTI DOSYALARI:
+================
+
+APK konumu:
+build/app/outputs/flutter-apk/app-release.apk
+
+App Bundle konumu:
+build/app/outputs/bundle/release/app-release.aab
+
+ÖNEMLİ NOTLAR:
+==============
+
+1. Google Play Store'a yükleme için MUTLAKA "upload.keystore" kullanılmalıdır
+2. Build yapılandırması (android/app/build.gradle.kts) doğru keystore'u kullanacak şekilde ayarlanmıştır
+3. key.properties dosyası da upload.keystore'u gösterecek şekilde güncellenmiştir
+4. pos701-release-key.jks dosyası Google Play Store için KULLANILMAMALIDIR
+5. Her build öncesi "flutter clean" komutu çalıştırılması önerilir
+6. AD_ID izni manifest dosyasından kaldırılmıştır (android/app/src/main/AndroidManifest.xml)
+   - Uygulama reklam kimliği kullanmadığı için bu izin tools:node="remove" ile engellendi
+   - Google Play Console'da "Reklam kimliği" sorusunu "Hayır" olarak işaretleyebilirsiniz

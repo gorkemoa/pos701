@@ -19,7 +19,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos701/viewmodels/order_viewmodel.dart';
 import 'package:pos701/viewmodels/ready_notes_viewmodel.dart';
 import 'package:pos701/services/ready_notes_service.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class CategoryView extends StatefulWidget {
   final int compID;
@@ -73,8 +72,6 @@ class _CategoryViewState extends State<CategoryView> {
   bool _isDraggingFab = false;
   Offset? _fabDragStartOffset;
 
-  // Voice input
-  late final stt.SpeechToText _speech;
   bool _isListening = false;
   
 
@@ -168,7 +165,6 @@ class _CategoryViewState extends State<CategoryView> {
   @override
   void initState() {
     super.initState();
-    _speech = stt.SpeechToText();
     _categoryViewModel = CategoryViewModel(ProductService());
     _productViewModel = ProductViewModel(ProductService());
     _readyNotesViewModel = ReadyNotesViewModel(ReadyNotesService());
@@ -190,9 +186,7 @@ class _CategoryViewState extends State<CategoryView> {
     _searchController.dispose();
     _orderDescController.dispose();
     _customerSearchController.dispose();
-    if (_isListening) {
-      _speech.stop();
-    }
+
     super.dispose();
   }
 
@@ -1616,24 +1610,7 @@ class _CategoryViewState extends State<CategoryView> {
                               hintText: 'Sipariş için not ekleyin (örn. “Az pişmiş, sos ayrı”)',
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                               contentPadding: const EdgeInsets.all(14),
-                              suffixIcon: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    tooltip: _isListening ? 'Dinleniyor...' : 'Sesle Not Ekle',
-                                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none, color: Color(AppConstants.primaryColorValue)),
-                                    onPressed: () => _listenNoteIntoController(_orderDescController),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Temizle',
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _orderDescController.clear();
-                                      setSheetState(() {});
-                                    },
-                                  ),
-                                ],
-                              ),
+                             
                               counterText: '$charCount/$maxChars',
                             ),
                           ),
@@ -1745,63 +1722,6 @@ class _CategoryViewState extends State<CategoryView> {
           },
         );
       },
-    );
-  }
-
-  Future<void> _listenNoteIntoController(TextEditingController controller) async {
-    if (_isListening) {
-      await _speech.stop();
-      setState(() => _isListening = false);
-      return;
-    }
-    final bool available = await _speech.initialize(
-      onStatus: (status) {
-        if (status.toLowerCase().contains('done') || status.toLowerCase().contains('notlistening')) {
-          if (mounted) setState(() => _isListening = false);
-        }
-      },
-      onError: (err) {
-        if (mounted) setState(() => _isListening = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Ses hatası: ${err.errorMsg}')),
-          );
-        }
-      },
-    );
-    if (!available) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ses tanıma kullanılamıyor')),
-        );
-      }
-      return;
-    }
-    final locales = await _speech.locales();
-    final String? trLocale = locales.firstWhere(
-      (l) => l.localeId.toLowerCase().startsWith('tr'),
-      orElse: () => locales.isNotEmpty ? locales.first : stt.LocaleName('en_US', 'English'),
-    ).localeId;
-    setState(() => _isListening = true);
-    await _speech.listen(
-      localeId: trLocale,
-      listenMode: stt.ListenMode.dictation,
-      listenFor: const Duration(seconds: 7),
-      pauseFor: const Duration(seconds: 2),
-      cancelOnError: true,
-      onResult: (res) {
-        if (!mounted) return;
-        final String rec = res.recognizedWords.trim();
-        if (rec.isEmpty) return;
-        if ((res.hasConfidenceRating && res.confidence < 0.30)) return;
-        if (res.finalResult) {
-          final String currentText = controller.text.trim();
-          controller.text = currentText.isEmpty ? rec : '$currentText, $rec';
-          controller.selection = TextSelection.fromPosition(TextPosition(offset: controller.text.length));
-          setState(() {});
-        }
-      },
-      partialResults: true,
     );
   }
 
