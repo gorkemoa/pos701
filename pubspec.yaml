@@ -25,6 +25,7 @@ dependencies:
   intl: ^0.20.2
   package_info_plus: ^8.3.0
   flutter_svg: ^2.0.10+1
+  new_version_plus: ^0.1.1
 
 dev_dependencies:
   flutter_test:
