@@ -1284,10 +1284,15 @@ class _CategoryViewState extends State<CategoryView> {
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () {
-                              basketViewModel.addProduct(product, opID: 0);
-                              debugPrint('➕ [CATEGORY_VIEW] Ürün miktarı artırıldı: {product.proName}, miktar: {basketViewModel.getProductQuantity(product)}');
-                            },
+                             onTap: () {
+                  if (product.isMenu) {
+                    debugPrint('🔍 [CATEGORY_VIEW] Menü ürünü - sağdan detay sayfasına gidiliyor: ${product.proName}');
+                    _goToProductDetail(product);
+                  } else {
+                    basketViewModel.addProduct(product, opID: 0);
+                    debugPrint('➡️ [CATEGORY_VIEW] Sağ tarafa tıklandı - Ürün miktarı arttırıldı: ${product.proName}');
+                  }
+                },
                             borderRadius: BorderRadius.circular(20),
                             child: Container(
                               decoration: BoxDecoration(
