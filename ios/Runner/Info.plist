@@ -34,6 +34,10 @@
 	<string>Sesli sipariş için mikrofon erişimi gereklidir</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Sesli komutları algılayabilmek için konuşma tanımaya izin verin</string>
+	<key>NSBonjourServices</key>
+	<array/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Yerel ağ üzerinden cihazları keşfetmek için izin gereklidir</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

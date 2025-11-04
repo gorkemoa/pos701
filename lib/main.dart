@@ -29,6 +29,7 @@ import 'package:pos701/viewmodels/notification_viewmodel.dart';
 import 'package:pos701/viewmodels/boss_statistics_viewmodel.dart';
 import 'package:pos701/viewmodels/company_viewmodel.dart';
 import 'package:pos701/firebase_options.dart';
+import 'package:upgrader/upgrader.dart';
 
 // Global navigator key - 403 hatası durumunda login'e yönlendirme için
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -83,8 +84,18 @@ void main() async {
   final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
   debugPrint("📲 APNs Token: $apnsToken");
 
-  runApp(
-    MultiProvider(
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Firebase Messaging servisini al
+    final firebaseMessagingService = FirebaseMessagingService();
+    
+    return MultiProvider(
       providers: [
         Provider<ApiService>(
           create: (_) => ApiService(),
@@ -194,55 +205,69 @@ void main() async {
             );
           },
         },
-        home: FutureBuilder<bool>(
-          future: _checkIfLoggedIn(AuthService(ApiService())),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              logger.d('Oturum durumu kontrol ediliyor...');
-              return Scaffold(
-                backgroundColor: Colors.white,
-                body: Center(
-                  child: Stack(
-                    children: [
-                      // Tam ekran kaplayan splash görseli
-                      Positioned.fill(
-                        child: Image.asset(
-                          'assets/splash/powered_by.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      // Alt kısımda loading indicator
-                      Positioned(
-                        bottom: 100,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF26B4E9)), // Mavi 7 rengi
+        home: UpgradeAlert(
+          upgrader: Upgrader(
+            debugDisplayAlways: false, // Sadece gerçekten yeni versiyon varsa göster
+            debugLogging: true, // Log görmek için
+            durationUntilAlertAgain: const Duration(seconds: 0), // Her açılışta kontrol et
+            messages: UpgraderMessages(
+              code: 'tr',
+            ),
+            countryCode: 'TR',
+          ),
+          dialogStyle: UpgradeDialogStyle.cupertino, // iOS tarzı dialog
+          child: FutureBuilder<bool>(
+            future: _checkIfLoggedIn(AuthService(ApiService())),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                final logger = AppLogger();
+                logger.d('Oturum durumu kontrol ediliyor...');
+                return Scaffold(
+                  backgroundColor: Colors.white,
+                  body: Center(
+                    child: Stack(
+                      children: [
+                        // Tam ekran kaplayan splash görseli
+                        Positioned.fill(
+                          child: Image.asset(
+                            'assets/splash/powered_by.png',
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ),
-                    ],
+                        // Alt kısımda loading indicator
+                        Positioned(
+                          bottom: 100,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF26B4E9)), // Mavi 7 rengi
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            } else {
-              final isLoggedIn = snapshot.data ?? false;
-              logger.i('Oturum durumu: ${isLoggedIn ? 'Giriş yapılmış' : 'Giriş yapılmamış'}');
-              
-              if (isLoggedIn) {
-                // Kullanıcı giriş yapmışsa ana sayfaya yönlendir
-                return const HomeView();
+                );
               } else {
-                // Kullanıcı giriş yapmamışsa giriş sayfasına yönlendir
-                return const LoginView();
+                final isLoggedIn = snapshot.data ?? false;
+                final logger = AppLogger();
+                logger.i('Oturum durumu: ${isLoggedIn ? 'Giriş yapılmış' : 'Giriş yapılmamış'}');
+                
+                if (isLoggedIn) {
+                  // Kullanıcı giriş yapmışsa ana sayfaya yönlendir
+                  return const HomeView();
+                } else {
+                  // Kullanıcı giriş yapmamışsa giriş sayfasına yönlendir
+                  return const LoginView();
+                }
               }
-            }
-          },
+            },
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Firebase başlatma işlemi
@@ -280,4 +305,3 @@ Future<bool> _checkIfLoggedIn(AuthService authService) async {
   logger.d('Oturum durumu kontrol ediliyor');
   return await authService.isLoggedIn();
 }
-
